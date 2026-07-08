@@ -1,42 +1,103 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif; background:#0e1621; color:#fff; width:375px; margin:0 auto; min-height:100vh; }
-  .header { background:#17212b; padding:12px 16px; display:flex; align-items:center; gap:10px; border-bottom:1px solid #0e1621; position:sticky; top:0; z-index:1; }
-  .avatar { width:38px; height:38px; border-radius:50%; background:#6d65ff; display:flex; align-items:center; justify-content:center; font-size:18px; }
-  .header .name { font-weight:600; font-size:15px; }
-  .header .status { font-size:12px; color:#6d65ff; }
-  .chat { padding:16px; display:flex; flex-direction:column; gap:8px; }
-  .msg { max-width:75%; padding:8px 12px; border-radius:16px; font-size:14px; line-height:1.4; position:relative; }
-  .msg.bot { align-self:flex-start; background:#182533; border-bottom-left-radius:4px; }
-  .msg.user { align-self:flex-end; background:#2b5278; border-bottom-right-radius:4px; }
-  .time { font-size:10px; color:#7d8e9e; margin-top:3px; float:right; margin-left:8px; }
-  .btn-attach { align-self:flex-start; background:#17212b; border:1px solid #2b5278; border-radius:12px; padding:12px 16px; font-size:14px; color:#6d65ff; font-weight:600; cursor:pointer; margin-top:4px; }
-  .date-sep { text-align:center; font-size:12px; color:#7d8e9e; margin:12px 0; }
-  .typing { align-self:flex-start; background:#182533; border-radius:16px; padding:10px 14px; font-size:13px; color:#7d8e9e; }
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:#0e1621;color:#fff;width:390px;margin:0 auto;min-height:100vh;overflow:hidden}
+
+/* Telegram header bar */
+.header{background:#17212b;padding:10px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid #0e1621;position:sticky;top:0;z-index:10;height:56px}
+.back-arrow{color:#6d65ff;font-size:20px;flex:0 0 auto}
+.avatar{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#6d65ff,#8b5cf6);display:flex;align-items:center;justify-content:center;font-size:20px;flex:0 0 auto}
+.header-info{flex:1;min-width:0}
+.header-name{font-weight:600;font-size:16px;line-height:1.2}
+.header-status{font-size:13px;color:#3a8bf0;line-height:1.2}
+.menu-icon{color:#a0a8b4;font-size:22px;flex:0 0 auto;cursor:pointer}
+
+/* Chat area */
+.chat{padding:10px 14px;display:flex;flex-direction:column;gap:4px;padding-bottom:60px}
+.date-sep{text-align:center;font-size:13px;color:#7d8e9e;margin:10px 0 6px;background:#17212b;border-radius:12px;padding:3px 10px;align-self:center}
+
+/* Messages */
+.msg-wrap{display:flex;flex-direction:column;max-width:80%}
+.msg-wrap.bot{align-self:flex-start;align-items:flex-start}
+.msg-wrap.user{align-self:flex-end;align-items:flex-end}
+.msg{padding:8px 12px 10px;font-size:15px;line-height:1.35;border-radius:16px;position:relative;margin-top:3px}
+.msg.bot{background:#182533;border-bottom-left-radius:4px}
+.msg.user{background:#2b5278;border-bottom-right-radius:4px}
+.msg .time{font-size:11px;color:#7d8e9e;position:absolute;bottom:3px;right:8px}
+.msg.bot .time{color:#6d7989}
+
+/* Inline keyboard button */
+.inline-btn{background:#17212b;border:1px solid #2b5278;border-radius:12px;padding:14px 18px;font-size:15px;color:#3a8bf0;font-weight:500;cursor:pointer;margin-top:6px;align-self:flex-start;text-align:center;width:100%;max-width:280px}
+.inline-btn:active{background:#1c2b3a}
+
+/* Input bar (decorative) */
+.input-bar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:390px;background:#17212b;padding:8px 12px;display:flex;align-items:center;gap:8px;border-top:1px solid #0e1621;z-index:10}
+.input-bar input{flex:1;background:#17212b;border:1px solid #2b3a4a;border-radius:20px;padding:10px 14px;color:#fff;font-size:14px;outline:none}
+.input-bar input::placeholder{color:#5d6d7e}
+.send-btn{width:40px;height:40px;border-radius:50%;background:#3a8bf0;border:0;color:#fff;font-size:16px;cursor:pointer;flex:0 0 auto;display:flex;align-items:center;justify-content:center}
 </style>
 </head>
 <body>
-  <div class="header">
-    <div class="avatar">🏋️</div>
-    <div>
-      <div class="name">Gym Coach</div>
-      <div class="status">en línea</div>
-    </div>
+
+<div class="header">
+  <span class="back-arrow">‹</span>
+  <div class="avatar">🏋️</div>
+  <div class="header-info">
+    <div class="header-name">Gym Coach</div>
+    <div class="header-status">en línea</div>
   </div>
-  <div class="chat">
-    <div class="date-sep">Hoy</div>
-    <div class="msg user">Voy a entrenar <span class="time">21:43</span></div>
-    <div class="msg bot">¡Vamos! ¿Cuánta energía tienes del 1 al 10? ¿Algún grupo muscular con molestia? <span class="time">21:43</span></div>
-    <div class="msg user">Energía 7, sin molestias. Tengo 45 min <span class="time">21:44</span></div>
-    <div class="msg bot">Perfecto. Te preparo 4 ejercicios de push/pull. 3 series cada uno, descanso 90s. Adaptado a tu perfil. <span class="time">21:44</span></div>
-    <div class="msg bot">Te abro el plan 👇 <span class="time">21:45</span></div>
-    <div class="btn-attach">📋 Abrir plan de entrenamiento</div>
-    <div class="typing">coach está escribiendo...</div>
+  <span class="menu-icon">⋮</span>
+</div>
+
+<div class="chat">
+  <div class="date-sep">8 julio</div>
+
+  <div class="msg-wrap user">
+    <div class="msg user">Voy a entrenar 💪<span class="time">21:43</span></div>
   </div>
+
+  <div class="msg-wrap bot">
+    <div class="msg bot">¡Vamos! ¿Cuánta energía tienes del 1 al 10? ¿Algún grupo muscular con molestia?<span class="time">21:43</span></div>
+  </div>
+
+  <div class="msg-wrap user">
+    <div class="msg user">Energía 7, sin molestias. Tengo 45 min<span class="time">21:44</span></div>
+  </div>
+
+  <div class="msg-wrap bot">
+    <div class="msg bot">Perfecto. Te preparo 4 ejercicios de push/pull. 3 series cada uno, descanso 90s. Adaptado a tu perfil y a lo que tienes en tu gym.<span class="time">21:44</span></div>
+  </div>
+
+  <div class="msg-wrap bot">
+    <div class="msg bot">Te abro el plan 👇<span class="time">21:45</span></div>
+    <div class="inline-btn">📋 Abrir plan de entrenamiento</div>
+  </div>
+
+  <div class="msg-wrap user">
+    <div class="msg user">El segundo ejercicio no tengo esa máquina<span class="time">21:48</span></div>
+  </div>
+
+  <div class="msg-wrap bot">
+    <div class="msg bot">Sin problema. Lo cambio por Remo en polea baja, mismo grupo muscular. Actualizado 👍<span class="time">21:48</span></div>
+  </div>
+
+  <div class="msg-wrap user">
+    <div class="msg user">He terminado. Bastante bien, el press me ha costado<span class="time">22:15</span></div>
+  </div>
+
+  <div class="msg-wrap bot">
+    <div class="msg bot">Lo apunto. La próxima vez bajamos un kilo el press y subimos reps. Buen entreno 🔥<span class="time">22:15</span></div>
+  </div>
+</div>
+
+<div class="input-bar">
+  <input type="text" placeholder="Mensaje" readonly>
+  <div class="send-btn">➤</div>
+</div>
+
 </body>
 </html>
