@@ -357,6 +357,14 @@
     const p=params();
     if(p.share_token){ try{ await loadSession(null,p.share_token); renderPlan(); }catch(e){ $('plan-body').innerHTML='<div class="empty"><div class="icon">🔗</div><p>No pude cargar este enlace.</p></div>'; } return; }
     if(p.session_id){ try{ await loadSession(p.session_id); if(p.exercise_id) openExercise(p.exercise_id); else renderPlan(); }catch(e){ $('plan-body').innerHTML='<div class="empty"><div class="icon">⚠️</div><p>No pude cargar la sesión.</p></div>'; } return; }
+    // Plain browser without Telegram identity: the API can't know who you
+    // are, so don't pretend to be an app. localhost keeps working for dev.
+    const inTelegram = !!(tg?.initData && tg.initData.length>10);
+    if(!inTelegram && location.hostname!=='localhost'){
+      $('active-card').innerHTML='<h2>Esta Mini App vive dentro de Telegram</h2><p>Ábrela desde el chat con tu coach: él te manda el botón. En el navegador solo se pueden ver rutinas compartidas con enlace.</p><p style="margin-top:8px"><a href="https://jlfernandezfernandez.github.io/gym-tracker/" style="color:var(--text);text-decoration:underline">Conoce el proyecto</a></p>';
+      document.querySelector('.grid').style.display='none';
+      return;
+    }
     await initLanding();
   });
 })();
