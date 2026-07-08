@@ -153,7 +153,19 @@ Send a message to your bot in Telegram. It should respond as the coach.
 
 | Variable | Default | Description |
 |---|---|---|
-| `GYM_TRACKER_API_BASE` | `https://gym.jordixlab.com/api` | API base URL |
-| `GYM_TRACKER_APP_BASE` | `https://gym.jordixlab.com` | Mini App base URL |
+| `GYM_TRACKER_API_BASE` | `http://localhost:8000/api` | API base URL |
+| `GYM_TRACKER_APP_BASE` | `http://localhost:8000` | Mini App base URL |
+| `GYM_TRACKER_COACH_KEY` | _(empty)_ | Shared secret, must match the API's `COACH_API_KEY` |
+
+## Shared (multi-user) instances
+
+One coach can serve several people. The API scopes all data by Telegram user id:
+
+- The Mini App authenticates each user automatically via initData.
+- The coach MCP authenticates with `GYM_TRACKER_COACH_KEY` and says *who* it
+  is acting for by passing `telegram_user_id` (the Telegram id of the chat)
+  on profile/session tools.
+- Without a user id, coach calls are unscoped (see everything) — fine for a
+  personal instance, not for a shared one.
 
 Set these in the Hermes profile's `.env` file or `config.yaml`.

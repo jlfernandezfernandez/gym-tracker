@@ -4,137 +4,227 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Gym Coach — Tu entrenador en Telegram</title>
-<meta name="description" content="Conecta un coach de IA a tu Telegram. Él te pregunta, crea tus entrenos y te los abre en una Mini App.">
+<meta name="description" content="Conecta un coach de IA a tu Telegram. Él te pregunta, crea tus entrenos y te los abre en una Mini App. Open source, self-hosted, MCP.">
+<meta property="og:title" content="Gym Coach — Tu entrenador en Telegram">
+<meta property="og:description" content="Un agente de IA que te conoce, crea tus entrenos y te guía serie a serie en Telegram. Open source, self-hosted, MCP.">
+<meta property="og:image" content="https://jlfernandezfernandez.github.io/gym-tracker/assets/telegram-chat.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏋️</text></svg>">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0f1120;--sec:#1a1d33;--text:#f0f1fa;--hint:#8b91b0;--btn:#6d65ff;--border:rgba(255,255,255,.08)}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;overflow-x:hidden}
-a{color:var(--btn);text-decoration:none}
-.container{max-width:780px;margin:0 auto;padding:0 20px}
-.hero{text-align:center;padding:60px 0 40px}
-.hero h1{font-size:42px;line-height:1.05;letter-spacing:-.03em;font-weight:800;margin-bottom:12px}
-.hero p{font-size:18px;color:var(--hint);max-width:560px;margin:0 auto}
-.hero .cta{display:flex;gap:12px;justify-content:center;margin-top:24px;flex-wrap:wrap}
-.btn{padding:14px 24px;border-radius:14px;font-weight:700;font-size:15px;border:0;cursor:pointer;transition:opacity .12s,transform .08s}
-.btn:active{transform:scale(.97)}
-.btn.primary{background:var(--btn);color:#fff}
-.btn.secondary{background:var(--sec);color:var(--text);border:1px solid var(--border)}
-.screenshots{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:40px 0}
-.screenshots img{width:100%;border-radius:16px;border:1px solid var(--border)}
-.screenshots .full{grid-column:1/-1}
-.section{padding:40px 0;border-top:1px solid var(--border)}
-.section h2{font-size:28px;font-weight:800;margin-bottom:16px;letter-spacing:-.02em}
-.section p{color:var(--hint);font-size:16px;margin-bottom:12px}
-.features{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:20px}
-.feature{background:var(--sec);border:1px solid var(--border);border-radius:16px;padding:20px}
-.feature h3{font-size:17px;font-weight:700;margin-bottom:6px}
-.feature p{font-size:14px;margin:0}
-.arch{background:var(--sec);border:1px solid var(--border);border-radius:16px;padding:20px;margin-top:20px;font-family:monospace;font-size:13px;line-height:1.6;color:var(--hint)}
-.steps{counter-reset:step;margin-top:20px}
-.step{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--border)}
-.step:last-child{border:0}
-.step::before{counter-increment:step;content:counter(step);flex:0 0 32px;height:32px;border-radius:50%;background:var(--btn);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px}
-.step div h3{font-size:16px;font-weight:600;margin-bottom:2px}
-.step div p{font-size:14px;margin:0}
-.steps-code{background:var(--sec);border:1px solid var(--border);border-radius:12px;padding:16px;font-family:monospace;font-size:13px;overflow-x:auto;margin-top:12px;color:var(--hint)}
-footer{text-align:center;padding:40px 0;color:var(--hint);font-size:14px;border-top:1px solid var(--border)}
-.badge{display:inline-block;padding:4px 12px;border-radius:999px;background:rgba(109,101,255,.15);color:var(--btn);font-size:12px;font-weight:600;margin-bottom:16px}
-@media(max-width:600px){.hero h1{font-size:30px}.screenshots{grid-template-columns:1fr}.features{grid-template-columns:1fr}}
+:root{
+  --bg:#09090b;--sec:#131315;--text:#fafafa;--hint:#a1a1aa;--dim:#71717a;
+  --border:rgba(255,255,255,.09);--border-hi:rgba(255,255,255,.18);
+}
+html{scroll-behavior:smooth}
+body{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:var(--text);text-decoration:none}
+.container{max-width:960px;margin:0 auto;padding:0 24px}
+nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid var(--border)}
+nav .logo{font-weight:700;letter-spacing:-.02em;font-size:15px}
+nav .links{display:flex;gap:20px;font-size:13.5px;color:var(--hint)}
+nav .links a{color:var(--hint);transition:color .15s}
+nav .links a:hover{color:var(--text)}
+.hero{text-align:center;padding:88px 0 56px;position:relative}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 300px at 50% 0%,rgba(255,255,255,.06),transparent);pointer-events:none}
+.badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:999px;border:1px solid var(--border);color:var(--hint);font-size:12.5px;font-weight:500;margin-bottom:24px;background:var(--sec)}
+.badge b{color:var(--text);font-weight:600}
+.hero h1{font-size:56px;line-height:1.03;letter-spacing:-.045em;font-weight:700;margin-bottom:18px;background:linear-gradient(180deg,#fff 30%,#a1a1aa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{font-size:17px;color:var(--hint);max-width:540px;margin:0 auto;line-height:1.65}
+.cta{display:flex;gap:10px;justify-content:center;margin-top:32px;flex-wrap:wrap}
+.btn{padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;border:1px solid transparent;cursor:pointer;transition:opacity .15s,background .15s,border-color .15s;letter-spacing:-.01em;display:inline-block}
+.btn.primary{background:var(--text);color:var(--bg)}
+.btn.primary:hover{opacity:.85}
+.btn.secondary{background:transparent;color:var(--text);border-color:var(--border)}
+.btn.secondary:hover{border-color:var(--border-hi)}
+.phones{display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:52px 0 8px;flex-wrap:wrap}
+.phone{width:250px;border-radius:38px;border:1px solid var(--border-hi);background:#000;padding:9px;box-shadow:0 30px 70px rgba(0,0,0,.55)}
+.phone img{width:100%;border-radius:30px;display:block}
+.phone .cap{text-align:center;font-size:12.5px;color:var(--dim);padding:12px 0 4px}
+.sim{max-width:400px;margin:44px auto 0;border:1px solid var(--border);border-radius:16px;background:var(--sec);padding:18px;text-align:left}
+.sim .h{display:flex;align-items:center;gap:10px;padding-bottom:12px;border-bottom:1px solid var(--border);margin-bottom:4px}
+.sim .av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#27272a,#3f3f46);display:flex;align-items:center;justify-content:center;font-size:15px}
+.sim .h b{font-size:13.5px;display:block;line-height:1.2}
+.sim .h span{font-size:11.5px;color:#4ade80}
+.bub{max-width:82%;padding:8px 12px;border-radius:12px;font-size:13px;line-height:1.45;margin-top:8px;opacity:0;animation:bub 16s infinite}
+.bub.me{background:#27272a;margin-left:auto;border-bottom-right-radius:4px;width:fit-content}
+.bub.bot{background:rgba(255,255,255,.05);border:1px solid var(--border);border-bottom-left-radius:4px;color:var(--hint);width:fit-content}
+.bub.btn-sim{background:transparent;border:1px solid var(--border-hi);color:var(--text);text-align:center;max-width:100%;font-weight:600}
+@keyframes bub{0%{opacity:0;transform:translateY(8px)}3%{opacity:1;transform:none}90%{opacity:1}97%{opacity:0}100%{opacity:0}}
+.feats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:28px}
+.feat{border:1px solid var(--border);border-radius:12px;padding:18px;background:var(--sec)}
+.feat .ic{font-size:20px;margin-bottom:8px}
+.feat h3{font-size:14px;font-weight:600;margin-bottom:4px;letter-spacing:-.01em}
+.feat p{font-size:12.5px;color:var(--hint);line-height:1.55}
+.section{padding:72px 0 0}
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
+.section h2{font-size:30px;font-weight:700;letter-spacing:-.03em;margin-bottom:12px}
+.section>.container>p,.lead{color:var(--hint);font-size:15.5px;max-width:640px}
+.features{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:28px}
+.feature{border:1px solid var(--border);border-radius:12px;padding:22px;background:var(--sec);transition:border-color .2s}
+.feature:hover{border-color:var(--border-hi)}
+.feature h3{font-size:15px;font-weight:600;margin-bottom:6px;letter-spacing:-.01em}
+.feature p{font-size:13.5px;color:var(--hint);line-height:1.6}
+.steps{margin-top:28px;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.step{display:flex;gap:18px;padding:18px 22px;border-bottom:1px solid var(--border);background:var(--sec)}
+.step:last-child{border-bottom:0}
+.step .n{flex:0 0 26px;height:26px;border-radius:8px;border:1px solid var(--border);color:var(--hint);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:12.5px;margin-top:2px}
+.step h3{font-size:14.5px;font-weight:600;margin-bottom:2px;letter-spacing:-.01em}
+.step p{font-size:13.5px;color:var(--hint);line-height:1.55}
+pre{background:var(--sec);border:1px solid var(--border);border-radius:12px;padding:18px 20px;font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:13px;line-height:1.7;overflow-x:auto;margin-top:14px;color:var(--hint)}
+pre b{color:var(--text);font-weight:500}
+.arch{font-family:ui-monospace,'SF Mono',Menlo,monospace;font-size:13px;line-height:1.8;color:var(--hint);background:var(--sec);border:1px solid var(--border);border-radius:12px;padding:22px;margin-top:24px;overflow-x:auto;white-space:pre}
+h3.sub{margin-top:32px;font-size:16px;font-weight:600;letter-spacing:-.01em}
+footer{margin-top:88px;border-top:1px solid var(--border);padding:36px 0 44px;color:var(--dim);font-size:13.5px}
+footer .frow{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap}
+footer a{color:var(--hint)}
+footer a:hover{color:var(--text)}
+@media(max-width:640px){
+  .hero{padding:56px 0 36px}
+  .hero h1{font-size:36px}
+  .features{grid-template-columns:1fr}
+  .feats{grid-template-columns:1fr 1fr}
+  .phone{width:210px}
+  nav .links{display:none}
+  .section{padding:56px 0 0}
+}
 </style>
 </head>
 <body>
 
 <div class="container">
+  <nav>
+    <span class="logo">🏋️ Gym Coach</span>
+    <div class="links">
+      <a href="#como">Cómo funciona</a>
+      <a href="#setup">Setup</a>
+      <a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/CONTRIBUTING.md">Contribuir</a>
+      <a href="https://github.com/jlfernandezfernandez/gym-tracker">GitHub</a>
+    </div>
+  </nav>
+</div>
 
-  <div class="hero">
-    <span class="badge">🏋️ Agent-oriented · MCP · Telegram Mini App</span>
-    <h1>Tu entrenador vive en Telegram.</h1>
-    <p>No es una app de gimnasio más. Es un coach de IA que te conoce, crea tus entrenos y te guía serie a serie — todo por chat.</p>
+<div class="hero">
+  <div class="container">
+    <span class="badge"><b>Open source</b> · Agent-first · MCP · Telegram Mini App</span>
+    <h1>Tu entrenador<br>vive en Telegram.</h1>
+    <p>No es otra app de gimnasio. Es un coach de IA que te conoce, crea tus entrenos, te guía serie a serie y se adapta en tiempo real — todo por chat.</p>
     <div class="cta">
-      <a href="https://github.com/jlfernandezfernandez/gym-tracker" class="btn primary">⬇ Ver en GitHub</a>
-      <a href="#setup" class="btn secondary">🚀 Cómo montarlo</a>
+      <a href="https://github.com/jlfernandezfernandez/gym-tracker" class="btn primary">Ver en GitHub</a>
+      <a href="#setup" class="btn secondary">Montar el tuyo</a>
+    </div>
+    <div class="sim" aria-hidden="true">
+      <div class="h"><div class="av">🏋️</div><div><b>Gym Coach</b><span>en línea</span></div></div>
+      <div class="bub me" style="animation-delay:.5s">Voy a entrenar 💪</div>
+      <div class="bub bot" style="animation-delay:2s">¿Energía del 1 al 10? ¿Alguna molestia?</div>
+      <div class="bub me" style="animation-delay:4s">Energía 7, sin molestias. Tengo 45 min</div>
+      <div class="bub bot" style="animation-delay:6s">Perfecto: 4 ejercicios push/pull, pesos según tu progresión. Te abro el plan 👇</div>
+      <div class="bub btn-sim" style="animation-delay:7.5s">📋 Abrir plan de entrenamiento</div>
+      <div class="bub me" style="animation-delay:9.5s">No tengo la máquina del segundo</div>
+      <div class="bub bot" style="animation-delay:11s">Lo cambio por remo en polea y lo apunto para no volver a proponerla 👍</div>
     </div>
   </div>
+</div>
 
-  <div class="screenshots">
-    <img src="assets/telegram-chat.png" alt="Chat con el coach en Telegram">
-    <img src="assets/mini-app-plan.png" alt="Mini App mostrando el plan del día">
-    <img src="assets/mini-app-exercise.png" alt="Mini App registrando series" class="full">
+<div class="container">
+
+  <div class="phones">
+    <div class="phone"><img src="assets/telegram-chat.png" alt="Chat con el coach en Telegram"><div class="cap">Hablas con el coach</div></div>
+    <div class="phone"><img src="assets/mini-app-plan.png" alt="Plan del día con mapa muscular"><div class="cap">Plan con zonas a trabajar</div></div>
+    <div class="phone"><img src="assets/mini-app-exercise.png" alt="Ejercicio con progresión y registro de series"><div class="cap">Progresión y registro por serie</div></div>
   </div>
 
-  <div class="section">
-    <h2>¿Cómo funciona?</h2>
-    <p>Hablas con tu coach en Telegram. Él te pregunta, crea el plan y te lo abre. Tú entrenas y registras series en la Mini App. El coach ajusta en tiempo real.</p>
+  <div class="section" id="como">
+    <p class="eyebrow">Flujo</p>
+    <h2>Cómo funciona</h2>
+    <p class="lead">Hablas con tu coach. Él pregunta, crea el plan y te lo abre en una Mini App. Tú entrenas; él ajusta en vivo.</p>
     <div class="steps">
-      <div class="step"><div><h3>Le dices que vas a entrenar</h3><p>«Voy a entrenar». El coach pregunta energía, tiempo y molestias.</p></div></div>
-      <div class="step"><div><h3>Él crea el plan adaptado</h3><p>Basado en tu perfil, historial y energía del día. 4-6 ejercicios, series y pesos sugeridos.</p></div></div>
-      <div class="step"><div><h3>Te abre la Mini App</h3><p>Un botón en el chat abre el plan visual. Ves cada ejercicio, gif, series. Registras tocando.</p></div></div>
-      <div class="step"><div><h3>Él ajusta en vivo</h3><p>¿Máquina ocupada? ¿Molestia? Le dices por chat y cambia el ejercicio al instante.</p></div></div>
-      <div class="step"><div><h3>Al terminar, feedback</h3><p>Le cuentas cómo fue. Guarda todo. La próxima vez adapta mejor.</p></div></div>
+      <div class="step"><span class="n">1</span><div><h3>Le dices que vas a entrenar</h3><p>«Voy a entrenar». El coach pregunta energía, tiempo y molestias.</p></div></div>
+      <div class="step"><span class="n">2</span><div><h3>Crea el plan adaptado</h3><p>Basado en tu perfil, historial y energía del día. Ejercicios, series y pesos sugeridos.</p></div></div>
+      <div class="step"><span class="n">3</span><div><h3>Te abre la Mini App</h3><p>Un botón en el chat abre el plan visual. Ves cada ejercicio y registras tocando. ¿No convence? Lo descarta y crea otro.</p></div></div>
+      <div class="step"><span class="n">4</span><div><h3>Ajusta en vivo</h3><p>¿Máquina ocupada? ¿Molestia? Se lo dices por chat y cambia el ejercicio al instante.</p></div></div>
+      <div class="step"><span class="n">5</span><div><h3>Feedback y memoria</h3><p>Al terminar le cuentas cómo fue. Lo guarda todo y la próxima vez adapta mejor. Puedes compartir la rutina con un link de solo lectura.</p></div></div>
     </div>
   </div>
 
   <div class="section">
-    <h2>¿Por qué es diferente?</h2>
+    <p class="eyebrow">Funcionalidades</p>
+    <h2>Todo lo que hace</h2>
+    <div class="feats">
+      <div class="feat"><div class="ic">💬</div><h3>Onboarding por chat</h3><p>El coach te conoce conversando: objetivo, lesiones, equipamiento. Sin formularios.</p></div>
+      <div class="feat"><div class="ic">📋</div><h3>Preview del plan</h3><p>Ves el entreno antes de empezar. ¿No convence? Lo descarta y crea otro.</p></div>
+      <div class="feat"><div class="ic">🫀</div><h3>Mapa muscular</h3><p>Cada plan muestra el cuerpo con las zonas a trabajar resaltadas.</p></div>
+      <div class="feat"><div class="ic">📈</div><h3>Progresión</h3><p>Gráfica de peso máximo por sesión en cada ejercicio. El coach elige cargas con datos.</p></div>
+      <div class="feat"><div class="ic">✍️</div><h3>Registro en un toque</h3><p>Series, pesos y sensaciones desde la Mini App o dictándoselo al coach.</p></div>
+      <div class="feat"><div class="ic">🔁</div><h3>Cambios en caliente</h3><p>Máquina ocupada o molestia: lo dices por chat y cambia el ejercicio al momento.</p></div>
+      <div class="feat"><div class="ic">🔗</div><h3>Comparte tu rutina</h3><p>Link de solo lectura para que un compañero la vea en cualquier navegador.</p></div>
+      <div class="feat"><div class="ic">👥</div><h3>Multi-usuario</h3><p>Una instancia, varios atletas. Cada uno con su perfil, historial y sesiones.</p></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="eyebrow">Diferencia</p>
+    <h2>Agente, no plantilla</h2>
     <div class="features">
-      <div class="feature"><h3>🤖 Agente, no plantilla</h3><p>Cada entreno es único. El coach razona sobre tu perfil, no escupe una rutina pre-hecha.</p></div>
-      <div class="feature"><h3>💬 Todo por chat</h3><p>No rellenas formularios. Hablas. El coach hace todo: plan, series, cambios, feedback.</p></div>
-      <div class="feature"><h3>🔌 MCP = control total</h3><p>El agente controla la app entera via 18 herramientas MCP. La app es agnóstica al agente.</p></div>
-      <div class="feature"><h3>🔒 Tus datos son tuyos</h3><p>Auth via Telegram. Cada usuario ve solo lo suyo. Despliegas tu propia instancia.</p></div>
+      <div class="feature"><h3>El agente es el cerebro</h3><p>La app no tiene IA: solo persiste perfil, sesiones y series. Cada entreno lo razona el coach sobre tu perfil real.</p></div>
+      <div class="feature"><h3>Todo por chat</h3><p>Sin formularios. El onboarding, los planes, los cambios y el feedback son conversación.</p></div>
+      <div class="feature"><h3>MCP = control total</h3><p>21 herramientas MCP controlan la app entera. Agnóstica al agente: Hermes, Claude, Cursor o el que venga.</p></div>
+      <div class="feature"><h3>Tus datos, tu servidor</h3><p>Self-hosted. Auth por Telegram, multi-usuario, datos en tu Postgres. Links de compartir en solo lectura.</p></div>
     </div>
   </div>
 
   <div class="section">
-    <h2>Arquitectura</h2>
-    <div class="arch">
-Tú ──Telegram──> Coach (Hermes) ──MCP──> API (FastAPI) ──> Postgres
+    <p class="eyebrow">Arquitectura</p>
+    <h2>Pensada para agentes</h2>
+    <div class="arch">Tú ──Telegram──▶ Coach (agente) ──MCP──▶ API (FastAPI) ──▶ Postgres
                       │
-                      └──deep link──> Mini App (visual)
-    </div>
-    <p style="margin-top:12px">La app no sabe quién es el coach. Solo expone herramientas MCP. Cualquier agente con soporte MCP puede controlarla.</p>
+                      └──deep link──▶ Mini App (visual)</div>
+    <p style="margin-top:14px;color:var(--hint);font-size:14.5px">La app no sabe quién es el coach. Solo expone una API y 21 tools MCP. El README incluye el manual de operación para que cualquier agente se genere su propia skill al conectarse.</p>
   </div>
 
   <div class="section" id="setup">
+    <p class="eyebrow">Setup</p>
     <h2>Montar tu propio coach</h2>
-    <p>Dos opciones: Docker Compose local (5 min) o Coolify con dominio.</p>
+    <p class="lead">Docker Compose en local o Coolify con dominio. Sin build steps: un contenedor, un Postgres.</p>
 
-    <h3 style="margin-top:20px;font-size:18px">Opción A — Docker Compose</h3>
-    <div class="steps-code">git clone https://github.com/jlfernandezfernandez/gym-tracker.git
-cd gym-tracker
-cp .env.example .env  # pon tu TELEGRAM_BOT_TOKEN
-docker compose up -d  # app en localhost:8000</div>
+    <h3 class="sub">1 — Levanta la app</h3>
+    <pre><b>git clone</b> https://github.com/jlfernandezfernandez/gym-tracker.git
+<b>cd</b> gym-tracker
+<b>cp</b> .env.example .env      # TELEGRAM_BOT_TOKEN de @BotFather
+<b>docker compose up -d</b>     # app en localhost:8000, catálogo se carga solo</pre>
 
-    <h3 style="margin-top:20px;font-size:18px">Opción B — Coolify</h3>
-    <div class="steps-code"># 1. Fork del repo en GitHub
-# 2. Coolify → New Resource → GitHub → gym-tracker
-# 3. Añadir Postgres como servicio vinculado
-# 4. Env vars: TELEGRAM_BOT_TOKEN, CORS_ORIGINS
-# 5. Deploy</div>
-
-    <h3 style="margin-top:20px;font-size:18px">Conectar el coach (Hermes)</h3>
-    <div class="steps-code">hermes profile create gym-coach
-hermes -p gym-coach mcp add gym_tracker \
+    <h3 class="sub">2 — Conecta tu agente (ej. Hermes)</h3>
+    <pre><b>hermes profile create</b> gym-coach
+<b>hermes -p gym-coach mcp add</b> gym_tracker \
   --stdio mcp/gym_tracker_mcp.py \
   --env GYM_TRACKER_API_BASE=https://gym.tu-dominio.com/api
 
-hermes -p gym-coach config set telegram.bot_token "TOKEN"
-hermes -p gym-coach gateway start</div>
-    <p style="margin-top:12px">Lee <a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/docs/coach-setup.md">docs/coach-setup.md</a> para la guía completa.</p>
+<b>hermes -p gym-coach config set</b> telegram.bot_token "TOKEN"
+<b>hermes -p gym-coach gateway start</b></pre>
+    <p style="margin-top:14px;color:var(--hint);font-size:14.5px">Guía completa paso a paso en <a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/docs/coach-setup.md" style="text-decoration:underline">docs/coach-setup.md</a>.</p>
   </div>
 
   <div class="section">
-    <h2>Stack</h2>
+    <p class="eyebrow">Stack</p>
+    <h2>Simple a propósito</h2>
     <div class="features">
-      <div class="feature"><h3>FastAPI + SQLModel</h3><p>Backend async, Postgres, 9 endpoints REST.</p></div>
-      <div class="feature"><h3>Astro Mini App</h3><p>Frontend static build, Telegram WebApp SDK.</p></div>
-      <div class="feature"><h3>FastMCP</h3><p>18 herramientas, stdio transport, sin auth.</p></div>
-      <div class="feature"><h3>Docker multi-stage</h3><p>Astro build + FastAPI en un contenedor.</p></div>
+      <div class="feature"><h3>FastAPI + SQLModel</h3><p>Backend async sobre Postgres. Auth HMAC de Telegram initData, scoping por usuario.</p></div>
+      <div class="feature"><h3>Mini App vanilla</h3><p>Un solo HTML estático con el SDK de Telegram. Cero dependencias, cero build.</p></div>
+      <div class="feature"><h3>FastMCP</h3><p>21 herramientas por stdio. Docstrings = documentación que el agente lee al conectarse.</p></div>
+      <div class="feature"><h3>Docker</h3><p>API + Mini App en un contenedor. Compose local o Coolify en producción.</p></div>
     </div>
   </div>
 
   <footer>
-    <p>Hecho por un agente Hermes. Pensado para agentes. MIT License.</p>
-    <p style="margin-top:8px"><a href="https://github.com/jlfernandezfernandez/gym-tracker">GitHub</a> · <a href="https://hermes-agent.nousresearch.com">Hermes Agent</a></p>
+    <div class="frow">
+      <span>MIT License · Hecho por un agente Hermes, pensado para agentes.</span>
+      <span>
+        <a href="https://github.com/jlfernandezfernandez/gym-tracker">GitHub</a> ·
+        <a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/CONTRIBUTING.md">Contribuir</a> ·
+        <a href="https://hermes-agent.nousresearch.com">Hermes Agent</a>
+      </span>
+    </div>
   </footer>
 
 </div>
