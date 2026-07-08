@@ -1,0 +1,19 @@
+name: CI
+on:
+  push: {branches: [main]}
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.13"}
+      - name: Install deps
+        run: pip install -r backend/requirements.txt mcp
+      - name: Syntax + imports
+        run: |
+          python -m compileall -q backend mcp
+          cd backend && python -c "import main, telegram_auth, schemas, models"
+      - name: Docker build
+        run: docker build -t gym-tracker .

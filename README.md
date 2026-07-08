@@ -77,6 +77,7 @@ cd gym-tracker
 # Configurar
 cp .env.example .env
 # Edita .env: pon tu TELEGRAM_BOT_TOKEN (de @BotFather)
+# ⚠️ Sin token la auth queda DESACTIVADA (solo para dev local)
 
 # Levantar
 docker compose up -d
