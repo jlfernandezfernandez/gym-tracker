@@ -1,0 +1,15 @@
+# Build context exclusions — keeps Docker build fast and small
+.venv
+backend/.venv
+node_modules
+.git
+.astro
+dist
+*.log
+.env
+.env.local
+__pycache__
+*.pyc
+.vscode
+.idea
+.DS_Store

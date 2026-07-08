@@ -1,0 +1,72 @@
+"""
+Gym Tracker — FastAPI Backend
+
+Endpoints for workout session management, exercise catalog, and Hermes AI coach.
+"""
+
+from contextlib import asynccontextmanager
+import os
+
+import logging
+
+from dotenv import load_dotenv
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+
+from database import init_db
+from routers import sessions, exercises, coach, profile
+
+load_dotenv()
+logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
+logger = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize DB on startup, clean up on shutdown."""
+    try:
+        await init_db()
+        logger.info("Database initialized successfully")
+    except Exception as e:
+        logger.error("Failed to initialize database: %s", e)
+        raise
+    yield
+
+
+app = FastAPI(
+    title="Gym Tracker API",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# CORS — allow the Mini App domain(s)
+origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "*").split(",")]
+is_wildcard = "*" in origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=not is_wildcard,  # credentials incompatible with wildcard
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Routers
+app.include_router(sessions.router)
+app.include_router(exercises.router)
+app.include_router(coach.router)
+app.include_router(profile.router)
+
+
+@app.get("/health")
+@app.get("/api/health")
+async def health():
+    return {"status": "ok", "version": "1.0.0"}
+
+
+# Serve Astro-built Telegram Mini App from the same container/domain.
+# Keep this after API routes so /api/* and /health continue to resolve first.
+if os.path.isdir("/app/static"):
+    app.mount("/", StaticFiles(directory="/app/static", html=True), name="frontend")
+elif os.path.isdir("static"):
+    app.mount("/", StaticFiles(directory="static", html=True), name="frontend")

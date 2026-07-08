@@ -1,0 +1,45 @@
+# =============================================================================
+# gym-tracker — docker-compose.yml (local dev)
+# =============================================================================
+# Usage:
+#   docker compose up -d          # start app + db
+#   docker compose down           # stop everything
+#   docker compose logs -f        # follow logs
+# =============================================================================
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: gym-tracker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-gym_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gym_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-gym_tracker}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gym_user} -d ${POSTGRES_DB:-gym_tracker}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gym-tracker-app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@db:5432/${POSTGRES_DB:-gym_tracker}
+      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
