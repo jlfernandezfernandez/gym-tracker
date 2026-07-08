@@ -21,14 +21,7 @@ Y cuando necesitas ver el plan o registrar series tocando botones, te abre una *
 
 ## Cómo se ve
 
-### El chat con el coach
-![Chat de Telegram](docs/assets/telegram-chat.png)
-
-### La Mini App — plan del día
-![Plan](docs/assets/mini-app-plan.png)
-
-### La Mini App — registrar series
-![Ejercicio](docs/assets/mini-app-exercise.png)
+Demo visual en la web del proyecto: **[jlfernandezfernandez.github.io/gym-tracker](https://jlfernandezfernandez.github.io/gym-tracker/)**
 
 ---
 
