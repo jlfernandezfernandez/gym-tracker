@@ -151,7 +151,13 @@
   function normalize(s){ const pl=[...(s?.planned_exercises||[])].sort((a,b)=>(a.order??0)-(b.order??0)); return {...s, exercises: pl.map(pe=>({planned_id:pe.id, exercise_id:pe.exercise_id, order:pe.order, sets:pe.target_sets||3, reps:pe.target_reps||10, weight:pe.suggested_weight||0, notes:pe.notes||'', status:pe.status||'pending', performed_sets:pe.performed_sets||[], ...(pe.exercise||{})}))}; }
   function params(){ return Object.fromEntries(new URLSearchParams(location.search).entries()); }
   function currentExercise(){ const id=state.current?.current_planned_exercise_id; return state.plan?.exercises?.find(e=>String(e.planned_id)===String(id)) || state.plan?.exercises?.find(e=>['pending','in_progress','changed'].includes(e.status)) || state.plan?.exercises?.[0]; }
-  async function loadSession(id, share){ state.readOnly=!!share; const s=share?await api('GET','/sessions/share/'+encodeURIComponent(share)):await api('GET','/sessions/'+encodeURIComponent(id)); state.session=s; state.plan=normalize(s); try{ if(!share) state.current=await api('GET','/sessions/'+s.id+'/current'); }catch(e){ state.current=null; } return state.plan; }
+  async function loadSession(id, share){ 
+    state.readOnly = !!share && !tg?.initData; // read-only only if no Telegram auth
+    const s=share?await api('GET','/sessions/share/'+encodeURIComponent(share)):await api('GET','/sessions/'+encodeURIComponent(id)); 
+    state.session=s; state.plan=normalize(s); 
+    try{ if(!state.readOnly) state.current=await api('GET','/sessions/'+s.id+'/current'); }catch(e){ state.current=null; } 
+    return state.plan; 
+  }
 
   function renderLandingActive(data){
     const c=$('active-card');
