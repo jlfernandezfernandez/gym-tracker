@@ -14,7 +14,6 @@
       --btn-text:var(--tg-theme-button-text-color,#09090b);
       --sec:var(--tg-theme-secondary-bg-color,#131315);
       --hint:var(--tg-theme-hint-color,#a1a1aa);
-      --link:var(--tg-theme-link-color,#d4d4d8);
       --border:rgba(255,255,255,.09);
       --ok:#22c55e;--warn:#f59e0b;--err:#ef4444;--info:#3b82f6;
       --r:12px;--r-sm:8px;
@@ -39,8 +38,6 @@
     .btn:disabled{opacity:.35;pointer-events:none}
     .btn.secondary{background:var(--sec);color:var(--text);border-color:var(--border)}
     .btn.ghost{background:transparent;color:var(--hint);border-color:var(--border)}
-    .btn.danger{background:transparent;color:var(--err);border-color:rgba(239,68,68,.35)}
-    .btn.sm{padding:8px 12px;font-size:13px}
     .row{display:flex;gap:8px;align-items:center}
     .row .btn{flex:1;min-width:0}
     .screen{display:none;animation:fade .18s ease}
@@ -127,7 +124,6 @@
       </div>
       <div id="active-card" class="card"><div class="loading"><div class="spinner"></div><p>Buscando sesión activa...</p></div></div>
       <div class="grid" style="margin-top:14px">
-        <button class="btn" id="open-coach">Hablar con el coach</button>
         <button class="btn secondary" id="open-active">Abrir sesión activa</button>
         <div class="row"><button class="btn ghost" id="open-history">Historial</button><button class="btn ghost" id="open-profile">Perfil</button></div>
       </div>
@@ -161,7 +157,6 @@
 <script>
 (() => {
   const API = window.API_BASE_URL || location.origin + '/api';
-  const BOT = window.BOT_URL || '#';
   const tg = window.Telegram?.WebApp;
   if (tg) { tg.expand(); tg.setHeaderColor?.('secondary_bg_color'); }
   const state = { session:null, plan:null, current:null, readOnly:false };
@@ -256,12 +251,11 @@
       const tsets=exs.reduce((a,e)=>a+(e.performed_sets||[]).length,0);
       html+=`<div class="card"><h2>Sesión completada</h2>${p.feedback?`<p>${esc(p.feedback)}</p>`:''}<div class="grid stats" style="margin-top:10px"><div class="stat"><b>${tsets}</b><span>series</span></div><div class="stat"><b>${Math.round(vol)}</b><span>kg volumen</span></div><div class="stat"><b>${p.duration_actual||p.duration_estimated||0}min</b><span>duración</span></div></div></div>`;
     }
-    if(!state.readOnly && p.status!=='completed') html+=`<div class="row" style="margin-top:12px"><button class="btn" id="open-current">▶ Ejercicio actual</button><button class="btn secondary" id="finish">✓ Finalizar</button></div><button class="btn ghost" style="margin-top:8px" id="talk">💬 Pedir cambio al coach</button>`;
+    if(!state.readOnly && p.status!=='completed') html+=`<div class="row" style="margin-top:12px"><button class="btn" id="open-current">▶ Ejercicio actual</button><button class="btn secondary" id="finish">✓ Finalizar</button></div>`;
     $('plan-body').innerHTML=html;
     document.querySelectorAll('[data-open]').forEach(el=>el.onclick=()=>openExercise(el.dataset.open));
     $('open-current')?.addEventListener('click',()=>openExercise(currentExercise()?.planned_id));
     $('finish')?.addEventListener('click',finishSession);
-    $('talk')?.addEventListener('click',()=>openBot());
     screen('plan');
   }
 
@@ -287,7 +281,7 @@
     }
     if(state.readOnly){ $('ex-body').innerHTML=html; return; }
     const next=done+1;
-    html+=`<div class="card"><h2>Registrar serie ${next}</h2><div class="row" style="margin-top:10px"><label><p>Peso (kg)</p><input id="kg" type="number" inputmode="decimal" step="0.5" value="${esc(ex.weight||0)}"></label><label><p>Reps</p><input id="reps" type="number" inputmode="numeric" value="${esc(ex.reps||10)}"></label></div><textarea id="note" style="margin-top:10px" placeholder="Nota: fácil, duro, molestia..."></textarea><button class="btn" style="margin-top:10px" id="save-set">✓ Guardar serie</button></div><div class="row" style="margin-top:10px"><button class="btn secondary" id="complete-ex">✓ Completar</button><button class="btn ghost" id="change-ex">💬 Cambiar</button></div>`;
+    html+=`<div class="card"><h2>Registrar serie ${next}</h2><div class="row" style="margin-top:10px"><label><p>Peso (kg)</p><input id="kg" type="number" inputmode="decimal" step="0.5" value="${esc(ex.weight||0)}"></label><label><p>Reps</p><input id="reps" type="number" inputmode="numeric" value="${esc(ex.reps||10)}"></label></div><textarea id="note" style="margin-top:10px" placeholder="Nota: fácil, duro, molestia..."></textarea><button class="btn" style="margin-top:10px" id="save-set">✓ Guardar serie</button></div><button class="btn secondary" style="margin-top:10px" id="complete-ex">✓ Completar</button>`;
     $('ex-body').innerHTML=html;
     api('GET','/exercises/'+ex.exercise_id+'/progress?limit=12').then(pts=>{
       if(!pts||pts.length<2) return;
@@ -297,7 +291,6 @@
     }).catch(()=>{});
     $('save-set').onclick=()=>saveSet(ex);
     $('complete-ex').onclick=()=>completeExercise(ex);
-    $('change-ex').onclick=()=>openBot('cambiar ejercicio '+ex.name);
   }
 
   async function saveSet(ex){
@@ -350,16 +343,12 @@
       const rows=F.filter(([,v])=>v).map(([k,v])=>`<div class="set-row"><span class="n">${esc(k)}</span><span class="v" style="text-align:right;max-width:60%">${esc(v)}</span></div>`).join('');
       let html=`<div class="card"><h2>${esc(p.name||'Atleta')}</h2><p>${p.onboarding_complete?'Onboarding completo ✓':'Onboarding pendiente — habla con el coach'}</p></div>`;
       html+=rows?`<div class="card"><div class="sets">${rows}</div></div>`:'<div class="empty"><div class="icon">👤</div><p>Perfil vacío.<br>El coach lo rellena conversando contigo.</p></div>';
-      html+=`<button class="btn ghost" style="margin-top:12px" id="edit-profile">💬 Actualizar con el coach</button>`;
       $('profile-body').innerHTML=html;
-      $('edit-profile').onclick=()=>openBot('quiero actualizar mi perfil');
     }catch(e){ $('profile-body').innerHTML='<div class="empty"><div class="icon">⚠️</div><p>No pude cargar el perfil.</p></div>'; }
   }
 
-  function openBot(text){ if(tg) tg.close(); location.href = text ? BOT+'?text='+encodeURIComponent(text) : BOT; }
 
   document.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>screen(b.dataset.back));
-  $('open-coach').onclick=()=>openBot();
   $('open-active').onclick=()=> state.plan ? renderPlan() : toast('No hay sesión activa','err');
   $('open-history').onclick=renderHistory;
   $('open-profile').onclick=renderProfile;
