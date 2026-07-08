@@ -31,7 +31,7 @@ services:
     container_name: gym-tracker-app
     restart: unless-stopped
     ports:
-      - "8000:8000"
+      - "${APP_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@db:5432/${POSTGRES_DB:-gym_tracker}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}

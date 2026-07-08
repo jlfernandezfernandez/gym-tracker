@@ -31,6 +31,16 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error("Failed to initialize database: %s", e)
         raise
+    # Seed the exercise catalog on first boot (no-op if already seeded).
+    try:
+        from database import async_session
+        from seed.exercises import seed_exercises
+        async with async_session() as session:
+            n = await seed_exercises(session)
+            if n:
+                logger.info("Seeded %d exercises", n)
+    except Exception as e:
+        logger.warning("Exercise seed skipped: %s", e)
     yield
 
 
@@ -64,9 +74,9 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
-# Serve Astro-built Telegram Mini App from the same container/domain.
+# Serve the static Telegram Mini App from the same container/domain.
 # Keep this after API routes so /api/* and /health continue to resolve first.
-if os.path.isdir("/app/static"):
-    app.mount("/", StaticFiles(directory="/app/static", html=True), name="frontend")
-elif os.path.isdir("static"):
-    app.mount("/", StaticFiles(directory="static", html=True), name="frontend")
+# In Docker the frontend is copied to ./static; in local dev it lives in ../frontend.
+_static_dir = next((d for d in ("static", "../frontend") if os.path.isdir(d)), None)
+if _static_dir:
+    app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")

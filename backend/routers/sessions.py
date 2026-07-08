@@ -1,13 +1,13 @@
 from datetime import date
 
-from fastapi import APIRouter, Depends, HTTPException, Header
-from sqlalchemy import select, func
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing import Optional
 
 from database import get_session as get_db_session
-from telegram_auth import get_telegram_user_id
+from telegram_auth import current_user_id
 from models import WorkoutSession, PlannedExercise, PerformedSet
 from schemas import (
     SessionCreate,
@@ -18,10 +18,6 @@ from schemas import (
 )
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
-
-
-def _uid(init_data: Optional[str], coach_key: Optional[str]) -> Optional[int]:
-    return get_telegram_user_id(init_data, coach_key)
 
 
 async def _load_session(session_id: int, db: AsyncSession) -> WorkoutSession:
@@ -104,11 +100,9 @@ def _current_state(s: WorkoutSession) -> dict:
 async def create_session(
     body: SessionCreate,
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """Create a full session with planned exercises."""
-    uid = _uid(init_data, coach_key)
     db_session = WorkoutSession(
         title=body.title,
         goal=body.goal,
@@ -140,11 +134,9 @@ async def create_session(
 @router.get("/today", response_model=SessionOut)
 async def get_today_session(
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """Get today's latest session if it exists."""
-    uid = _uid(init_data, coach_key)
     stmt = select(WorkoutSession).where(WorkoutSession.session_date == date.today())
     if uid:
         stmt = stmt.where(WorkoutSession.telegram_user_id == uid)
@@ -162,11 +154,9 @@ async def get_today_session(
 @router.get("/active")
 async def get_active_session(
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """Get latest non-completed session with derived current exercise state."""
-    uid = _uid(init_data, coach_key)
     stmt = select(WorkoutSession).where(WorkoutSession.status != "completed")
     if uid:
         stmt = stmt.where(WorkoutSession.telegram_user_id == uid)
@@ -185,11 +175,9 @@ async def get_active_session(
 async def get_current_exercise(
     session_id: int,
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """Get derived current exercise/set for the agent and Mini App."""
-    uid = _uid(init_data, coach_key)
     s = await _load_session(session_id, db)
     _check_owner(s, uid)
     return _current_state(s)
@@ -200,11 +188,9 @@ async def complete_planned_exercise(
     session_id: int,
     planned_id: int,
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """Mark one planned exercise completed and keep session active."""
-    uid = _uid(init_data, coach_key)
     s = await _load_session(session_id, db)
     _check_owner(s, uid)
     pe = await db.get(PlannedExercise, planned_id)
@@ -242,11 +228,9 @@ async def get_shared_session(
 async def get_session(
     session_id: int,
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """Get a full session with exercises and performed sets."""
-    uid = _uid(init_data, coach_key)
     s = await _load_session(session_id, db)
     _check_owner(s, uid)
     return s
@@ -258,11 +242,9 @@ async def log_set(
     planned_id: int,
     body: PerformedSetCreate,
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """Log a performed set for a planned exercise."""
-    uid = _uid(init_data, coach_key)
     s = await _load_session(session_id, db)
     _check_owner(s, uid)
     pe = await db.get(PlannedExercise, planned_id)
@@ -290,6 +272,34 @@ async def log_set(
         pe.status = "in_progress"
 
     await db.commit()
+    # Expire cached objects so the reload includes the set we just inserted
+    # (expire_on_commit=False keeps the identity map otherwise).
+    db.expire_all()
+    return await _load_session(session_id, db)
+
+
+@router.delete("/{session_id}/exercises/{planned_id}/sets/{set_id}", response_model=SessionOut)
+async def delete_set(
+    session_id: int,
+    planned_id: int,
+    set_id: int,
+    db: AsyncSession = Depends(get_db_session),
+    uid: Optional[int] = Depends(current_user_id),
+):
+    """Delete a performed set (fix a wrongly logged one)."""
+    s = await _load_session(session_id, db)
+    _check_owner(s, uid)
+    pe = await db.get(PlannedExercise, planned_id)
+    if not pe or pe.session_id != session_id:
+        raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
+    ps = await db.get(PerformedSet, set_id)
+    if not ps or ps.planned_exercise_id != planned_id:
+        raise HTTPException(status_code=404, detail="Set not found in this exercise")
+    await db.delete(ps)
+    if pe.status == "completed":
+        pe.status = "in_progress"
+    await db.commit()
+    db.expire_all()
     return await _load_session(session_id, db)
 
 
@@ -298,11 +308,9 @@ async def finish_session(
     session_id: int,
     body: SessionFinish,
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """Finish a workout session, save feedback and actual duration."""
-    uid = _uid(init_data, coach_key)
     s = await _load_session(session_id, db)
     _check_owner(s, uid)
 
@@ -316,18 +324,38 @@ async def finish_session(
     return await _load_session(session_id, db)
 
 
+@router.delete("/{session_id}")
+async def delete_session(
+    session_id: int,
+    db: AsyncSession = Depends(get_db_session),
+    uid: Optional[int] = Depends(current_user_id),
+):
+    """Delete a session (e.g. discard a plan preview the athlete rejected)."""
+    s = await _load_session(session_id, db)
+    _check_owner(s, uid)
+    for pe in s.planned_exercises or []:
+        for ps in pe.performed_sets or []:
+            await db.delete(ps)
+        await db.delete(pe)
+    await db.delete(s)
+    await db.commit()
+    return {"deleted": session_id}
+
+
 @router.get("", response_model=list[SessionSummary])
 async def list_sessions(
     limit: int = 10,
     db: AsyncSession = Depends(get_db_session),
-    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
-    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    uid: Optional[int] = Depends(current_user_id),
 ):
     """List last N sessions with summary info."""
-    uid = _uid(init_data, coach_key)
     stmt = (
         select(WorkoutSession)
-        .options(selectinload(WorkoutSession.planned_exercises))
+        .options(
+            selectinload(WorkoutSession.planned_exercises).selectinload(
+                PlannedExercise.performed_sets
+            )
+        )
     )
     if uid:
         stmt = stmt.where(WorkoutSession.telegram_user_id == uid)

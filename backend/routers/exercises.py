@@ -1,11 +1,12 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
-from models import Exercise
+from telegram_auth import current_user_id
+from models import Exercise, PerformedSet, PlannedExercise, WorkoutSession
 from schemas import ExerciseOut
 
 router = APIRouter(prefix="/api/exercises", tags=["exercises"])
@@ -41,6 +42,39 @@ async def list_muscle_groups(
     stmt = select(Exercise.muscle_group).distinct().order_by(Exercise.muscle_group)
     result = await session.execute(stmt)
     return [row[0] for row in result.all()]
+
+
+@router.get("/{exercise_id}/progress")
+async def exercise_progress(
+    exercise_id: int,
+    limit: int = Query(20, ge=1, le=100),
+    session: AsyncSession = Depends(get_session),
+    uid: Optional[int] = Depends(current_user_id),
+):
+    """Per-session progression for one exercise: top weight, volume and sets."""
+    stmt = (
+        select(
+            WorkoutSession.session_date,
+            func.max(PerformedSet.weight),
+            func.sum(PerformedSet.weight * PerformedSet.reps),
+            func.count(PerformedSet.id),
+        )
+        .join(PlannedExercise, PerformedSet.planned_exercise_id == PlannedExercise.id)
+        .join(WorkoutSession, PlannedExercise.session_id == WorkoutSession.id)
+        .where(PlannedExercise.exercise_id == exercise_id)
+    )
+    if uid:
+        stmt = stmt.where(WorkoutSession.telegram_user_id == uid)
+    stmt = (
+        stmt.group_by(WorkoutSession.id, WorkoutSession.session_date)
+        .order_by(WorkoutSession.session_date.desc(), WorkoutSession.id.desc())
+        .limit(limit)
+    )
+    rows = (await session.execute(stmt)).all()
+    return [
+        {"date": r[0].isoformat(), "top_weight": float(r[1] or 0), "volume": float(r[2] or 0), "sets": r[3]}
+        for r in reversed(rows)
+    ]
 
 
 @router.get("/{exercise_id}", response_model=ExerciseOut)

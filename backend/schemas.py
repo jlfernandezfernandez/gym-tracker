@@ -43,11 +43,12 @@ class SessionFinish(BaseModel):
 # ── Coach ──
 
 class CoachPlanRequest(BaseModel):
+    title: str = ""
+    goal: str = ""
     energy: int = Field(default=5, ge=1, le=10)
     discomfort: str = ""
-    focus: int = Field(default=5, ge=1, le=10)
     time_available: int = 45
-    recent_sessions: str = ""
+    exercises: list[PlannedExerciseCreate] = []
 
 
 # ── Athlete profile / onboarding ──
@@ -88,8 +89,6 @@ class ExerciseOut(BaseModel):
     instructions: str = ""
     image_url: str = ""
     gif_url: str = ""
-    source: str = ""
-    alternatives: str = ""
 
 
 class PerformedSetOut(BaseModel):

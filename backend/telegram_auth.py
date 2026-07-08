@@ -27,7 +27,7 @@ import urllib.parse
 from functools import lru_cache
 from typing import Any, Optional
 
-from fastapi import HTTPException
+from fastapi import Header, HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -116,14 +116,25 @@ def get_telegram_user(init_data: str | None) -> dict[str, Any]:
     return validated.get("user", {})
 
 
-def get_telegram_user_id(init_data: str | None, coach_key: str | None = None) -> Optional[int]:
-    """Convenience: return just the telegram user id (int) or None.
-
-    The coach MCP sends X-Coach-Key instead of init_data. If coach_key
-    matches COACH_API_KEY, returns None (full access, no user scoping).
-    """
-    if coach_key and COACH_API_KEY and coach_key == COACH_API_KEY:
-        return None  # Coach mode: full access, no user filter
+def get_telegram_user_id(init_data: str | None) -> Optional[int]:
+    """Convenience: return just the telegram user id (int) or None."""
     user = get_telegram_user(init_data)
     uid = user.get("id")
     return int(uid) if uid is not None else None
+
+
+async def current_user_id(
+    init_data: Optional[str] = Header(None, alias="X-Telegram-Init-Data"),
+    coach_key: Optional[str] = Header(None, alias="X-Coach-Key"),
+    coach_user_id: Optional[int] = Header(None, alias="X-Telegram-User-Id"),
+) -> Optional[int]:
+    """FastAPI dependency resolving the acting Telegram user.
+
+    - Mini App: validates X-Telegram-Init-Data (HMAC) and returns its user id.
+    - Coach MCP: X-Coach-Key matching COACH_API_KEY plus X-Telegram-User-Id
+      scopes the request to that user. Without X-Telegram-User-Id the coach
+      gets unscoped access (single-user instances / admin).
+    """
+    if coach_key and COACH_API_KEY and hmac.compare_digest(coach_key, COACH_API_KEY):
+        return coach_user_id
+    return get_telegram_user_id(init_data)

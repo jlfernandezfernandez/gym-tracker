@@ -6,9 +6,9 @@ exercises if the database is empty.
 """
 
 import json
+import urllib.request
 from typing import Any
 
-import httpx
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,7 @@ from models import Exercise
 EXERCISE_DB_URL = (
     "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json"
 )
+IMAGE_BASE_URL = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises"
 
 
 def _parse_exercise(raw: dict[str, Any]) -> dict[str, Any] | None:
@@ -33,9 +34,9 @@ def _parse_exercise(raw: dict[str, Any]) -> dict[str, Any] | None:
     instructions_list = raw.get("instructions", [])
     instructions = "\n".join(instructions_list) if isinstance(instructions_list, list) else ""
 
-    # Images
+    # Images come as paths relative to the free-exercise-db repo
     images = raw.get("images", [])
-    image_url = images[0] if images else ""
+    image_url = f"{IMAGE_BASE_URL}/{images[0]}" if images else ""
     gif_url = ""
 
     return {
@@ -46,8 +47,6 @@ def _parse_exercise(raw: dict[str, Any]) -> dict[str, Any] | None:
         "instructions": instructions,
         "image_url": image_url,
         "gif_url": gif_url,
-        "source": "free-exercise-db",
-        "alternatives": "",
     }
 
 
@@ -60,10 +59,8 @@ async def seed_exercises(db: AsyncSession) -> int:
         return 0
 
     print("Downloading exercise catalog from free-exercise-db...")
-    async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-        resp = await client.get(EXERCISE_DB_URL)
-        resp.raise_for_status()
-        data = resp.json()
+    with urllib.request.urlopen(EXERCISE_DB_URL, timeout=30) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
 
     exercises = data if isinstance(data, list) else data.get("exercises", [])
 

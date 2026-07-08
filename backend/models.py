@@ -16,8 +16,6 @@ class Exercise(SQLModel, table=True):
     instructions: str = Field(default="")
     image_url: str = Field(default="")
     gif_url: str = Field(default="")
-    source: str = Field(default="free-exercise-db")
-    alternatives: str = Field(default="")
 
     planned_exercises: list["PlannedExercise"] = Relationship(back_populates="exercise")
 
@@ -98,4 +96,4 @@ class AthleteProfile(SQLModel, table=True):
     unavailable_equipment: str = Field(default="")
     notes: str = Field(default="")
     onboarding_complete: bool = Field(default=False)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

@@ -1,13 +1,3 @@
-# Stage 0: Build Astro frontend
-FROM node:22-alpine AS frontend
-WORKDIR /web
-COPY package.json package-lock.json* ./
-RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi
-COPY astro.config.mjs ./
-COPY src/ ./src/
-COPY frontend/ ./frontend/
-RUN npm run build
-
 # =============================================================================
 # gym-tracker — Dockerfile
 # =============================================================================
@@ -40,11 +30,9 @@ COPY --from=builder /root/.local /root/.local
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code
+# Copy application code + static Mini App (plain HTML, no build step)
 COPY backend/ /app/
-COPY --from=frontend /web/dist/ /app/static/
-
-WORKDIR /app
+COPY frontend/ /app/static/
 
 EXPOSE 8000
 

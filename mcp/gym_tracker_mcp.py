@@ -18,14 +18,14 @@ from mcp.server.fastmcp import FastMCP
 
 logger = logging.getLogger(__name__)
 
-API_BASE = os.getenv("GYM_TRACKER_API_BASE", "https://gym.jordixlab.com/api").rstrip("/")
-APP_BASE = os.getenv("GYM_TRACKER_APP_BASE", "https://gym.jordixlab.com").rstrip("/")
+API_BASE = os.getenv("GYM_TRACKER_API_BASE", "http://localhost:8000/api").rstrip("/")
+APP_BASE = os.getenv("GYM_TRACKER_APP_BASE", "http://localhost:8000").rstrip("/")
 COACH_KEY = os.getenv("GYM_TRACKER_COACH_KEY", "")
 
 mcp = FastMCP("gym-tracker")
 
 
-def _request(method: str, path: str, payload: dict[str, Any] | None = None) -> Any:
+def _request(method: str, path: str, payload: dict[str, Any] | None = None, user_id: int | None = None) -> Any:
     """Send an HTTP request to the gym-tracker API and return parsed JSON.
 
     Raises RuntimeError with the API error detail on non-2xx responses.
@@ -35,6 +35,8 @@ def _request(method: str, path: str, payload: dict[str, Any] | None = None) -> A
     headers = {"Accept": "application/json"}
     if COACH_KEY:
         headers["X-Coach-Key"] = COACH_KEY
+    if user_id is not None:
+        headers["X-Telegram-User-Id"] = str(user_id)
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
@@ -57,71 +59,28 @@ def health() -> dict[str, Any]:
 
 
 @mcp.tool()
-def get_athlete_profile() -> dict[str, Any]:
+def get_athlete_profile(telegram_user_id: int | None = None) -> dict[str, Any]:
     """Read the athlete's profile: goals, body metrics, injuries, gym equipment, preferences, and onboarding status.
 
     Always call this before creating a plan. If onboarding_complete is false,
     start the onboarding conversation first.
+    telegram_user_id: Telegram id of the athlete you are talking to. Omit only on single-user instances.
     """
-    return _request("GET", "/profile")
+    return _request("GET", "/profile", user_id=telegram_user_id)
 
 
 @mcp.tool()
-def update_athlete_profile(
-    name: str | None = None,
-    age: int | None = None,
-    height_cm: float | None = None,
-    weight_kg: float | None = None,
-    goal: str = "",
-    experience_level: str = "",
-    training_days_per_week: int | None = None,
-    usual_session_minutes: int | None = None,
-    injuries: str = "",
-    limitations: str = "",
-    preferred_exercises: str = "",
-    disliked_exercises: str = "",
-    gym_name: str = "",
-    available_equipment: str = "",
-    unavailable_equipment: str = "",
-    notes: str = "",
-    onboarding_complete: bool = False,
-) -> dict[str, Any]:
-    """Update the athlete profile after onboarding or new preferences/equipment limitations."""
-    payload: dict[str, Any] = {
-        "goal": goal,
-        "experience_level": experience_level,
-        "injuries": injuries,
-        "limitations": limitations,
-        "preferred_exercises": preferred_exercises,
-        "disliked_exercises": disliked_exercises,
-        "gym_name": gym_name,
-        "available_equipment": available_equipment,
-        "unavailable_equipment": unavailable_equipment,
-        "notes": notes,
-        "onboarding_complete": onboarding_complete,
-    }
-    if name is not None:
-        payload["name"] = name
-    if age is not None:
-        payload["age"] = int(age)
-    if height_cm is not None:
-        payload["height_cm"] = float(height_cm)
-    if weight_kg is not None:
-        payload["weight_kg"] = float(weight_kg)
-    if training_days_per_week is not None:
-        payload["training_days_per_week"] = int(training_days_per_week)
-    if usual_session_minutes is not None:
-        payload["usual_session_minutes"] = int(usual_session_minutes)
-    return _request("PUT", "/profile", payload)
+def patch_athlete_profile(updates_json: str, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Update athlete profile fields from a JSON object string.
 
-
-@mcp.tool()
-def patch_athlete_profile(updates_json: str) -> dict[str, Any]:
-    """Patch selected athlete profile fields from a JSON object string. Use for incremental facts learned in chat."""
+    Use after onboarding (include "onboarding_complete": true) and for any
+    incremental facts learned in chat (injuries, equipment, preferences...).
+    Example: {"goal": "hipertrofia", "injuries": "hombro izquierdo", "onboarding_complete": true}
+    """
     updates = json.loads(updates_json or "{}")
     if not isinstance(updates, dict):
         raise ValueError("updates_json must be a JSON object")
-    return _request("PATCH", "/profile", updates)
+    return _request("PATCH", "/profile", updates, user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -137,9 +96,22 @@ def list_exercises(search: str = "", muscle_group: str = "", limit: int = 10) ->
 
 
 @mcp.tool()
+def get_exercise(exercise_id: int) -> dict[str, Any]:
+    """Get full detail of one catalog exercise: instructions, muscles, equipment, image."""
+    return _request("GET", f"/exercises/{int(exercise_id)}")
+
+
+@mcp.tool()
 def list_muscle_groups() -> list[str]:
     """List available exercise muscle groups."""
     return _request("GET", "/exercises/muscle-groups")
+
+
+@mcp.tool()
+def exercise_progress(exercise_id: int, limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
+    """Progression of one exercise across sessions: date, top weight, volume, sets. Use it to talk progress and choose next weights."""
+    qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 100))})
+    return _request("GET", f"/exercises/{int(exercise_id)}/progress?{qs}", user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -149,15 +121,22 @@ def get_session(session_id: int) -> dict[str, Any]:
 
 
 @mcp.tool()
-def get_today_session() -> dict[str, Any]:
+def get_today_session(telegram_user_id: int | None = None) -> dict[str, Any]:
     """Get today's latest workout session."""
-    return _request("GET", "/sessions/today")
+    return _request("GET", "/sessions/today", user_id=telegram_user_id)
 
 
 @mcp.tool()
-def get_active_session() -> dict[str, Any]:
+def list_sessions(limit: int = 10, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
+    """List recent workout sessions (summary: date, title, status, sets). Use it to adapt new plans to recent training."""
+    qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 50))})
+    return _request("GET", f"/sessions?{qs}", user_id=telegram_user_id)
+
+
+@mcp.tool()
+def get_active_session(telegram_user_id: int | None = None) -> dict[str, Any]:
     """Get latest non-completed session plus derived current exercise/set state."""
-    return _request("GET", "/sessions/active")
+    return _request("GET", "/sessions/active", user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -173,15 +152,31 @@ def complete_exercise(session_id: int, planned_exercise_id: int) -> dict[str, An
 
 
 @mcp.tool()
-def create_plan(energy: int = 5, time_available: int = 45, discomfort: str = "", focus: int = 5, recent_sessions: str = "") -> dict[str, Any]:
-    """Create a workout plan. Returns the stored session with share token and exercises."""
+def delete_session(session_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Delete a workout session. Use to discard a plan preview the athlete rejected before creating a new one."""
+    return _request("DELETE", f"/sessions/{int(session_id)}", user_id=telegram_user_id)
+
+
+@mcp.tool()
+def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available: int = 45, discomfort: str = "", exercises_json: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Create a workout plan. Returns the stored session with share token and exercises.
+
+    exercises_json: JSON array of the exercises you picked from list_exercises, e.g.
+    [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
+      "suggested_weight": 40.0, "notes": "controla la bajada"}]
+    If empty, the API picks a generic fallback plan — always pick exercises yourself.
+    """
+    exercises = json.loads(exercises_json) if exercises_json else []
+    if not isinstance(exercises, list):
+        raise ValueError("exercises_json must be a JSON array")
     return _request("POST", "/coach/plan", {
+        "title": title,
+        "goal": goal,
         "energy": int(energy),
         "time_available": int(time_available),
         "discomfort": discomfort,
-        "focus": int(focus),
-        "recent_sessions": recent_sessions,
-    })
+        "exercises": exercises,
+    }, user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -200,19 +195,18 @@ def log_set(session_id: int, planned_exercise_id: int, set_number: int, weight: 
 
 
 @mcp.tool()
+def delete_set(session_id: int, planned_exercise_id: int, set_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Delete a wrongly logged set (the athlete corrected themselves). Set ids come in session responses."""
+    return _request("DELETE", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets/{int(set_id)}", user_id=telegram_user_id)
+
+
+@mcp.tool()
 def update_planned_exercise(session_id: int, planned_exercise_id: int, status: str = "completed", new_exercise_id: int | None = None, notes: str = "") -> dict[str, Any]:
     """Mark an exercise completed/skipped/changed; optionally replace it with another catalog exercise."""
     payload: dict[str, Any] = {"status": status, "notes": notes}
     if new_exercise_id is not None:
         payload["new_exercise_id"] = int(new_exercise_id)
     return _request("PUT", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", payload)
-
-
-@mcp.tool()
-def alternatives(muscle: str, limit: int = 4) -> list[dict[str, Any]]:
-    """Return simple same-muscle alternatives."""
-    qs = urllib.parse.urlencode({"muscle": muscle, "limit": max(1, min(int(limit), 8))})
-    return _request("GET", f"/coach/alternatives?{qs}")
 
 
 @mcp.tool()
