@@ -71,7 +71,7 @@ class PerformedSet(SQLModel, table=True):
     rpe: Optional[float] = Field(default=None, ge=1.0, le=10.0)
     sensation: str = Field(default="")
     notes: str = Field(default="")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     planned_exercise: "PlannedExercise" = Relationship(back_populates="performed_sets")
 
