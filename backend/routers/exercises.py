@@ -15,16 +15,19 @@ router = APIRouter(prefix="/api/exercises", tags=["exercises"])
 @router.get("", response_model=list[ExerciseOut])
 async def list_exercises(
     muscle_group: Optional[str] = Query(None, description="Filter by muscle group"),
+    equipment: Optional[str] = Query(None, description="Filter by equipment type"),
     search: Optional[str] = Query(None, description="Search by name"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     session: AsyncSession = Depends(get_session),
 ):
-    """List exercise catalog, optionally filtered by muscle group or name."""
+    """List exercise catalog, optionally filtered by muscle group, equipment or name."""
     stmt = select(Exercise)
 
     if muscle_group:
         stmt = stmt.where(Exercise.muscle_group == muscle_group)
+    if equipment:
+        stmt = stmt.where(Exercise.equipment == equipment)
     if search:
         stmt = stmt.where(Exercise.name.ilike(f"%{search}%"))
 
@@ -41,7 +44,17 @@ async def list_muscle_groups(
     """List distinct muscle groups available in the catalog."""
     stmt = select(Exercise.muscle_group).distinct().order_by(Exercise.muscle_group)
     result = await session.execute(stmt)
-    return [row[0] for row in result.all()]
+    return [row[0] for row in result.all() if row[0]]
+
+
+@router.get("/equipment", response_model=list[str])
+async def list_equipment(
+    session: AsyncSession = Depends(get_session),
+):
+    """List distinct equipment types."""
+    stmt = select(Exercise.equipment).distinct().order_by(Exercise.equipment)
+    result = await session.execute(stmt)
+    return [row[0] for row in result.all() if row[0]]
 
 
 @router.get("/{exercise_id}/progress")

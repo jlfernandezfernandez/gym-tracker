@@ -1,0 +1,16 @@
+# MCP server as a standalone service (SSE transport), e.g. for Coolify.
+# Set GYM_TRACKER_API_BASE / GYM_TRACKER_APP_BASE / GYM_TRACKER_COACH_KEY
+# in the deployment environment.
+FROM python:3.13-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir mcp fastmcp
+
+COPY mcp/ ./mcp/
+COPY run_mcp.py .
+
+ENV MCP_PORT=8001
+EXPOSE 8001
+
+CMD ["python", "run_mcp.py"]
