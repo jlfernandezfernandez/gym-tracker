@@ -232,18 +232,19 @@ def finish_session(session_id: int, duration_actual: int = 0, feedback: str = ""
 
 @mcp.tool()
 def list_measurements(limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
-    """List historical body measurements: weight, muscle, fat, BodyTrax score, source and date."""
+    """List historical body measurements: weight, muscle, fat, score, source and date."""
     qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 100))})
     return _request("GET", f"/profile/measurements?{qs}", user_id=telegram_user_id)
 
 
 @mcp.tool()
 def add_measurement(measurement_json: str, telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Add a body measurement from BodyTrax/manual/smart scale.
+    """Add a generic body measurement from any source.
 
     measurement_json example:
-    {"source":"BodyTrax","measured_at":"2026-07-09T10:00:00","weight_kg":72.3,
-     "muscle_kg":56.4,"fat_kg":12.9,"visceral_fat":4,"score":787}
+    {"source":"smart_scale","measured_at":"2026-07-09T10:00:00","weight_kg":72.3,
+     "muscle_kg":56.4,"fat_kg":12.9,"body_fat_pct":17.8,"score":787}
+    Source is free text: manual, smart_scale, inbody, dexa, clinic, photo_checkin, etc.
     """
     if telegram_user_id is None:
         raise ValueError("telegram_user_id is required so measurements are attached to the athlete profile")
@@ -258,14 +259,16 @@ def body_measurement_history(limit: int = 20, telegram_user_id: int | None = Non
     """List Jordi's historical body measurements.
 
     Use this instead of reading profile.weight_kg when talking about evolution.
-    Returns dated measurements from manual entries, BodyTrax, smart scales, etc.
+    Returns dated measurements from any source: manual, smart scale, medical scan,
+    body-composition device, photos/check-ins, etc.
     """
     return list_measurements(limit=limit, telegram_user_id=telegram_user_id)
 
 
 @mcp.tool()
-def record_bodytrax_measurement(
+def record_body_measurement(
     telegram_user_id: int,
+    source: str = "manual",
     measured_at: str = "",
     weight_kg: float | None = None,
     muscle_kg: float | None = None,
@@ -275,13 +278,17 @@ def record_bodytrax_measurement(
     score: float | None = None,
     notes: str = "",
 ) -> dict[str, Any]:
-    """Record a BodyTrax/body-composition measurement as dated history.
+    """Record a generic dated body measurement.
 
-    This is the preferred tool when Jordi sends new BodyTrax or scale data.
+    Preferred tool when Jordi sends weight, body-composition, medical measurement,
+    smart-scale data, photos/check-in notes, or any future measurement source.
+    `source` is free text (manual, smart_scale, inbody, dexa, clinic, etc.).
     Do not overwrite profile notes; store each measurement with measured_at/source.
     measured_at can be ISO datetime/date. Empty means now.
     """
-    body: dict[str, Any] = {"source": "BodyTrax", "notes": notes}
+    if not source:
+        source = "manual"
+    body: dict[str, Any] = {"source": source, "notes": notes}
     if measured_at:
         body["measured_at"] = measured_at
     for key, value in {

@@ -487,13 +487,13 @@ async function renderProfile(push = true) {
     const contextRows = context.filter(([, v]) => v).map(([k, v]) => `<div class="set-row"><span class="n">${esc(k)}</span><span class="v" style="text-align:right;max-width:62%">${esc(v)}</span></div>`).join('');
     if (contextRows) html += `<div class="card"><h2>Contexto del coach</h2><div class="sets" style="margin-top:10px">${contextRows}</div></div>`;
     if (measurements.length) {
-      html += `<div class="card"><h2>Mediciones</h2><p>Peso, BodyTrax o futuras básculas/sensores. Cada dato con fecha.</p><div class="measure-list" style="margin-top:10px">${measurements.map((m) => {
+      html += `<div class="card"><h2>Mediciones</h2><p>Peso, composición corporal o cualquier medición futura. Cada dato con fecha y fuente.</p><div class="measure-list" style="margin-top:10px">${measurements.map((m) => {
         const d = new Date(m.measured_at).toLocaleDateString('es-ES');
         const bits = [m.weight_kg && `${m.weight_kg}kg`, m.muscle_kg && `${m.muscle_kg}kg músculo`, m.fat_kg && `${m.fat_kg}kg grasa`, m.score && `score ${m.score}`].filter(Boolean).join(' · ');
         return `<div class="measure-row"><div><b>${esc(bits || 'Medición')}</b><p>${esc(m.source || 'manual')} · ${esc(d)}${m.notes ? ' · ' + esc(m.notes) : ''}</p></div></div>`;
       }).join('')}</div></div>`;
     } else {
-      html += `<div class="card"><h2>Mediciones</h2><p>Aquí irán peso, BodyTrax, grasa, músculo y evolución por fecha cuando el coach las añada.</p></div>`;
+      html += `<div class="card"><h2>Mediciones</h2><p>Aquí irán peso, grasa, músculo, perímetros, check-ins o cualquier medición por fecha cuando el coach las añada.</p></div>`;
     }
     $('profile-body').innerHTML = html;
   } catch {

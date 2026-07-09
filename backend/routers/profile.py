@@ -90,7 +90,7 @@ async def list_measurements(
     db: AsyncSession = Depends(get_session),
     uid: Optional[int] = Depends(current_user_id),
 ):
-    """Return historical body measurements (manual, BodyTrax, smart scale, etc.)."""
+    """Return historical body measurements from any source: manual, scale, scan, clinic, etc."""
     stmt = select(AthleteMeasurement)
     if uid:
         stmt = stmt.where(AthleteMeasurement.telegram_user_id == uid)
