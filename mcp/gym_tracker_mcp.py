@@ -254,6 +254,50 @@ def add_measurement(measurement_json: str, telegram_user_id: int | None = None) 
 
 
 @mcp.tool()
+def body_measurement_history(limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
+    """List Jordi's historical body measurements.
+
+    Use this instead of reading profile.weight_kg when talking about evolution.
+    Returns dated measurements from manual entries, BodyTrax, smart scales, etc.
+    """
+    return list_measurements(limit=limit, telegram_user_id=telegram_user_id)
+
+
+@mcp.tool()
+def record_bodytrax_measurement(
+    telegram_user_id: int,
+    measured_at: str = "",
+    weight_kg: float | None = None,
+    muscle_kg: float | None = None,
+    fat_kg: float | None = None,
+    body_fat_pct: float | None = None,
+    visceral_fat: float | None = None,
+    score: float | None = None,
+    notes: str = "",
+) -> dict[str, Any]:
+    """Record a BodyTrax/body-composition measurement as dated history.
+
+    This is the preferred tool when Jordi sends new BodyTrax or scale data.
+    Do not overwrite profile notes; store each measurement with measured_at/source.
+    measured_at can be ISO datetime/date. Empty means now.
+    """
+    body: dict[str, Any] = {"source": "BodyTrax", "notes": notes}
+    if measured_at:
+        body["measured_at"] = measured_at
+    for key, value in {
+        "weight_kg": weight_kg,
+        "muscle_kg": muscle_kg,
+        "fat_kg": fat_kg,
+        "body_fat_pct": body_fat_pct,
+        "visceral_fat": visceral_fat,
+        "score": score,
+    }.items():
+        if value is not None:
+            body[key] = float(value)
+    return _request("POST", "/profile/measurements", body, user_id=telegram_user_id)
+
+
+@mcp.tool()
 def session_web_url(session_id: int, planned_exercise_id: int | None = None) -> str:
     """Return a Mini App URL for a session or a specific exercise screen.
 
