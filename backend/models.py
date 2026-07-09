@@ -9,11 +9,15 @@ class Exercise(SQLModel, table=True):
     __tablename__ = "exercises"
 
     id: int = Field(default=None, primary_key=True)
+    external_id: str = Field(default="", index=True, unique=True)
     name: str = Field(index=True)
     muscle_group: str = Field(index=True)
     secondary_muscles: str = Field(default="")
-    equipment: str = Field(default="")
+    target: str = Field(default="", index=True)
+    body_part: str = Field(default="", index=True)
+    equipment: str = Field(default="", index=True)
     instructions: str = Field(default="")
+    instructions_es: str = Field(default="")
     image_url: str = Field(default="")
     gif_url: str = Field(default="")
 

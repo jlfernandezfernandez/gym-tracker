@@ -1,6 +1,14 @@
 # =============================================================================
 # gym-tracker — Dockerfile
 # =============================================================================
+# Stage 0: Build the Astro Mini App
+FROM node:22-slim AS frontend
+WORKDIR /fe
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ ./
+RUN npm run build
+
 # Stage 1: Build / install dependencies
 FROM python:3.13-slim AS builder
 
@@ -30,9 +38,9 @@ COPY --from=builder /root/.local /root/.local
 # Make sure scripts in .local are usable
 ENV PATH=/root/.local/bin:$PATH
 
-# Copy application code + static Mini App (plain HTML, no build step)
+# Copy application code + built Mini App
 COPY backend/ /app/
-COPY frontend/ /app/static/
+COPY --from=frontend /fe/dist/ /app/static/
 
 EXPOSE 8000
 

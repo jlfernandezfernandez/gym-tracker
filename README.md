@@ -88,7 +88,7 @@ docker compose up -d
    - `CORS_ORIGINS` = tu dominio (ej: `https://gym.midominio.com`)
 5. Deploy
 
-El Dockerfile sirve API y Mini App desde un solo contenedor. En el primer arranque la app descarga y carga sola el catálogo de ejercicios (free-exercise-db).
+El Dockerfile sirve API y Mini App desde un solo contenedor. El catálogo de ejercicios (1324 ejercicios con GIFs, imágenes e instrucciones en español) viene incluido en el repo y se carga solo en el primer arranque — sin dependencias externas.
 
 ### Conectar el coach (Hermes)
 
@@ -187,7 +187,7 @@ El coach controla toda la app via MCP. Estas son las herramientas:
 ## Stack
 
 - **Backend**: FastAPI + SQLModel + Postgres
-- **Frontend**: un solo HTML estático (vanilla JS) → Mini App de Telegram. Sin build step.
+- **Frontend**: Astro (estático, TypeScript vanilla) + Chart.js + react-body-highlighter → Mini App de Telegram
 - **MCP**: Python (FastMCP) — el puente entre agente y app
 - **Deploy**: Docker multi-stage, Coolify o docker compose
 - **Auth**: Telegram InitData HMAC (sin passwords)
@@ -202,12 +202,17 @@ El coach controla toda la app via MCP. Estas son las herramientas:
 │   ├── models.py     # SQLModel tables
 │   ├── schemas.py    # Pydantic schemas
 │   ├── telegram_auth.py  # HMAC InitData validation
-│   └── seed/         # Exercise catalog seeder
-├── frontend/         # Mini App (un solo HTML, sin build)
+│   ├── seed/         # Exercise catalog seeder
+│   └── exercise_data/    # Catálogo vendorizado: JSON + imágenes + GIFs
+├── frontend/         # Mini App (Astro + TypeScript)
+│   └── src/
+│       ├── pages/    # index.astro (markup de pantallas)
+│       ├── lib/      # app.ts (lógica), chart.ts, bodymap.tsx
+│       └── styles/   # global.css
 ├── mcp/              # MCP server (21 tools)
 ├── templates/        # SOUL.md + SKILL.md for coach profile
-├── docs/             # Setup guide + screenshots
-├── Dockerfile        # FastAPI + estáticos
+├── docs/             # Setup guide + landing
+├── Dockerfile        # Multi-stage: build frontend + API + estáticos
 └── docker-compose.yml
 ```
 

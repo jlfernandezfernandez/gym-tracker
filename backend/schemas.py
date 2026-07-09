@@ -82,11 +82,15 @@ class AthleteProfileOut(AthleteProfileIn):
 
 class ExerciseOut(BaseModel):
     id: int
+    external_id: str = ""
     name: str
     muscle_group: str
     secondary_muscles: str = ""
+    target: str = ""
+    body_part: str = ""
     equipment: str = ""
     instructions: str = ""
+    instructions_es: str = ""
     image_url: str = ""
     gif_url: str = ""
 

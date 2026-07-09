@@ -1,12 +1,12 @@
 """
-Seed exercises from free-exercise-db into the database.
+Seed exercises from the vendored dataset (backend/exercise_data/) into the DB.
 
-Downloads the exercise catalog JSON from the public repo and inserts
-exercises if the database is empty.
+Dataset: https://github.com/hasaneyldrm/exercises-dataset (media © Gym Visual,
+see exercise_data/NOTICE.md). Runs on startup; no-op if the table already has rows.
 """
 
 import json
-import urllib.request
+from pathlib import Path
 from typing import Any
 
 from sqlalchemy import select, func
@@ -14,65 +14,53 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Exercise
 
-EXERCISE_DB_URL = (
-    "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/dist/exercises.json"
-)
-IMAGE_BASE_URL = "https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises"
+DATA_DIR = Path(__file__).resolve().parent.parent / "exercise_data"
+MEDIA_URL_PREFIX = "/exercise-media"
 
 
 def _parse_exercise(raw: dict[str, Any]) -> dict[str, Any] | None:
-    """Map a free-exercise-db entry to our Exercise model fields."""
+    """Map a dataset entry to Exercise model fields."""
     name = raw.get("name", "").strip()
     if not name:
         return None
 
-    # Map muscle groups
-    primary_muscles = raw.get("primaryMuscles", [])
-    secondary_muscles = raw.get("secondaryMuscles", [])
-    muscle_group = primary_muscles[0] if primary_muscles else "other"
-    equipment = raw.get("equipment", "")
-    instructions_list = raw.get("instructions", [])
-    instructions = "\n".join(instructions_list) if isinstance(instructions_list, list) else ""
-
-    # Images come as paths relative to the free-exercise-db repo
-    images = raw.get("images", [])
-    image_url = f"{IMAGE_BASE_URL}/{images[0]}" if images else ""
-    gif_url = ""
+    instructions = raw.get("instructions") or {}
+    image = raw.get("image", "")
+    gif = raw.get("gif_url", "")
 
     return {
+        "external_id": raw.get("id", ""),
         "name": name,
-        "muscle_group": muscle_group,
-        "secondary_muscles": ", ".join(secondary_muscles),
-        "equipment": equipment,
-        "instructions": instructions,
-        "image_url": image_url,
-        "gif_url": gif_url,
+        "muscle_group": raw.get("muscle_group") or raw.get("target") or "other",
+        "secondary_muscles": ", ".join(raw.get("secondary_muscles") or []),
+        "target": raw.get("target", ""),
+        "body_part": raw.get("body_part", ""),
+        "equipment": raw.get("equipment", ""),
+        "instructions": instructions.get("en", ""),
+        "instructions_es": instructions.get("es", ""),
+        "image_url": f"{MEDIA_URL_PREFIX}/{image}" if image else "",
+        "gif_url": f"{MEDIA_URL_PREFIX}/{gif}" if gif else "",
     }
 
 
 async def seed_exercises(db: AsyncSession) -> int:
-    """Download and seed exercises. Returns number of new exercises inserted."""
-    # Check if already seeded
+    """Seed exercises from the local JSON. Returns number of rows inserted."""
     result = await db.execute(select(func.count(Exercise.id)))
     count = result.scalar()
     if count and count > 0:
         return 0
 
-    print("Downloading exercise catalog from free-exercise-db...")
-    with urllib.request.urlopen(EXERCISE_DB_URL, timeout=30) as resp:
-        data = json.loads(resp.read().decode("utf-8"))
-
-    exercises = data if isinstance(data, list) else data.get("exercises", [])
+    with open(DATA_DIR / "exercises.json", encoding="utf-8") as f:
+        data = json.load(f)
 
     inserted = 0
-    for raw in exercises:
+    for raw in data:
         parsed = _parse_exercise(raw)
         if parsed is None:
             continue
-        exercise = Exercise(**parsed)
-        db.add(exercise)
+        db.add(Exercise(**parsed))
         inserted += 1
 
     await db.commit()
-    print(f"Seeded {inserted} exercises from free-exercise-db")
+    print(f"Seeded {inserted} exercises from local dataset")
     return inserted

@@ -1,0 +1,95 @@
+---
+import '../styles/global.css';
+---
+
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			name="viewport"
+			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+		/>
+		<title>Gym Coach</title>
+		<script is:inline src="https://telegram.org/js/telegram-web-app.js"></script>
+	</head>
+	<body>
+		<main class="app">
+			<!-- LANDING -->
+			<section id="landing" class="screen active">
+				<div class="hero">
+					<span class="eyebrow">Mini App</span>
+					<h1>Tu coach vive en Telegram.</h1>
+					<p>El entrenador crea tu plan. Aquí ves el plan, cada ejercicio y registras series.</p>
+				</div>
+				<div class="card">
+					<h2>Cómo funciona</h2>
+					<div class="steps">
+						<p><b>1.</b> Habla con tu bot en Telegram</p>
+						<p><b>2.</b> El coach te pregunta y crea el plan</p>
+						<p><b>3.</b> Abres aquí el plan para verlo y registrar</p>
+					</div>
+				</div>
+				<div id="active-card" class="card">
+					<div class="loading"><div class="spinner"></div><p>Buscando sesión activa...</p></div>
+				</div>
+				<div class="grid" style="margin-top:14px">
+					<button class="btn secondary" id="open-active">Abrir sesión activa</button>
+					<div class="row">
+						<button class="btn ghost" id="open-history">Historial</button>
+						<button class="btn ghost" id="open-profile">Perfil</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- PLAN -->
+			<section id="plan" class="screen">
+				<div class="topbar">
+					<button class="back" data-back="landing">←</button>
+					<div style="flex:1;min-width:0"><h2 id="plan-title">Plan</h2><p id="plan-subtitle"></p></div>
+				</div>
+				<div id="plan-body">
+					<div class="loading"><div class="spinner"></div><p>Cargando plan...</p></div>
+				</div>
+			</section>
+
+			<!-- EXERCISE -->
+			<section id="exercise" class="screen">
+				<div class="topbar">
+					<button class="back" data-back="plan">←</button>
+					<div style="flex:1;min-width:0"><h2 id="ex-title">Ejercicio</h2><p id="ex-subtitle"></p></div>
+				</div>
+				<div id="ex-body">
+					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
+				</div>
+			</section>
+
+			<!-- PROFILE -->
+			<section id="profile" class="screen">
+				<div class="topbar">
+					<button class="back" data-back="landing">←</button>
+					<div style="flex:1;min-width:0"><h2>Tu perfil</h2><p>Lo que el coach sabe de ti</p></div>
+				</div>
+				<div id="profile-body">
+					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
+				</div>
+			</section>
+
+			<!-- HISTORY -->
+			<section id="history" class="screen">
+				<div class="topbar">
+					<button class="back" data-back="landing">←</button>
+					<div style="flex:1;min-width:0"><h2>Historial</h2><p>Últimas sesiones</p></div>
+				</div>
+				<div id="hist-body">
+					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
+				</div>
+			</section>
+		</main>
+
+		<script>
+			import { init } from '../lib/app';
+			init();
+		</script>
+	</body>
+</html>

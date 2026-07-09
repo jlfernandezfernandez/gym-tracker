@@ -74,9 +74,14 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
+# Serve exercise images/GIFs from the vendored dataset.
+_media_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "exercise_data")
+if os.path.isdir(_media_dir):
+    app.mount("/exercise-media", StaticFiles(directory=_media_dir), name="exercise-media")
+
 # Serve the static Telegram Mini App from the same container/domain.
 # Keep this after API routes so /api/* and /health continue to resolve first.
-# In Docker the frontend is copied to ./static; in local dev it lives in ../frontend.
-_static_dir = next((d for d in ("static", "../frontend") if os.path.isdir(d)), None)
+# In Docker the built frontend is copied to ./static; in local dev use ../frontend/dist.
+_static_dir = next((d for d in ("static", "../frontend/dist") if os.path.isdir(d)), None)
 if _static_dir:
     app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")

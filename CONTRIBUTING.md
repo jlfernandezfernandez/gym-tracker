@@ -12,13 +12,15 @@ docker compose up -d      # app en http://localhost:8000 (el catálogo de ejerci
 ```
 
 Sin Docker: levanta un Postgres, `pip install -r backend/requirements.txt` y
-`cd backend && uvicorn main:app --reload`. El frontend es un solo HTML estático
-(`frontend/index.html`), no hay build step.
+`cd backend && uvicorn main:app --reload`. Frontend: `cd frontend && npm install`
+y `npm run dev` (dev server de Astro con proxy a la API) o `npm run build` para
+que FastAPI sirva `frontend/dist/`.
 
 ## Estructura
 
 - `backend/` — FastAPI + SQLModel. Routers en `backend/routers/`.
-- `frontend/index.html` — Mini App completa (HTML + CSS + JS vanilla, un archivo).
+- `backend/exercise_data/` — catálogo vendorizado (JSON + imágenes + GIFs); el seed lo carga en el primer arranque.
+- `frontend/` — Mini App en Astro: `src/pages/index.astro` (markup), `src/lib/app.ts` (lógica), `chart.ts` (Chart.js), `bodymap.tsx` (react-body-highlighter).
 - `mcp/gym_tracker_mcp.py` — servidor MCP (21 tools) que habla con la API pública.
 - `templates/` — SOUL.md y SKILL.md para el perfil del agente coach.
 - `docs/` — GitHub Pages + guía de setup.
@@ -26,8 +28,7 @@ Sin Docker: levanta un Postgres, `pip install -r backend/requirements.txt` y
 ## Principios
 
 - **Agnóstico al agente**: la app solo expone API + MCP. Nada específico de Hermes/Claude en backend.
-- **YAGNI**: sin abstracciones especulativas. El frontend es un archivo a propósito.
-- **Sin build steps innecesarios**: HTML estático, sin bundlers.
+- **YAGNI**: sin abstracciones especulativas. React solo existe como isla para el body map.
 - La API es el contrato: si cambias un endpoint, actualiza el MCP y el frontend.
 
 ## PRs
