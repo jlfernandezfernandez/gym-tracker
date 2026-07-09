@@ -32,7 +32,7 @@ def _request(method: str, path: str, payload: dict[str, Any] | None = None, user
     """
     url = f"{API_BASE}{path}"
     data = None
-    headers = {"Accept": "application/json"}
+    headers = {"Accept": "application/json", "User-Agent": "gym-tracker-mcp/1.0 (+https://gym.jordixlab.com)"}
     if COACH_KEY:
         headers["X-Coach-Key"] = COACH_KEY
     if user_id is not None:
@@ -231,6 +231,29 @@ def finish_session(session_id: int, duration_actual: int = 0, feedback: str = ""
 
 
 @mcp.tool()
+def list_measurements(limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
+    """List historical body measurements: weight, muscle, fat, BodyTrax score, source and date."""
+    qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 100))})
+    return _request("GET", f"/profile/measurements?{qs}", user_id=telegram_user_id)
+
+
+@mcp.tool()
+def add_measurement(measurement_json: str, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Add a body measurement from BodyTrax/manual/smart scale.
+
+    measurement_json example:
+    {"source":"BodyTrax","measured_at":"2026-07-09T10:00:00","weight_kg":72.3,
+     "muscle_kg":56.4,"fat_kg":12.9,"visceral_fat":4,"score":787}
+    """
+    if telegram_user_id is None:
+        raise ValueError("telegram_user_id is required so measurements are attached to the athlete profile")
+    body = json.loads(measurement_json or "{}")
+    if not isinstance(body, dict):
+        raise ValueError("measurement_json must be a JSON object")
+    return _request("POST", "/profile/measurements", body, user_id=telegram_user_id)
+
+
+@mcp.tool()
 def session_web_url(session_id: int, planned_exercise_id: int | None = None) -> str:
     """Return a Mini App URL for a session or a specific exercise screen.
 
@@ -239,9 +262,9 @@ def session_web_url(session_id: int, planned_exercise_id: int | None = None) -> 
     """
     session = _request("GET", f"/sessions/{int(session_id)}")
     token = urllib.parse.quote(str(session["share_token"]), safe="")
-    url = f"{APP_BASE}/?share_token={token}"
+    url = f"{APP_BASE}/session/share/{token}"
     if planned_exercise_id is not None:
-        url += f"&exercise_id={int(planned_exercise_id)}"
+        url += f"/exercise/{int(planned_exercise_id)}"
     return url
 
 
@@ -249,7 +272,7 @@ def session_web_url(session_id: int, planned_exercise_id: int | None = None) -> 
 def share_web_url(share_token: str) -> str:
     """Return a read-only share URL for a companion."""
     token = urllib.parse.quote(str(share_token), safe="")
-    return f"{APP_BASE}/?share_token={token}"
+    return f"{APP_BASE}/session/share/{token}"
 
 
 if __name__ == "__main__":

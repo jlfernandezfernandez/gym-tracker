@@ -12,6 +12,7 @@ import logging
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import init_db
@@ -83,5 +84,19 @@ if os.path.isdir(_media_dir):
 # Keep this after API routes so /api/* and /health continue to resolve first.
 # In Docker the built frontend is copied to ./static; in local dev use ../frontend/dist.
 _static_dir = next((d for d in ("static", "../frontend/dist") if os.path.isdir(d)), None)
+
+
+def _frontend_index() -> str:
+    assert _static_dir is not None
+    return os.path.join(_static_dir, "index.html")
+
+
+# Clean client-side routes. These return the Mini App shell; app.ts reads path params.
 if _static_dir:
+    @app.get("/session/share/{share_token}", include_in_schema=False)
+    @app.get("/session/share/{share_token}/exercise/{planned_exercise_id}", include_in_schema=False)
+    @app.get("/exercise/share/{share_token}/{planned_exercise_id}", include_in_schema=False)
+    async def frontend_clean_routes():
+        return FileResponse(_frontend_index())
+
     app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")

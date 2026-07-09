@@ -64,12 +64,16 @@ function pushScreen(id: string) {
 function popScreen() {
   const prev = state.viewStack.pop();
   if (prev) {
-    // If the previous screen was plan and we just finished exercise, re-render plan to update state.
     if (prev === 'plan' && state.plan) renderPlan(false);
     else screen(prev);
-  } else {
-    screen('landing');
+    return;
   }
+  // Share/read-only context must never go back to an unauthenticated empty home.
+  if (state.readOnly && state.plan) {
+    renderPlan(false);
+    return;
+  }
+  screen('landing');
 }
 
 function authHeaders(): Record<string, string> {
@@ -114,8 +118,50 @@ function normalize(s: any) {
   };
 }
 
-function params() {
-  return Object.fromEntries(new URLSearchParams(location.search).entries());
+function routeParams() {
+  const q: Record<string, string> = Object.fromEntries(new URLSearchParams(location.search).entries());
+  const parts = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+  // Clean routes:
+  // /session/share/:token
+  // /session/share/:token/exercise/:plannedExerciseId
+  // /exercise/share/:token/:plannedExerciseId
+  if (parts[0] === 'session' && parts[1] === 'share' && parts[2]) {
+    q.share_token = parts[2];
+    if (parts[3] === 'exercise' && parts[4]) q.exercise_id = parts[4];
+  }
+  if (parts[0] === 'exercise' && parts[1] === 'share' && parts[2]) {
+    q.share_token = parts[2];
+    if (parts[3]) q.exercise_id = parts[3];
+  }
+  return q;
+}
+
+function mediaUrl(url?: string) {
+  if (!url) return '';
+  return url.startsWith('http') ? url : location.origin + url;
+}
+
+function splitMuscles(s?: string) {
+  return String(s || '')
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
+}
+
+function sessionMuscles(exs: any[]) {
+  return [
+    ...new Set<string>(
+      exs.flatMap((e: any) => [e.target, e.body_part, e.muscle_group, ...splitMuscles(e.secondary_muscles)]).filter(Boolean),
+    ),
+  ];
+}
+
+function completedSets(ex: any) {
+  return ex.performed_sets?.length || 0;
+}
+
+function exerciseProgressPct(ex: any) {
+  return ex.sets ? Math.min(100, Math.round((completedSets(ex) / ex.sets) * 100)) : 0;
 }
 
 function currentExercise() {
@@ -184,23 +230,39 @@ async function initLanding() {
 
 function renderPlan(push = true) {
   const p = state.plan;
-  if (push) pushScreen('plan');
   $('plan-title').textContent = p.title || 'Plan del coach';
   $('plan-subtitle').textContent = state.readOnly
     ? 'Vista compartida (solo lectura)'
     : 'Creado por el coach. Aquí se ejecuta y registra.';
+  ($('plan-back') as HTMLButtonElement).style.display = state.readOnly ? 'none' : '';
+  ($('exercise-back') as HTMLButtonElement).style.display = '';
   const exs = p.exercises || [];
-  const done = exs.filter((e: any) => e.status === 'completed').length;
-  const pct = exs.length ? Math.round((done / exs.length) * 100) : 0;
-  let html = `<div class="card"><h2>${esc(p.title || 'Entrenamiento')}</h2><p>${esc(p.goal || p.coach_summary || 'Plan generado por el coach')}</p><div class="progress" style="margin-top:10px"><div style="width:${pct}%"></div></div><div class="grid stats" style="margin-top:10px"><div class="stat"><b>${exs.length}</b><span>ejercicios</span></div><div class="stat"><b>${done}/${exs.length}</b><span>hechos</span></div><div class="stat"><b>${pct}%</b><span>progreso</span></div></div></div>`;
-  const muscles: string[] = [...new Set<string>(exs.map((e: any) => e.muscle_group).filter(Boolean))];
+  const doneEx = exs.filter((e: any) => e.status === 'completed').length;
+  const doneSets = exs.reduce((a: number, e: any) => a + completedSets(e), 0);
+  const totalSets = exs.reduce((a: number, e: any) => a + (e.sets || 0), 0);
+  const pct = totalSets ? Math.round((doneSets / totalSets) * 100) : 0;
+  const muscles: string[] = sessionMuscles(exs);
+  const heroMedia = mediaUrl(exs.find((e: any) => e.gif_url || e.image_url)?.gif_url || exs.find((e: any) => e.image_url)?.image_url);
+  let html = `<div class="session-hero card">
+    ${heroMedia ? `<div class="session-hero-media"><img src="${esc(heroMedia)}" loading="eager"/></div>` : ''}
+    <div class="session-hero-content"><div class="meta"><span class="pill active">${esc(STATUS_ES[p.status] || p.status)}</span><span class="pill">${esc(p.duration_estimated || 0)} min</span></div>
+    <h1>${esc(p.title || 'Entrenamiento')}</h1><p>${esc(p.goal || p.coach_summary || 'Plan generado por el coach')}</p>
+    <div class="progress"><div style="width:${pct}%"></div></div>
+    <div class="grid stats" style="margin-top:10px"><div class="stat"><b>${exs.length}</b><span>ejercicios</span></div><div class="stat"><b>${doneSets}/${totalSets}</b><span>series</span></div><div class="stat"><b>${pct}%</b><span>progreso</span></div></div></div></div>`;
   if (muscles.length)
-    html += `<div class="card"><h2>Zonas de hoy</h2><div id="bodymap-slot"></div><div class="meta" style="justify-content:center;margin-top:8px">${muscles.map((m) => `<span class="pill">${esc(m)}</span>`).join('')}</div></div>`;
+    html += `<div class="card"><h2>Mapa muscular de hoy</h2><div id="bodymap-slot"></div><div class="meta muscle-cloud">${muscles.slice(0, 10).map((m) => `<span class="pill">${esc(m)}</span>`).join('')}</div></div>`;
   const curId = state.current?.current_planned_exercise_id;
   exs.forEach((ex: any) => {
     const isCur = String(ex.planned_id) === String(curId);
     const stEs = STATUS_ES[ex.status] || ex.status;
-    html += `<div class="card tap exercise ${isCur ? 'current' : ''}" data-open="${ex.planned_id}"><div class="thumb">${ex.image_url || ex.gif_url ? `<img src="${esc(ex.image_url || ex.gif_url)}" loading="lazy"/>` : '🏋️'}</div><div class="info"><h3>${esc(ex.name || 'Ejercicio')}</h3><p>${esc(ex.muscle_group || '')} ${ex.equipment ? '· ' + esc(ex.equipment) : ''}</p><div class="meta"><span class="pill">${ex.sets}×${ex.reps}</span>${ex.weight ? `<span class="pill">${ex.weight}kg</span>` : ''}<span class="pill st-${esc(ex.status)}">${stEs}</span>${isCur ? '<span class="pill active">actual</span>' : ''}</div></div></div>`;
+    const media = mediaUrl(ex.gif_url || ex.image_url);
+    const epct = exerciseProgressPct(ex);
+    html += `<div class="card tap exercise-card ${isCur ? 'current' : ''}" data-open="${ex.planned_id}">
+      <div class="exercise-media">${media ? `<img src="${esc(media)}" loading="lazy"/>` : '🏋️'}</div>
+      <div class="exercise-card-body"><div class="exercise-title-row"><h3>${esc(ex.name || 'Ejercicio')}</h3><span class="pill">${completedSets(ex)}/${ex.sets}</span></div>
+      <p>${esc(ex.target || ex.muscle_group || '')}${ex.equipment ? ' · ' + esc(ex.equipment) : ''}</p>
+      <div class="progress mini"><div style="width:${epct}%"></div></div>
+      <div class="meta"><span class="pill active">${ex.sets}×${ex.reps}</span>${ex.weight ? `<span class="pill">${ex.weight}kg</span>` : '<span class="pill">peso corporal</span>'}<span class="pill st-${esc(ex.status)}">${stEs}</span>${isCur ? '<span class="pill active">actual</span>' : ''}</div></div></div>`;
   });
   if (p.status === 'completed') {
     const vol = exs.reduce(
@@ -219,7 +281,7 @@ function renderPlan(push = true) {
   document.getElementById('open-current')?.addEventListener('click', () => openExercise(currentExercise()?.planned_id));
   document.getElementById('finish')?.addEventListener('click', finishSession);
   if (push) pushScreen('plan');
-  screen('plan');
+  else screen('plan');
 }
 
 async function openExercise(plannedId?: string, push = true) {
@@ -238,11 +300,17 @@ async function openExercise(plannedId?: string, push = true) {
 
 function renderExercise(ex: any) {
   $('ex-title').textContent = ex.name || 'Ejercicio';
-  $('ex-subtitle').textContent = `${ex.muscle_group || ''} ${ex.equipment ? '· ' + ex.equipment : ''}`;
+  $('ex-subtitle').textContent = `${ex.target || ex.muscle_group || ''} ${ex.equipment ? '· ' + ex.equipment : ''}`;
   const done = ex.performed_sets?.length || 0;
-  const instructions =
-    ex.instructions_es || ex.instructions || ex.notes || 'Sigue las indicaciones del coach en Telegram.';
-  let html = `<div class="big-media">${ex.gif_url || ex.image_url ? `<img src="${esc(ex.gif_url || ex.image_url)}" loading="lazy"/>` : '🏋️'}</div><div class="card"><h2>${esc(ex.name || 'Ejercicio')}</h2><p class="instr" style="margin-top:6px" onclick="this.classList.toggle('open')">${esc(instructions)}</p><div class="meta" style="margin-top:10px"><span class="pill">Objetivo: ${ex.sets}×${ex.reps}</span>${ex.weight ? `<span class="pill">${ex.weight}kg sugerido</span>` : ''}<span class="pill">${done} hechas</span></div></div>`;
+  const instructions = ex.instructions_es || ex.instructions || ex.notes || 'Sigue las indicaciones del coach en Telegram.';
+  const media = mediaUrl(ex.gif_url || ex.image_url);
+  const muscles = sessionMuscles([ex]);
+  let html = `<div class="exercise-hero"><div class="big-media">${media ? `<img src="${esc(media)}" loading="eager"/>` : '🏋️'}</div>
+    <div class="card"><div class="exercise-title-row"><h2>${esc(ex.name || 'Ejercicio')}</h2><span class="pill active">${done}/${ex.sets}</span></div>
+    <div class="set-dots">${Array.from({ length: ex.sets || 0 }, (_, i) => `<span class="${i < done ? 'done' : i === done ? 'next' : ''}">${i + 1}</span>`).join('')}</div>
+    <div class="meta"><span class="pill active">${ex.sets}×${ex.reps}</span>${ex.weight ? `<span class="pill">${ex.weight}kg sugerido</span>` : '<span class="pill">peso corporal</span>'}<span class="pill">${esc(ex.equipment || '')}</span></div></div></div>`;
+  if (muscles.length) html += `<div class="card compact-map"><h2>Músculos</h2><div id="exercise-bodymap-slot"></div></div>`;
+  html += `<details class="card details-card"><summary>Técnica y notas</summary><p class="instr open">${esc(instructions)}</p>${ex.notes ? `<p style="margin-top:8px">${esc(ex.notes)}</p>` : ''}</details>`;
   if (done > 0) {
     html += '<div class="card"><h3>Series registradas</h3><div class="sets" style="margin-top:8px">';
     (ex.performed_sets || []).forEach((s: any) => {
@@ -253,12 +321,16 @@ function renderExercise(ex: any) {
   if (state.readOnly) {
     html += `<div class="card" style="margin-top:10px"><p>📝 Vista compartida de solo lectura.</p></div>`;
     $('ex-body').innerHTML = html;
+    const slot = document.getElementById('exercise-bodymap-slot');
+    if (slot) renderBodyMap(slot, muscles);
     loadProgressChart(ex);
     return;
   }
   const next = done + 1;
   html += `<div class="card"><h2>Registrar serie ${next}</h2><div class="row" style="margin-top:10px"><label><p>Peso (kg)</p><input id="kg" type="number" inputmode="decimal" step="0.5" value="${esc(ex.weight || 0)}"></label><label><p>Reps</p><input id="reps" type="number" inputmode="numeric" value="${esc(ex.reps || 10)}"></label></div><textarea id="note" style="margin-top:10px" placeholder="Nota: fácil, duro, molestia..."></textarea><button class="btn" style="margin-top:10px" id="save-set">✓ Guardar serie</button></div><button class="btn secondary" style="margin-top:10px" id="complete-ex">✓ Completar</button>`;
   $('ex-body').innerHTML = html;
+  const slot = document.getElementById('exercise-bodymap-slot');
+  if (slot) renderBodyMap(slot, muscles);
   loadProgressChart(ex);
   $('save-set').onclick = () => saveSet(ex);
   $('complete-ex').onclick = () => completeExercise(ex);
@@ -377,38 +449,58 @@ async function renderProfile(push = true) {
   if (push) pushScreen('profile');
   try {
     const p = await api('GET', '/profile');
-    const F: [string, unknown][] = [
+    let measurements: any[] = [];
+    try {
+      measurements = await api('GET', '/profile/measurements?limit=8');
+    } catch {}
+    const latest = measurements[0];
+    const fixed: [string, unknown][] = [
       ['Objetivo', p.goal],
       ['Experiencia', p.experience_level],
       ['Días/semana', p.training_days_per_week],
-      ['Minutos/sesión', p.usual_session_minutes],
+      ['Min/sesión', p.usual_session_minutes],
       ['Edad', p.age],
       ['Altura', p.height_cm && p.height_cm + ' cm'],
-      ['Peso', p.weight_kg && p.weight_kg + ' kg'],
+      ['Gym', p.gym_name],
+    ];
+    const context: [string, unknown][] = [
       ['Patologías', p.injuries],
       ['Limitaciones', p.limitations],
-      ['Gym', p.gym_name],
       ['Equipamiento', p.available_equipment],
       ['No disponible', p.unavailable_equipment],
       ['Le gustan', p.preferred_exercises],
       ['No le gustan', p.disliked_exercises],
       ['Notas', p.notes],
     ];
-    const rows = F.filter(([, v]) => v)
-      .map(
-        ([k, v]) =>
-          `<div class="set-row"><span class="n">${esc(k)}</span><span class="v" style="text-align:right;max-width:60%">${esc(v)}</span></div>`,
-      )
-      .join('');
-    let html = `<div class="card"><h2>${esc(p.name || 'Atleta')}</h2><p>${p.onboarding_complete ? 'Onboarding completo ✓' : 'Onboarding pendiente — habla con el coach'}</p></div>`;
-    html += rows
-      ? `<div class="card"><div class="sets">${rows}</div></div>`
-      : '<div class="empty"><div class="icon">👤</div><p>Perfil vacío.<br>El coach lo rellena conversando contigo.</p></div>';
+    const tile = (k: string, v: unknown) => `<div class="profile-tile"><b>${esc(v || '—')}</b><span>${esc(k)}</span></div>`;
+    let html = `<div class="card"><h1>${esc(p.name || 'Atleta')}</h1><p>${p.onboarding_complete ? 'Perfil deportivo activo' : 'Onboarding pendiente — habla con el coach'}</p>`;
+    if (latest || p.weight_kg) {
+      html += `<div class="profile-grid" style="margin-top:12px">
+        ${tile('Peso actual', (latest?.weight_kg || p.weight_kg) ? `${latest?.weight_kg || p.weight_kg} kg` : '—')}
+        ${tile('Músculo', latest?.muscle_kg ? `${latest.muscle_kg} kg` : '—')}
+        ${tile('Grasa', latest?.fat_kg ? `${latest.fat_kg} kg` : '—')}
+        ${tile('Score', latest?.score || '—')}
+      </div>`;
+    }
+    html += `</div>`;
+    html += `<div class="card"><h2>Datos fijos</h2><div class="profile-grid" style="margin-top:10px">${fixed.filter(([, v]) => v).map(([k, v]) => tile(k, v)).join('')}</div></div>`;
+    const contextRows = context.filter(([, v]) => v).map(([k, v]) => `<div class="set-row"><span class="n">${esc(k)}</span><span class="v" style="text-align:right;max-width:62%">${esc(v)}</span></div>`).join('');
+    if (contextRows) html += `<div class="card"><h2>Contexto del coach</h2><div class="sets" style="margin-top:10px">${contextRows}</div></div>`;
+    if (measurements.length) {
+      html += `<div class="card"><h2>Mediciones</h2><p>Peso, BodyTrax o futuras básculas/sensores. Cada dato con fecha.</p><div class="measure-list" style="margin-top:10px">${measurements.map((m) => {
+        const d = new Date(m.measured_at).toLocaleDateString('es-ES');
+        const bits = [m.weight_kg && `${m.weight_kg}kg`, m.muscle_kg && `${m.muscle_kg}kg músculo`, m.fat_kg && `${m.fat_kg}kg grasa`, m.score && `score ${m.score}`].filter(Boolean).join(' · ');
+        return `<div class="measure-row"><div><b>${esc(bits || 'Medición')}</b><p>${esc(m.source || 'manual')} · ${esc(d)}${m.notes ? ' · ' + esc(m.notes) : ''}</p></div></div>`;
+      }).join('')}</div></div>`;
+    } else {
+      html += `<div class="card"><h2>Mediciones</h2><p>Aquí irán peso, BodyTrax, grasa, músculo y evolución por fecha cuando el coach las añada.</p></div>`;
+    }
     $('profile-body').innerHTML = html;
   } catch {
     $('profile-body').innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>No pude cargar el perfil.</p></div>';
   }
 }
+
 
 export function init() {
   state.viewStack = [];
@@ -420,7 +512,7 @@ export function init() {
   $('open-profile').onclick = () => renderProfile(true);
 
   (async () => {
-    const p = params();
+    const p = routeParams();
     if (p.share_token) {
       try {
         await loadSession(null, p.share_token);

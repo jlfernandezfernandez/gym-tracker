@@ -78,6 +78,33 @@ class AthleteProfileOut(AthleteProfileIn):
     updated_at: datetime
 
 
+# ── Athlete measurements ──
+
+class AthleteMeasurementIn(BaseModel):
+    measured_at: Optional[datetime] = None
+    source: str = "manual"
+    weight_kg: Optional[float] = None
+    muscle_kg: Optional[float] = None
+    fat_kg: Optional[float] = None
+    body_fat_pct: Optional[float] = None
+    visceral_fat: Optional[float] = None
+    score: Optional[float] = None
+    notes: str = ""
+
+
+class AthleteMeasurementOut(BaseModel):
+    id: int
+    measured_at: datetime
+    source: str = "manual"
+    weight_kg: Optional[float] = None
+    muscle_kg: Optional[float] = None
+    fat_kg: Optional[float] = None
+    body_fat_pct: Optional[float] = None
+    visceral_fat: Optional[float] = None
+    score: Optional[float] = None
+    notes: str = ""
+
+
 # ── Response schemas ──
 
 class ExerciseOut(BaseModel):

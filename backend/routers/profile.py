@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_session
 from telegram_auth import current_user_id
 from ownership import adopt_legacy_unscoped_data
-from models import AthleteProfile
-from schemas import AthleteProfileIn, AthleteProfileOut
+from models import AthleteProfile, AthleteMeasurement
+from schemas import AthleteProfileIn, AthleteProfileOut, AthleteMeasurementIn, AthleteMeasurementOut
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -82,3 +82,49 @@ async def patch_profile(
     await db.commit()
     await db.refresh(profile)
     return profile
+
+
+@router.get("/measurements", response_model=list[AthleteMeasurementOut])
+async def list_measurements(
+    limit: int = 20,
+    db: AsyncSession = Depends(get_session),
+    uid: Optional[int] = Depends(current_user_id),
+):
+    """Return historical body measurements (manual, BodyTrax, smart scale, etc.)."""
+    stmt = select(AthleteMeasurement)
+    if uid:
+        stmt = stmt.where(AthleteMeasurement.telegram_user_id == uid)
+    else:
+        stmt = stmt.where(AthleteMeasurement.telegram_user_id == None)  # noqa: E711
+    stmt = stmt.order_by(AthleteMeasurement.measured_at.desc()).limit(max(1, min(limit, 100)))
+    result = await db.execute(stmt)
+    return result.scalars().all()
+
+
+@router.post("/measurements", response_model=AthleteMeasurementOut)
+async def add_measurement(
+    body: AthleteMeasurementIn,
+    db: AsyncSession = Depends(get_session),
+    uid: Optional[int] = Depends(current_user_id),
+):
+    """Add one historical body measurement. Also updates current profile weight when provided."""
+    profile = await _get_or_create_profile(db, uid)
+    measurement = AthleteMeasurement(
+        telegram_user_id=uid,
+        measured_at=(body.measured_at or datetime.now(timezone.utc)).replace(tzinfo=None),
+        source=body.source,
+        weight_kg=body.weight_kg,
+        muscle_kg=body.muscle_kg,
+        fat_kg=body.fat_kg,
+        body_fat_pct=body.body_fat_pct,
+        visceral_fat=body.visceral_fat,
+        score=body.score,
+        notes=body.notes,
+    )
+    db.add(measurement)
+    if body.weight_kg is not None:
+        profile.weight_kg = body.weight_kg
+        profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    await db.commit()
+    await db.refresh(measurement)
+    return measurement

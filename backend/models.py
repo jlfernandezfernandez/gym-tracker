@@ -79,6 +79,22 @@ class PerformedSet(SQLModel, table=True):
     planned_exercise: "PlannedExercise" = Relationship(back_populates="performed_sets")
 
 
+class AthleteMeasurement(SQLModel, table=True):
+    __tablename__ = "athlete_measurements"
+
+    id: int = Field(default=None, primary_key=True)
+    telegram_user_id: Optional[int] = Field(default=None, index=True)
+    measured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    source: str = Field(default="manual", index=True)
+    weight_kg: Optional[float] = Field(default=None)
+    muscle_kg: Optional[float] = Field(default=None)
+    fat_kg: Optional[float] = Field(default=None)
+    body_fat_pct: Optional[float] = Field(default=None)
+    visceral_fat: Optional[float] = Field(default=None)
+    score: Optional[float] = Field(default=None)
+    notes: str = Field(default="")
+
+
 class AthleteProfile(SQLModel, table=True):
     __tablename__ = "athlete_profiles"
 
