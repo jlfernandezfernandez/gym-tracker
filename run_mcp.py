@@ -16,5 +16,5 @@ mcp.settings.host = "0.0.0.0"
 mcp.settings.port = port
 mcp.settings.transport_security.enable_dns_rebinding_protection = False
 
-print(f"Starting gym-tracker MCP on port {port} (SSE)", flush=True)
-mcp.run(transport="sse")
+print(f"Starting gym-tracker MCP on port {port} (streamable-http)", flush=True)
+mcp.run(transport="streamable-http")
