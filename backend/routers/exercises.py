@@ -57,6 +57,46 @@ async def list_equipment(
     return [row[0] for row in result.all() if row[0]]
 
 
+@router.get("/records")
+async def personal_records(
+    session: AsyncSession = Depends(get_session),
+    uid: Optional[int] = Depends(current_user_id),
+):
+    """Personal records: every exercise the athlete has performed, with max weight and last date."""
+    stmt = (
+        select(
+            Exercise.id,
+            Exercise.name,
+            Exercise.muscle_group,
+            Exercise.equipment,
+            Exercise.image_url,
+            func.max(PerformedSet.weight),
+            func.max(WorkoutSession.session_date),
+            func.count(func.distinct(WorkoutSession.id)),
+        )
+        .join(PlannedExercise, PerformedSet.planned_exercise_id == PlannedExercise.id)
+        .join(WorkoutSession, PlannedExercise.session_id == WorkoutSession.id)
+        .join(Exercise, PlannedExercise.exercise_id == Exercise.id)
+    )
+    if uid:
+        stmt = stmt.where(WorkoutSession.telegram_user_id == uid)
+    stmt = stmt.group_by(Exercise.id).order_by(func.max(WorkoutSession.session_date).desc())
+    rows = (await session.execute(stmt)).all()
+    return [
+        {
+            "exercise_id": r[0],
+            "name": r[1],
+            "muscle_group": r[2],
+            "equipment": r[3],
+            "image_url": r[4],
+            "max_weight": float(r[5] or 0),
+            "last_date": r[6].isoformat(),
+            "sessions": r[7],
+        }
+        for r in rows
+    ]
+
+
 @router.get("/{exercise_id}/progress")
 async def exercise_progress(
     exercise_id: int,

@@ -25,6 +25,7 @@ import '../styles/global.css';
 				<div class="grid" style="margin-top:14px">
 					<div class="row">
 						<button class="btn ghost" id="open-history">Historial</button>
+						<button class="btn ghost" id="open-records">Marcas</button>
 						<button class="btn ghost" id="open-profile">Perfil</button>
 					</div>
 				</div>
@@ -59,6 +60,28 @@ import '../styles/global.css';
 					<div style="flex:1;min-width:0"><h2>Tu perfil</h2><p>Lo que el coach sabe de ti</p></div>
 				</div>
 				<div id="profile-body">
+					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
+				</div>
+			</section>
+
+			<!-- RECORDS -->
+			<section id="records" class="screen">
+				<div class="topbar">
+					<button class="back" id="records-back">←</button>
+					<div style="flex:1;min-width:0"><h2>Mis marcas</h2><p>Peso máximo por ejercicio</p></div>
+				</div>
+				<div id="records-body">
+					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
+				</div>
+			</section>
+
+			<!-- RECORD DETAIL -->
+			<section id="record-detail" class="screen">
+				<div class="topbar">
+					<button class="back" id="record-back">←</button>
+					<div style="flex:1;min-width:0"><h2 id="record-title">Ejercicio</h2><p id="record-subtitle"></p></div>
+				</div>
+				<div id="record-body">
 					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
 				</div>
 			</section>

@@ -383,11 +383,19 @@ function loadProgressChart(ex: any) {
 }
 
 async function saveSet(ex: any) {
+  const btn = $('save-set') as HTMLButtonElement;
+  if (btn.disabled) return; // double-tap guard: one in-flight save at a time
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
   try {
     const kg = parseFloat(($('kg') as HTMLInputElement).value || '0');
     const reps = parseInt(($('reps') as HTMLInputElement).value || '0');
     const note = ($('note') as HTMLTextAreaElement).value || '';
-    if (reps <= 0) return toast('Pon las reps', 'err');
+    if (reps <= 0) {
+      btn.disabled = false;
+      btn.textContent = '✓ Guardar serie';
+      return toast('Pon las reps', 'err');
+    }
     const updated = await api('POST', `/sessions/${state.session.id}/exercises/${ex.planned_id}/sets`, {
       set_number: (ex.performed_sets?.length || 0) + 1,
       weight: kg,
@@ -406,6 +414,8 @@ async function saveSet(ex: any) {
     renderExercise(fresh);
     screen('exercise');
   } catch (e: any) {
+    btn.disabled = false;
+    btn.textContent = '✓ Guardar serie';
     haptic('bad');
     toast(e.message, 'err');
   }
@@ -460,10 +470,12 @@ async function renderHistory(push = true) {
       return;
     }
     $('hist-body').innerHTML = list
-      .map(
-        (s: any) =>
-          `<div class="card tap" data-session="${s.id}"><h3>${esc(s.title || 'Entrenamiento')}</h3><p>${esc(s.session_date)} · ${s.exercise_count || 0} ejercicios · ${s.total_sets || 0} series</p></div>`,
-      )
+      .map((s: any) => {
+        // Legacy titles embed the date ("Pecho · 09/07"); strip it, session_date is the source of truth.
+        const title = String(s.title || 'Entrenamiento').replace(/\s*[·\-–—]\s*\d{1,2}\/\d{1,2}(\/\d{2,4})?\s*$/, '');
+        const dateStr = new Date(s.session_date + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+        return `<div class="card tap" data-session="${s.id}"><h3>${esc(title)}</h3><p>${esc(dateStr)} · ${s.exercise_count || 0} ejercicios · ${s.total_sets || 0} series</p></div>`;
+      })
       .join('');
     document.querySelectorAll<HTMLElement>('[data-session]').forEach(
       (el) =>
@@ -474,6 +486,64 @@ async function renderHistory(push = true) {
     );
   } catch {
     $('hist-body').innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>No pude cargar el historial.</p></div>';
+  }
+}
+
+const fmtDate = (d: string) =>
+  new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+
+async function renderRecords(push = true) {
+  if (push) pushScreen('records');
+  try {
+    const rows = await api('GET', '/exercises/records');
+    if (!rows?.length) {
+      $('records-body').innerHTML =
+        '<div class="empty"><div class="icon">🏆</div><p>Sin marcas todavía.<br>Registra series y aparecerán aquí.</p></div>';
+      return;
+    }
+    $('records-body').innerHTML = rows
+      .map(
+        (r: any) => `<div class="card tap exercise-card" data-record="${r.exercise_id}" data-name="${esc(r.name)}">
+          <div class="exercise-media">${r.image_url ? `<img src="${esc(mediaUrl(r.image_url))}" loading="lazy"/>` : '🏋️'}</div>
+          <div class="exercise-card-body"><div class="exercise-title-row"><h3>${esc(r.name)}</h3><span class="pill active">${r.max_weight ? r.max_weight + 'kg' : 'corporal'}</span></div>
+          <p>${esc(r.muscle_group || '')}${r.equipment ? ' · ' + esc(r.equipment) : ''}</p>
+          <div class="meta"><span class="pill">${esc(fmtDate(r.last_date))}</span><span class="pill">${r.sessions} ${r.sessions === 1 ? 'sesión' : 'sesiones'}</span></div></div></div>`,
+      )
+      .join('');
+    document.querySelectorAll<HTMLElement>('[data-record]').forEach(
+      (el) => (el.onclick = () => renderRecordDetail(el.dataset.record!, el.dataset.name || 'Ejercicio')),
+    );
+  } catch {
+    $('records-body').innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>No pude cargar las marcas.</p></div>';
+  }
+}
+
+async function renderRecordDetail(exerciseId: string, name: string) {
+  pushScreen('record-detail');
+  $('record-title').textContent = name;
+  $('record-subtitle').textContent = 'Histórico por sesión';
+  try {
+    const pts: (ProgressPoint & { volume: number; sets: number })[] = await api(
+      'GET',
+      '/exercises/' + encodeURIComponent(exerciseId) + '/progress?limit=50',
+    );
+    if (!pts?.length) {
+      $('record-body').innerHTML = '<div class="empty"><div class="icon">📈</div><p>Sin datos todavía.</p></div>';
+      return;
+    }
+    const max = Math.max(...pts.map((p) => p.top_weight || 0));
+    let html = `<div class="card"><div class="grid stats"><div class="stat"><b>${max ? max + 'kg' : '—'}</b><span>máximo</span></div><div class="stat"><b>${pts.length}</b><span>sesiones</span></div><div class="stat"><b>${pts[pts.length - 1].top_weight}kg</b><span>última</span></div></div></div>`;
+    if (pts.length >= 2)
+      html += '<div class="card"><h3>Progresión</h3><p style="font-size:12px">Peso máximo por sesión</p><div class="chart-wrap"><canvas id="record-chart"></canvas></div></div>';
+    html += `<div class="card"><h3>Sesiones</h3><div class="sets" style="margin-top:8px">${[...pts]
+      .reverse()
+      .map((p: any) => `<div class="set-row"><span class="n">${esc(fmtDate(p.date))}</span><span class="v">${p.top_weight}kg máx · ${p.sets} series · ${Math.round(p.volume)}kg vol</span></div>`)
+      .join('')}</div></div>`;
+    $('record-body').innerHTML = html;
+    const canvas = document.getElementById('record-chart') as HTMLCanvasElement | null;
+    if (canvas) renderProgressChart(canvas, pts);
+  } catch {
+    $('record-body').innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>No pude cargar el detalle.</p></div>';
   }
 }
 
@@ -540,7 +610,10 @@ export function init() {
   $('exercise-back').onclick = () => popScreen();
   $('profile-back').onclick = () => popScreen();
   $('history-back').onclick = () => popScreen();
+  $('records-back').onclick = () => popScreen();
+  $('record-back').onclick = () => popScreen();
   $('open-history').onclick = () => renderHistory(true);
+  $('open-records').onclick = () => renderRecords(true);
   $('open-profile').onclick = () => renderProfile(true);
 
   (async () => {

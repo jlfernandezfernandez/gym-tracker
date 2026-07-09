@@ -186,6 +186,9 @@ def delete_session(session_id: int, telegram_user_id: int | None = None) -> dict
 def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available: int = 45, discomfort: str = "", exercises_json: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
     """Create a workout plan owned by the Telegram athlete.
 
+    title: workout name only (e.g. "Pecho + Tríceps"). Never embed the date —
+    the app stores and displays session_date separately.
+
     CRITICAL: telegram_user_id is required. Without it the API would create an
     unscoped session that share links can open, but the Telegram Mini App cannot
     show as the athlete's active session.

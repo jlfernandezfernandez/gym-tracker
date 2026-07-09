@@ -33,6 +33,12 @@ class PerformedSetCreate(BaseModel):
     notes: str = ""
 
 
+class PlannedExerciseUpdate(BaseModel):
+    status: Optional[str] = None
+    new_exercise_id: Optional[int] = None
+    notes: Optional[str] = None
+
+
 class SessionFinish(BaseModel):
     duration_actual: int = 0
     feedback: str = ""

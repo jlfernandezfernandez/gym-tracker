@@ -8,14 +8,17 @@ from typing import Optional
 
 from database import get_session as get_db_session
 from telegram_auth import current_user_id
-from models import WorkoutSession, PlannedExercise, PerformedSet
+from models import Exercise, WorkoutSession, PlannedExercise, PerformedSet
 from schemas import (
     SessionCreate,
     SessionOut,
     SessionSummary,
     PerformedSetCreate,
+    PlannedExerciseUpdate,
     SessionFinish,
 )
+
+PLANNED_EXERCISE_STATUSES = {"pending", "in_progress", "completed", "skipped", "changed"}
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
@@ -204,6 +207,41 @@ async def complete_planned_exercise(
     return await _load_session(session_id, db)
 
 
+@router.put("/{session_id}/exercises/{planned_id}", response_model=SessionOut)
+async def update_planned_exercise(
+    session_id: int,
+    planned_id: int,
+    body: PlannedExerciseUpdate,
+    db: AsyncSession = Depends(get_db_session),
+    uid: Optional[int] = Depends(current_user_id),
+):
+    """Update a planned exercise: change status, swap the exercise, or set notes."""
+    s = await _load_session(session_id, db)
+    _check_owner(s, uid)
+    pe = await db.get(PlannedExercise, planned_id)
+    if not pe or pe.session_id != session_id:
+        raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
+
+    if body.status is not None:
+        if body.status not in PLANNED_EXERCISE_STATUSES:
+            raise HTTPException(status_code=422, detail=f"Invalid status. Use one of: {sorted(PLANNED_EXERCISE_STATUSES)}")
+        pe.status = body.status
+    if body.new_exercise_id is not None:
+        if not await db.get(Exercise, body.new_exercise_id):
+            raise HTTPException(status_code=404, detail="Exercise not found in catalog")
+        pe.exercise_id = body.new_exercise_id
+        if body.status is None:
+            pe.status = "changed"
+    if body.notes is not None:
+        pe.notes = body.notes
+
+    if s.status == "planned" and pe.status in {"in_progress", "completed"}:
+        s.status = "in_progress"
+    await db.commit()
+    db.expire_all()
+    return await _load_session(session_id, db)
+
+
 @router.get("/share/{share_token}", response_model=SessionOut)
 async def get_shared_session(
     share_token: str,
@@ -251,6 +289,18 @@ async def log_set(
     pe = await db.get(PlannedExercise, planned_id)
     if not pe or pe.session_id != session_id:
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
+
+    # Idempotency guard: rapid duplicate submits (double-tap, retry) of the same
+    # set land as identical rows within seconds. Return current state instead.
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+    for existing in pe.performed_sets or []:
+        if (
+            existing.set_number == body.set_number
+            and existing.weight == body.weight
+            and existing.reps == body.reps
+            and abs((now - existing.timestamp).total_seconds()) < 30
+        ):
+            return await _load_session(session_id, db)
 
     ps = PerformedSet(
         planned_exercise_id=planned_id,
