@@ -159,13 +159,23 @@ def delete_session(session_id: int, telegram_user_id: int | None = None) -> dict
 
 @mcp.tool()
 def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available: int = 45, discomfort: str = "", exercises_json: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Create a workout plan. Returns the stored session with share token and exercises.
+    """Create a workout plan owned by the Telegram athlete.
+
+    CRITICAL: telegram_user_id is required. Without it the API would create an
+    unscoped session that share links can open, but the Telegram Mini App cannot
+    show as the athlete's active session.
 
     exercises_json: JSON array of the exercises you picked from list_exercises, e.g.
     [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
       "suggested_weight": 40.0, "notes": "controla la bajada"}]
     If empty, the API picks a generic fallback plan — always pick exercises yourself.
     """
+    if telegram_user_id is None:
+        raise ValueError(
+            "telegram_user_id is required for create_plan so the Mini App can show "
+            "the workout as the athlete's active session. Pass the Telegram user id "
+            "from the current chat/context."
+        )
     exercises = json.loads(exercises_json) if exercises_json else []
     if not isinstance(exercises, list):
         raise ValueError("exercises_json must be a JSON array")
