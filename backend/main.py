@@ -8,6 +8,7 @@ import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
+from typing import Any
 
 import boto3
 from botocore.config import Config as BotoConfig
@@ -30,7 +31,7 @@ S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "")
 S3_BUCKET = os.getenv("S3_BUCKET", "gym-tracker-media")
 S3_REGION = os.getenv("S3_REGION", "garage")
 
-_s3_client: boto3.client | None = None
+_s3_client: Any = None
 
 
 def _get_s3() -> boto3.client:

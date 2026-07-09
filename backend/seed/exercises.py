@@ -35,7 +35,7 @@ S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "")
 S3_BUCKET = os.getenv("S3_BUCKET", "gym-tracker-media")
 S3_REGION = os.getenv("S3_REGION", "garage")
 
-_s3_client: boto3.client | None = None
+_s3_client: Any = None
 
 
 def _get_s3() -> boto3.client:
