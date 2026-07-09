@@ -2,8 +2,7 @@
 Seed exercises from the vendored dataset (backend/exercise_data/) into the DB
 and upload media to S3-compatible object storage.
 
-Dataset: https://github.com/hasaneyldrm/exercises-dataset (media © Gym Visual,
-see exercise_data/NOTICE.md). Runs on startup; no-op if the table already has rows.
+Dataset: https://github.com/jlfernandezfernandez/exercises-dataset-es (media © Gym Visual, see exercise_data/NOTICE.md). Runs on startup and idempotently upserts metadata.
 """
 
 import asyncio
@@ -26,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "exercise_data"
 MEDIA_URL_PREFIX = "/exercise-media"
-UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main"
+UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/jlfernandezfernandez/exercises-dataset-es/main"
 DOWNLOAD_CONCURRENCY = 8
 
 # ── S3-compatible object storage ────────────────────────────────────────────
