@@ -7,7 +7,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
 from telegram_auth import current_user_id
-from ownership import adopt_legacy_unscoped_data
 from models import AthleteProfile, AthleteMeasurement
 from schemas import AthleteProfileIn, AthleteProfileOut, AthleteMeasurementIn, AthleteMeasurementOut
 
@@ -16,7 +15,6 @@ router = APIRouter(prefix="/api/profile", tags=["profile"])
 
 async def _get_or_create_profile(db: AsyncSession, uid: int | None = None) -> AthleteProfile:
     """Get the athlete profile for a given Telegram user, or create one."""
-    await adopt_legacy_unscoped_data(db, uid)
     if uid:
         result = await db.execute(
             select(AthleteProfile).where(AthleteProfile.telegram_user_id == uid).limit(1)
@@ -43,25 +41,6 @@ async def get_profile(
 ):
     """Return the athlete profile for the authenticated Telegram user."""
     return await _get_or_create_profile(db, uid)
-
-
-@router.put("", response_model=AthleteProfileOut)
-async def update_profile(
-    body: AthleteProfileIn,
-    db: AsyncSession = Depends(get_session),
-    uid: Optional[int] = Depends(current_user_id),
-):
-    """Replace/update the athlete profile from coach onboarding."""
-    profile = await _get_or_create_profile(db, uid)
-    data = body.model_dump(exclude_unset=True)
-    for key, value in data.items():
-        setattr(profile, key, value)
-    if uid is not None:
-        profile.telegram_user_id = uid
-    profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
-    await db.commit()
-    await db.refresh(profile)
-    return profile
 
 
 @router.patch("", response_model=AthleteProfileOut)

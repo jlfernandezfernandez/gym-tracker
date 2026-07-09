@@ -8,7 +8,8 @@ const API = (window as any).API_BASE_URL || location.origin + '/api';
 const tg = (window as any).Telegram?.WebApp;
 if (tg) {
   tg.expand();
-  tg.setHeaderColor?.('secondary_bg_color');
+  tg.setHeaderColor?.('#f6f7f9');
+  tg.setBackgroundColor?.('#f6f7f9');
 }
 
 interface State {
@@ -124,14 +125,9 @@ function routeParams() {
   // Only clean routes are supported:
   // /session/share/:token
   // /session/share/:token/exercise/:plannedExerciseId
-  // /exercise/share/:token/:plannedExerciseId
   if (parts[0] === 'session' && parts[1] === 'share' && parts[2]) {
     p.share_token = parts[2];
     if (parts[3] === 'exercise' && parts[4]) p.exercise_id = parts[4];
-  }
-  if (parts[0] === 'exercise' && parts[1] === 'share' && parts[2]) {
-    p.share_token = parts[2];
-    if (parts[3]) p.exercise_id = parts[3];
   }
   return p;
 }

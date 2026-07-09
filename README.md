@@ -46,11 +46,12 @@ Tú ──Telegram──> Coach (Hermes) ──MCP──> API ──> Base de da
                         └──deep link──> Mini App (visual)
 ```
 
-La aplicación es **agnóstica al agente**. No sabe ni le importa quién la llama. Todo se controla via MCP (21 herramientas):
+La aplicación es **agnóstica al agente**. No sabe ni le importa quién la llama. Todo se controla via MCP (23 herramientas):
 
 | Categoría | Qué hace el agente |
 |---|---|
 | **Perfil** | Leer y actualizar tu perfil deportivo |
+| **Mediciones** | Registrar y consultar peso/composición corporal con fecha y fuente |
 | **Catálogo** | Buscar ejercicios, ver alternativas |
 | **Sesiones** | Crear planes, ver estado actual, registrar series |
 | **Mini App** | Generar deep links para abrir la web |
@@ -148,7 +149,7 @@ Si despliegas tu propia instancia, tus datos están en tu Postgres, en tu servid
 
 ## Para agentes — manual de operación
 
-¿Eres un agente conectándote como coach? Con esta sección + los docstrings de las tools MCP (los ves al conectarte) puedes generarte tu propia skill. Las plantillas de `templates/` (SOUL.md, SKILL.md) son un punto de partida opcional.
+¿Eres un agente conectándote como coach? El propio servidor MCP te entrega el manual al conectarte: las `instructions` del servidor + los docstrings de cada tool son suficientes para operar sin leer nada más. Las plantillas de `templates/` (SOUL.md, SKILL.md) son un punto de partida opcional para darle personalidad.
 
 **Qué eres tú y qué es la app**: tú eres el cerebro — la app no tiene IA, solo persiste perfil, sesiones, ejercicios y series. El chat de Telegram es el producto principal; la Mini App es la superficie visual que abres con deep links cuando ver/tocar gana a leer.
 
@@ -156,20 +157,21 @@ Si despliegas tu propia instancia, tus datos están en tu Postgres, en tu servid
 
 1. **Onboarding primero.** Al empezar, `get_athlete_profile`. Si `onboarding_complete` es false, no planifiques: pregunta como entrenador real (objetivo, experiencia, días/tiempo, lesiones, equipamiento, gustos) en bloques cortos y guarda con `patch_athlete_profile` (termina con `"onboarding_complete": true`).
 2. **Nunca inventes** peso, altura, lesiones, máquinas ni historial. Lee el perfil, mira `list_sessions`, o pregunta.
-3. **Elige tú los ejercicios**: `list_exercises` / `list_muscle_groups` → pásalos en `exercises_json` de `create_plan`. Sin ejercicios la API mete un fallback genérico — evítalo.
+3. **Elige tú los ejercicios**: `list_exercises` / `list_muscle_groups` → pásalos en `exercises_json` de `create_plan`. La API rechaza planes sin ejercicios (422).
 4. **Preview antes de entrenar**: `create_plan` deja la sesión en `planned`; manda `session_web_url`. ¿No convence? `delete_session` y otra.
 5. **Durante el entreno actualiza estado, no solo respondas**: "he hecho 12" → `log_set`; "me duele el hombro" → alternativa + guarda en perfil; "no hay máquina" → `patch_athlete_profile` + `update_planned_exercise` con `new_exercise_id`. Posición actual: `get_active_session` / `get_current_state`.
 6. **Al terminar**: `finish_session` con feedback. Úsalo (y `list_sessions`) para adaptar el siguiente plan.
-7. **Compartir**: `share_web_url(share_token)` → link solo lectura para un compañero en cualquier navegador.
-8. **Multi-usuario**: pasa siempre `telegram_user_id` (id de Telegram del chat) en tools de perfil/sesión. Sin él, acceso sin filtro — solo instancias personales.
+7. **Datos corporales**: peso, composición, básculas, escáneres → `record_body_measurement` (con fecha y fuente); evolución → `list_measurements`.
+8. **Compartir**: `share_web_url(share_token)` → link solo lectura para un compañero en cualquier navegador.
+9. **Multi-usuario**: pasa siempre `telegram_user_id` (id de Telegram del chat) en tools de perfil/sesión. Sin él, acceso sin filtro — solo instancias personales.
 
-**Deep links**: plan `?session_id=<id>` · ejercicio `?session_id=<id>&exercise_id=<planned_id>` · compañero `?share_token=<token>`.
+**Deep links** (los generan `session_web_url` / `share_web_url`, nunca los construyas a mano): plan `/session/share/<token>` · ejercicio `/session/share/<token>/exercise/<planned_id>`.
 
 **Persistencia**: lo físico/entrenable → perfil de la app. Tu memoria de agente → solo preferencias humanas estables. No dupliques logs de entreno.
 
 ---
 
-## MCP — las 21 herramientas del coach
+## MCP — las 23 herramientas del coach
 
 El coach controla toda la app via MCP. Estas son las herramientas:
 
@@ -178,6 +180,8 @@ El coach controla toda la app via MCP. Estas son las herramientas:
 | `health` | Saber si la API está viva |
 | `get_athlete_profile` | Leer perfil del atleta |
 | `patch_athlete_profile` | Guardar/actualizar campos del perfil (onboarding incluido) |
+| `record_body_measurement` | Registrar peso/composición corporal con fecha y fuente |
+| `list_measurements` | Historial de mediciones corporales (evolución) |
 | `list_exercises` | Buscar ejercicios por nombre o músculo |
 | `list_muscle_groups` | Ver grupos musculares disponibles |
 | `get_exercise` | Detalle completo de un ejercicio |
@@ -194,15 +198,17 @@ El coach controla toda la app via MCP. Estas son las herramientas:
 | `delete_set` | Borrar una serie mal registrada |
 | `update_planned_exercise` | Cambiar/saltar un ejercicio |
 | `finish_session` | Terminar sesión con feedback |
-| `session_web_url` | Generar link a la Mini App |
+| `session_web_url` | Generar link a la Mini App (`/session/share/<token>`) |
 | `share_web_url` | Generar link compartible (solo lectura) |
+
+Al conectarte, el servidor MCP también expone unas `instructions` con el manual de operación completo — un agente nuevo no necesita más documentación.
 
 ---
 
 ## Stack
 
 - **Backend**: FastAPI + SQLModel + Postgres
-- **Frontend**: Astro (estático, TypeScript vanilla) + Chart.js + react-body-highlighter → Mini App de Telegram
+- **Frontend**: Astro (estático, TypeScript vanilla) + Chart.js + body-highlighter → Mini App de Telegram
 - **MCP**: Python (FastMCP) — el puente entre agente y app
 - **Deploy**: Docker multi-stage, Coolify o docker compose
 - **Auth**: Telegram InitData HMAC (sin passwords)
@@ -222,9 +228,9 @@ El coach controla toda la app via MCP. Estas son las herramientas:
 ├── frontend/         # Mini App (Astro + TypeScript)
 │   └── src/
 │       ├── pages/    # index.astro (markup de pantallas)
-│       ├── lib/      # app.ts (lógica), chart.ts, bodymap.tsx
+│       ├── lib/      # app.ts (lógica), chart.ts, bodymap.ts
 │       └── styles/   # global.css
-├── mcp/              # MCP server (21 tools)
+├── mcp/              # MCP server (23 tools)
 ├── templates/        # SOUL.md + SKILL.md for coach profile
 ├── docs/             # Setup guide + landing
 ├── Dockerfile        # Multi-stage: build frontend + API + estáticos

@@ -1,12 +1,11 @@
 /**
- * Body map: renders react-body-highlighter models (front + back) into a
- * container, highlighting the muscle groups worked today.
+ * Body map: renders body-highlighter models (front + back) into a container,
+ * highlighting the muscle groups worked today.
  */
-import { createRoot } from 'react-dom/client';
-import Model, { type Muscle } from 'react-body-highlighter';
+import createBodyHighlighter from 'body-highlighter';
 
-// Dataset muscle_group → react-body-highlighter slugs.
-const MUSCLE_MAP: Record<string, Muscle[]> = {
+// Dataset muscle_group → body-highlighter slugs.
+const MUSCLE_MAP: Record<string, string[]> = {
   abdominals: ['abs'],
   'ankle stabilizers': ['calves'],
   ankles: ['calves'],
@@ -38,8 +37,8 @@ const MUSCLE_MAP: Record<string, Muscle[]> = {
   wrists: ['forearm'],
 };
 
-export function toModelMuscles(muscleGroups: string[]): Muscle[] {
-  const out = new Set<Muscle>();
+export function toModelMuscles(muscleGroups: string[]): string[] {
+  const out = new Set<string>();
   for (const g of muscleGroups) {
     for (const m of MUSCLE_MAP[String(g || '').toLowerCase()] ?? []) out.add(m);
   }
@@ -47,19 +46,17 @@ export function toModelMuscles(muscleGroups: string[]): Muscle[] {
 }
 
 export function renderBodyMap(container: HTMLElement, muscleGroups: string[]): void {
-  const data = [{ name: 'hoy', muscles: toModelMuscles(muscleGroups) }];
-  // Realistic skin tone on a dark card, with a vibrant accent for worked muscles.
-  const props = { data, bodyColor: '#d4a373', highlightedColors: ['#3b82f6'] };
-  createRoot(container).render(
-    <div>
-      <div className="bodymap">
-        <Model {...props} type="anterior" />
-        <Model {...props} type="posterior" />
-      </div>
-      <div className="bodymap-labels">
-        <span>Frente</span>
-        <span>Espalda</span>
-      </div>
-    </div>,
-  );
+  const data = [{ name: 'hoy', muscles: toModelMuscles(muscleGroups) as any }];
+  // Realistic skin tone on a light card, with the app accent for worked muscles.
+  const opts = { data, bodyColor: '#e3b58c', highlightedColors: ['#4f46e5'] };
+  container.innerHTML =
+    '<div class="bodymap"><div data-side="anterior"></div><div data-side="posterior"></div></div>' +
+    '<div class="bodymap-labels"><span>Frente</span><span>Espalda</span></div>';
+  for (const side of ['anterior', 'posterior'] as const) {
+    createBodyHighlighter({
+      ...opts,
+      container: container.querySelector<HTMLElement>(`[data-side="${side}"]`)!,
+      type: side,
+    });
+  }
 }

@@ -12,9 +12,9 @@ export interface ProgressPoint {
 
 export function renderProgressChart(canvas: HTMLCanvasElement, pts: ProgressPoint[]): void {
   const css = getComputedStyle(document.documentElement);
-  const accent = css.getPropertyValue('--btn').trim() || '#fafafa';
-  const hint = css.getPropertyValue('--hint').trim() || '#a1a1aa';
-  const border = 'rgba(255,255,255,.08)';
+  const accent = css.getPropertyValue('--btn').trim() || '#4f46e5';
+  const hint = css.getPropertyValue('--hint').trim() || '#6b7280';
+  const border = 'rgba(17,24,39,.08)';
 
   new Chart(canvas, {
     type: 'line',
@@ -24,7 +24,7 @@ export function renderProgressChart(canvas: HTMLCanvasElement, pts: ProgressPoin
         {
           data: pts.map((p) => p.top_weight),
           borderColor: accent,
-          backgroundColor: 'rgba(255,255,255,.06)',
+          backgroundColor: 'rgba(79,70,229,.08)',
           fill: true,
           tension: 0.3,
           pointRadius: 3,

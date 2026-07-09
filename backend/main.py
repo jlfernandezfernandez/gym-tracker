@@ -10,7 +10,7 @@ import os
 import logging
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -94,19 +94,9 @@ def _frontend_index() -> str:
 # Clean client-side routes. These return the Mini App shell; app.ts reads path params.
 if _static_dir:
     @app.get("/", include_in_schema=False)
-    async def frontend_root(request: Request):
-        legacy_params = {"share_token", "session_id", "exercise_id"}
-        if legacy_params.intersection(request.query_params.keys()):
-            raise HTTPException(
-                status_code=410,
-                detail="Legacy query-param Mini App URLs are removed. Use /session/share/<token> or /session/share/<token>/exercise/<planned_exercise_id>.",
-            )
-        return FileResponse(_frontend_index())
-
     @app.get("/session/share/{share_token}", include_in_schema=False)
     @app.get("/session/share/{share_token}/exercise/{planned_exercise_id}", include_in_schema=False)
-    @app.get("/exercise/share/{share_token}/{planned_exercise_id}", include_in_schema=False)
-    async def frontend_clean_routes():
+    async def frontend_shell():
         return FileResponse(_frontend_index())
 
     app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")

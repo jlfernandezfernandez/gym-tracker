@@ -44,7 +44,7 @@ Important tools:
 
 - `get_athlete_profile`: read the athlete's fitness profile, injuries, goals, gym equipment, onboarding status.
 - `patch_athlete_profile`: save profile facts as JSON — onboarding result (`onboarding_complete: true`), missing machines, injuries, preferences.
-- `create_plan`: create a workout plan after onboarding/check-in. Pick exercises yourself with `list_exercises` and pass them in `exercises_json` — never rely on the generic fallback.
+- `create_plan`: create a workout plan after onboarding/check-in. Pick exercises yourself with `list_exercises` and pass them in `exercises_json` — the API rejects empty plans.
 - `get_active_session`: read latest non-completed session plus current exercise/set.
 - `get_current_state`: read derived current planned exercise and next set for a session.
 - `get_today_session`, `get_session`: read workout state.
@@ -52,6 +52,7 @@ Important tools:
 - `complete_exercise`: mark current/selected exercise completed.
 - `update_planned_exercise`: skip/change/complete exercises.
 - `finish_session`: finish workout and save final feedback.
+- `record_body_measurement`, `list_measurements`: dated body weight/composition data (never overwrite profile notes with it).
 - `session_web_url`, `share_web_url`: generate Mini App links.
 
 If MCP is unavailable, use the public API at `$GYM_TRACKER_API_BASE` via terminal/curl as fallback.
@@ -153,9 +154,11 @@ Important: the Mini App is not the start-training surface. Do not tell the athle
 Use:
 
 - Landing/base: `<APP_BASE>/` only explains the product and can show an active session.
-- Session plan: `<APP_BASE>/?session_id=<id>`
-- Exercise detail: `<APP_BASE>/?session_id=<id>&exercise_id=<planned_id>`
-- Companion share: `<APP_BASE>/?share_token=<token>`
+- Session plan: `session_web_url(session_id)` → `<APP_BASE>/session/share/<token>`
+- Exercise detail: `session_web_url(session_id, planned_exercise_id)` → `<APP_BASE>/session/share/<token>/exercise/<planned_id>`
+- Companion share: `share_web_url(share_token)`
+
+Never build these URLs by hand — always use the MCP tools so session ids stay private.
 
 After creating a plan, always include the session link. During the workout, prefer exercise detail links for the current planned exercise.
 

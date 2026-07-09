@@ -8,7 +8,6 @@ from typing import Optional
 
 from database import get_session as get_db_session
 from telegram_auth import current_user_id
-from ownership import adopt_legacy_unscoped_data
 from models import WorkoutSession, PlannedExercise, PerformedSet
 from schemas import (
     SessionCreate,
@@ -138,7 +137,6 @@ async def get_today_session(
     uid: Optional[int] = Depends(current_user_id),
 ):
     """Get today's latest session if it exists."""
-    await adopt_legacy_unscoped_data(db, uid)
     stmt = select(WorkoutSession).where(WorkoutSession.session_date == date.today())
     if uid:
         stmt = stmt.where(WorkoutSession.telegram_user_id == uid)
@@ -159,7 +157,6 @@ async def get_active_session(
     uid: Optional[int] = Depends(current_user_id),
 ):
     """Get latest non-completed session with derived current exercise state."""
-    await adopt_legacy_unscoped_data(db, uid)
     stmt = select(WorkoutSession).where(WorkoutSession.status != "completed")
     if uid:
         stmt = stmt.where(WorkoutSession.telegram_user_id == uid)
@@ -234,7 +231,6 @@ async def get_session(
     uid: Optional[int] = Depends(current_user_id),
 ):
     """Get a full session with exercises and performed sets."""
-    await adopt_legacy_unscoped_data(db, uid)
     s = await _load_session(session_id, db)
     _check_owner(s, uid)
     return s
@@ -363,7 +359,6 @@ async def list_sessions(
     uid: Optional[int] = Depends(current_user_id),
 ):
     """List last N sessions with summary info."""
-    await adopt_legacy_unscoped_data(db, uid)
     stmt = (
         select(WorkoutSession)
         .options(

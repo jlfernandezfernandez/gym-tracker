@@ -22,7 +22,32 @@ API_BASE = os.getenv("GYM_TRACKER_API_BASE", "http://localhost:8000/api").rstrip
 APP_BASE = os.getenv("GYM_TRACKER_APP_BASE", "http://localhost:8000").rstrip("/")
 COACH_KEY = os.getenv("GYM_TRACKER_COACH_KEY", "")
 
-mcp = FastMCP("gym-tracker")
+COACH_GUIDE = """You are the athlete's personal trainer. This app has no AI: it only stores
+profile, exercise catalog, sessions and sets. You are the brain; Telegram chat is the main
+product and the Mini App (deep links) is the visual surface.
+
+Operating rules:
+1. Onboarding first: get_athlete_profile. If onboarding_complete is false, don't plan yet —
+   ask like a real trainer (goal, experience, days/time, injuries, equipment, likes) in short
+   blocks and save with patch_athlete_profile (finish with {"onboarding_complete": true}).
+2. Never invent weight, height, injuries, machines or history. Read the profile, check
+   list_sessions / exercise_progress / list_measurements, or ask.
+3. Pick exercises yourself: list_exercises / list_muscle_groups, then send them in
+   create_plan exercises_json. The API rejects empty plans.
+4. Preview before training: create_plan leaves the session as 'planned'; send session_web_url.
+   Not convincing? delete_session and create another.
+5. During the workout update state, don't just chat: "did 12 reps" → log_set; pain →
+   alternative + patch_athlete_profile; machine busy → update_planned_exercise with
+   new_exercise_id. Current position: get_active_session / get_current_state.
+6. When done: finish_session with feedback. Use it and list_sessions to adapt the next plan.
+7. Body data (weight, composition, scans): record_body_measurement, never overwrite notes.
+8. Sharing: share_web_url(share_token) gives a read-only link for a companion.
+9. Multi-user: always pass telegram_user_id (Telegram id of the chat) on profile/session tools.
+
+Persistence split: physical/trainable facts → app profile. Your own agent memory → only
+stable human preferences. Never duplicate workout logs outside the app."""
+
+mcp = FastMCP("gym-tracker", instructions=COACH_GUIDE)
 
 
 def _request(method: str, path: str, payload: dict[str, Any] | None = None, user_id: int | None = None) -> Any:
@@ -168,7 +193,7 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
     exercises_json: JSON array of the exercises you picked from list_exercises, e.g.
     [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
       "suggested_weight": 40.0, "notes": "controla la bajada"}]
-    If empty, the API picks a generic fallback plan — always pick exercises yourself.
+    Required: pick the exercises yourself from list_exercises; the API rejects empty plans.
     """
     if telegram_user_id is None:
         raise ValueError(
@@ -232,37 +257,12 @@ def finish_session(session_id: int, duration_actual: int = 0, feedback: str = ""
 
 @mcp.tool()
 def list_measurements(limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
-    """List historical body measurements: weight, muscle, fat, score, source and date."""
+    """List historical body measurements: weight, muscle, fat, score, source and date.
+
+    Use this instead of profile.weight_kg when talking about evolution over time.
+    """
     qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 100))})
     return _request("GET", f"/profile/measurements?{qs}", user_id=telegram_user_id)
-
-
-@mcp.tool()
-def add_measurement(measurement_json: str, telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Add a generic body measurement from any source.
-
-    measurement_json example:
-    {"source":"smart_scale","measured_at":"2026-07-09T10:00:00","weight_kg":72.3,
-     "muscle_kg":56.4,"fat_kg":12.9,"body_fat_pct":17.8,"score":787}
-    Source is free text: manual, smart_scale, inbody, dexa, clinic, photo_checkin, etc.
-    """
-    if telegram_user_id is None:
-        raise ValueError("telegram_user_id is required so measurements are attached to the athlete profile")
-    body = json.loads(measurement_json or "{}")
-    if not isinstance(body, dict):
-        raise ValueError("measurement_json must be a JSON object")
-    return _request("POST", "/profile/measurements", body, user_id=telegram_user_id)
-
-
-@mcp.tool()
-def body_measurement_history(limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
-    """List Jordi's historical body measurements.
-
-    Use this instead of reading profile.weight_kg when talking about evolution.
-    Returns dated measurements from any source: manual, smart scale, medical scan,
-    body-composition device, photos/check-ins, etc.
-    """
-    return list_measurements(limit=limit, telegram_user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -280,7 +280,7 @@ def record_body_measurement(
 ) -> dict[str, Any]:
     """Record a generic dated body measurement.
 
-    Preferred tool when Jordi sends weight, body-composition, medical measurement,
+    Use when the athlete sends weight, body-composition, medical measurement,
     smart-scale data, photos/check-in notes, or any future measurement source.
     `source` is free text (manual, smart_scale, inbody, dexa, clinic, etc.).
     Do not overwrite profile notes; store each measurement with measured_at/source.
