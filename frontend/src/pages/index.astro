@@ -1,21 +1,7 @@
 ---
 import AppLayout from '../layouts/AppLayout.astro';
-import Landing from '../components/Landing.astro';
-import Screen from '../components/Screen.astro';
-import FinishDialog from '../components/FinishDialog.astro';
+import App from '../components/App.tsx';
 ---
 <AppLayout>
-	<Landing />
-	<Screen id="plan" title="Plan" />
-	<Screen id="exercise" title="Ejercicio" />
-	<Screen id="profile" title="Tu perfil" subtitle="Lo que el coach sabe de ti" />
-	<Screen id="history" title="Historial" subtitle="Últimas sesiones" />
-	<Screen id="records" title="Mis marcas" subtitle="Peso máximo por ejercicio" />
-	<Screen id="record-detail" title="Ejercicio" />
-	<FinishDialog />
+	<App client:only="preact" />
 </AppLayout>
-
-<script>
-	import { init } from '../lib/app';
-	init();
-</script>

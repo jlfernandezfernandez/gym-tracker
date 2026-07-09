@@ -10,13 +10,13 @@ export interface ProgressPoint {
   sets: number;
 }
 
-export function renderProgressChart(canvas: HTMLCanvasElement, pts: ProgressPoint[]): void {
+export function renderProgressChart(canvas: HTMLCanvasElement, pts: ProgressPoint[]): Chart {
   const css = getComputedStyle(document.documentElement);
   const accent = css.getPropertyValue('--btn').trim() || '#4f46e5';
   const hint = css.getPropertyValue('--hint').trim() || '#6b7280';
   const border = 'rgba(17,24,39,.08)';
 
-  new Chart(canvas, {
+  return new Chart(canvas, {
     type: 'line',
     data: {
       labels: pts.map((p) => p.date.slice(5)),

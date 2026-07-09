@@ -1,10 +1,15 @@
 // @ts-check
 
+import preact from '@astrojs/preact';
+import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
 
 // Static Mini App served by FastAPI (Docker copies dist/ to /app/static).
 export default defineConfig({
+	// compat: TanStack Query imports from "react"; preact/compat resolves it.
+	integrations: [preact({ compat: true })],
 	vite: {
+		plugins: [tailwindcss()],
 		server: {
 			proxy: {
 				// Local dev: `npm run dev` against the compose stack on :8010.
