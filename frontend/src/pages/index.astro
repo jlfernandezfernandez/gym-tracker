@@ -1,7 +1,3 @@
----
-import '../styles/global.css';
----
-
 <!doctype html>
 <html lang="es">
 	<head>
@@ -18,17 +14,8 @@ import '../styles/global.css';
 			<!-- LANDING -->
 			<section id="landing" class="screen active">
 				<div class="hero">
-					<span class="eyebrow">Mini App</span>
-					<h1>Tu coach vive en Telegram.</h1>
-					<p>El entrenador crea tu plan. Aquí ves el plan, cada ejercicio y registras series.</p>
-				</div>
-				<div class="card">
-					<h2>Cómo funciona</h2>
-					<div class="steps">
-						<p><b>1.</b> Habla con tu bot en Telegram</p>
-						<p><b>2.</b> El coach te pregunta y crea el plan</p>
-						<p><b>3.</b> Abres aquí el plan para verlo y registrar</p>
-					</div>
+					<h1 id="landing-greeting">Hola</h1>
+					<p id="landing-sub">Cargando sesión...</p>
 				</div>
 				<div id="active-card" class="card">
 					<div class="loading"><div class="spinner"></div><p>Buscando sesión activa...</p></div>
@@ -45,7 +32,7 @@ import '../styles/global.css';
 			<!-- PLAN -->
 			<section id="plan" class="screen">
 				<div class="topbar">
-					<button class="back" data-back="landing">←</button>
+					<button class="back" id="plan-back">←</button>
 					<div style="flex:1;min-width:0"><h2 id="plan-title">Plan</h2><p id="plan-subtitle"></p></div>
 				</div>
 				<div id="plan-body">
@@ -56,7 +43,7 @@ import '../styles/global.css';
 			<!-- EXERCISE -->
 			<section id="exercise" class="screen">
 				<div class="topbar">
-					<button class="back" data-back="plan">←</button>
+					<button class="back" id="exercise-back">←</button>
 					<div style="flex:1;min-width:0"><h2 id="ex-title">Ejercicio</h2><p id="ex-subtitle"></p></div>
 				</div>
 				<div id="ex-body">
@@ -67,7 +54,7 @@ import '../styles/global.css';
 			<!-- PROFILE -->
 			<section id="profile" class="screen">
 				<div class="topbar">
-					<button class="back" data-back="landing">←</button>
+					<button class="back" id="profile-back">←</button>
 					<div style="flex:1;min-width:0"><h2>Tu perfil</h2><p>Lo que el coach sabe de ti</p></div>
 				</div>
 				<div id="profile-body">
@@ -78,7 +65,7 @@ import '../styles/global.css';
 			<!-- HISTORY -->
 			<section id="history" class="screen">
 				<div class="topbar">
-					<button class="back" data-back="landing">←</button>
+					<button class="back" id="history-back">←</button>
 					<div style="flex:1;min-width:0"><h2>Historial</h2><p>Últimas sesiones</p></div>
 				</div>
 				<div id="hist-body">

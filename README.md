@@ -117,6 +117,21 @@ Lee [`docs/coach-setup.md`](docs/coach-setup.md) para la guía completa paso a p
 
 ---
 
+## Cómo funciona
+
+Gym Coach combina un **coach de IA** en Telegram con una **Mini App visual**:
+
+1. Hablas con el bot en Telegram.
+2. El coach te conoce: objetivo, experiencia, lesiones, equipamiento.
+3. Crea tu entrenamiento del día.
+4. Te envía un botón. Al pulsarlo se abre la Mini App.
+5. Desde la Mini App ves el plan, cada ejercicio con GIF o imagen, y registras peso/reps/notas serie a serie.
+6. Cuando terminas, el coach recibe tu feedback y progreso para ajustar la próxima sesión.
+
+No tienes que rellenar formularios ni buscar ejercicios. **Hablas con tu coach y él hace todo.**
+
+---
+
 ## Multi-usuario
 
 Cada persona que abre la Mini App desde Telegram se identifica automáticamente via **Telegram InitData** (firma HMAC con el bot token). No hay registros, no hay passwords.

@@ -16,8 +16,9 @@ interface State {
   plan: any;
   current: any;
   readOnly: boolean;
+  viewStack: string[];
 }
-const state: State = { session: null, plan: null, current: null, readOnly: false };
+const state: State = { session: null, plan: null, current: null, readOnly: false, viewStack: [] };
 
 const $ = (id: string) => document.getElementById(id)!;
 const esc = (s: unknown) =>
@@ -53,6 +54,22 @@ function screen(id: string) {
   document.querySelectorAll('.screen').forEach((s) => s.classList.remove('active'));
   $(id).classList.add('active');
   scrollTo(0, 0);
+}
+
+function pushScreen(id: string) {
+  state.viewStack.push(id);
+  screen(id);
+}
+
+function popScreen() {
+  const prev = state.viewStack.pop();
+  if (prev) {
+    // If the previous screen was plan and we just finished exercise, re-render plan to update state.
+    if (prev === 'plan' && state.plan) renderPlan(false);
+    else screen(prev);
+  } else {
+    screen('landing');
+  }
 }
 
 function authHeaders(): Record<string, string> {
@@ -125,11 +142,14 @@ async function loadSession(id: string | null, share?: string) {
   return state.plan;
 }
 
-function renderLandingActive(data: any) {
+function renderLandingActive(data: any, profile?: any) {
   const c = $('active-card');
+  const greeting = profile?.name ? `Hola, ${profile.name}` : 'Hola';
+  $('landing-greeting').textContent = greeting;
   if (!data) {
+    $('landing-sub').textContent = 'Sin sesión activa. Empieza hablando con el coach.';
     c.innerHTML =
-      '<h2>Sin sesión activa</h2><p>Empieza hablando con el coach. Él crea el entrenamiento y te manda el botón.</p>';
+      '<div class="empty"><div class="icon">🏋️</div><p>Sin sesión activa.</p><p>Empieza hablando con el coach. Él crea el entrenamiento y te manda el botón.</p></div>';
     ($('open-active') as HTMLButtonElement).disabled = true;
     return;
   }
@@ -139,20 +159,28 @@ function renderLandingActive(data: any) {
   state.current = data.current;
   const cur = data.current;
   const pct = cur.total_sets ? Math.round((cur.completed_sets / cur.total_sets) * 100) : 0;
-  c.innerHTML = `<h2>Sesión activa</h2><p>${esc(p.title || 'Entrenamiento')} · ${esc(cur.exercise_count || p.exercises.length)} ejercicios</p><div class="progress" style="margin-top:10px"><div style="width:${pct}%"></div></div><div class="row" style="margin-top:8px"><span class="pill active">▶ ${esc(cur.current_exercise_name || '—')}</span><span class="pill">Serie ${esc(cur.current_set_number || 1)}/${esc(cur.target_sets || '-')}</span></div>`;
+  $('landing-sub').textContent = 'Esta es tu sesión activa de hoy';
+  c.innerHTML = `<h2>${esc(p.title || 'Entrenamiento')}</h2><p>${esc(cur.exercise_count || p.exercises.length)} ejercicios · ${esc(STATUS_ES[p.status] || p.status)}</p><div class="progress" style="margin-top:10px"><div style="width:${pct}%"></div></div><div class="row" style="margin-top:8px"><span class="pill active">▶ ${esc(cur.current_exercise_name || '—')}</span><span class="pill">Serie ${esc(cur.current_set_number || 1)}/${esc(cur.target_sets || '-')}</span></div>`;
 }
 
 async function initLanding() {
+  let profile: any;
+  try {
+    profile = await api('GET', '/profile');
+  } catch {
+    profile = null;
+  }
   try {
     const data = await api('GET', '/sessions/active');
-    renderLandingActive(data);
+    renderLandingActive(data, profile);
   } catch {
-    renderLandingActive(null);
+    renderLandingActive(null, profile);
   }
 }
 
-function renderPlan() {
+function renderPlan(push = true) {
   const p = state.plan;
+  if (push) pushScreen('plan');
   $('plan-title').textContent = p.title || 'Plan del coach';
   $('plan-subtitle').textContent = state.readOnly
     ? 'Vista compartida (solo lectura)'
@@ -183,13 +211,14 @@ function renderPlan() {
   $('plan-body').innerHTML = html;
   const slot = document.getElementById('bodymap-slot');
   if (slot) renderBodyMap(slot, muscles);
-  document.querySelectorAll<HTMLElement>('[data-open]').forEach((el) => (el.onclick = () => openExercise(el.dataset.open!)));
+  document.querySelectorAll<HTMLElement>('[data-open]').forEach((el) => (el.onclick = () => openExercise(el.dataset.open!, true)));
   document.getElementById('open-current')?.addEventListener('click', () => openExercise(currentExercise()?.planned_id));
   document.getElementById('finish')?.addEventListener('click', finishSession);
+  if (push) pushScreen('plan');
   screen('plan');
 }
 
-async function openExercise(plannedId?: string) {
+async function openExercise(plannedId?: string, push = true) {
   if (!plannedId) return toast('No hay ejercicio actual', 'err');
   if (!state.current && state.session && !state.readOnly) {
     try {
@@ -199,7 +228,8 @@ async function openExercise(plannedId?: string) {
   const ex = state.plan.exercises.find((e: any) => String(e.planned_id) === String(plannedId));
   if (!ex) return toast('Ejercicio no encontrado', 'err');
   renderExercise(ex);
-  screen('exercise');
+  if (push) pushScreen('exercise');
+  else screen('exercise');
 }
 
 function renderExercise(ex: any) {
@@ -217,6 +247,7 @@ function renderExercise(ex: any) {
     html += '</div></div>';
   }
   if (state.readOnly) {
+    html += `<div class="card" style="margin-top:10px"><p>📝 Vista compartida de solo lectura.</p></div>`;
     $('ex-body').innerHTML = html;
     loadProgressChart(ex);
     return;
@@ -265,6 +296,7 @@ async function saveSet(ex: any) {
     toast('Serie guardada', 'ok');
     const fresh = state.plan.exercises.find((e: any) => e.planned_id === ex.planned_id);
     renderExercise(fresh);
+    screen('exercise');
   } catch (e: any) {
     haptic('bad');
     toast(e.message, 'err');
@@ -281,7 +313,8 @@ async function completeExercise(ex: any) {
     } catch {}
     haptic('ok');
     toast('Ejercicio completado', 'ok');
-    renderPlan();
+    renderPlan(false);
+    popScreen();
   } catch (e: any) {
     haptic('bad');
     toast(e.message, 'err');
@@ -301,14 +334,16 @@ async function finishSession() {
     state.plan = normalize(updated);
     haptic('ok');
     toast('Sesión finalizada', 'ok');
-    renderPlan();
+    renderPlan(false);
+    popScreen();
+    initLanding();
   } catch (e: any) {
     toast(e.message, 'err');
   }
 }
 
-async function renderHistory() {
-  screen('history');
+async function renderHistory(push = true) {
+  if (push) pushScreen('history');
   try {
     const rows = await api('GET', '/sessions');
     const list = rows || [];
@@ -327,7 +362,7 @@ async function renderHistory() {
       (el) =>
         (el.onclick = async () => {
           await loadSession(el.dataset.session!);
-          renderPlan();
+          renderPlan(true);
         }),
     );
   } catch {
@@ -335,8 +370,8 @@ async function renderHistory() {
   }
 }
 
-async function renderProfile() {
-  screen('profile');
+async function renderProfile(push = true) {
+  if (push) pushScreen('profile');
   try {
     const p = await api('GET', '/profile');
     const F: [string, unknown][] = [
@@ -373,18 +408,22 @@ async function renderProfile() {
 }
 
 export function init() {
-  document.querySelectorAll<HTMLElement>('[data-back]').forEach((b) => (b.onclick = () => screen(b.dataset.back!)));
-  $('open-active').onclick = () => (state.plan ? renderPlan() : toast('No hay sesión activa', 'err'));
-  $('open-history').onclick = renderHistory;
-  $('open-profile').onclick = renderProfile;
+  state.viewStack = [];
+  $('plan-back').onclick = () => popScreen();
+  $('exercise-back').onclick = () => popScreen();
+  $('profile-back').onclick = () => popScreen();
+  $('history-back').onclick = () => popScreen();
+  $('open-active').onclick = () => (state.plan ? renderPlan(true) : toast('No hay sesión activa', 'err'));
+  $('open-history').onclick = () => renderHistory(true);
+  $('open-profile').onclick = () => renderProfile(true);
 
   (async () => {
     const p = params();
     if (p.share_token) {
       try {
         await loadSession(null, p.share_token);
-        if (p.exercise_id) openExercise(p.exercise_id);
-        else renderPlan();
+        if (p.exercise_id) openExercise(p.exercise_id, false);
+        else renderPlan(false);
       } catch {
         $('plan-body').innerHTML = '<div class="empty"><div class="icon">🔗</div><p>No pude cargar este enlace.</p></div>';
       }
@@ -393,20 +432,17 @@ export function init() {
     if (p.session_id) {
       try {
         await loadSession(p.session_id);
-        if (p.exercise_id) openExercise(p.exercise_id);
-        else renderPlan();
+        if (p.exercise_id) openExercise(p.exercise_id, false);
+        else renderPlan(false);
       } catch {
         $('plan-body').innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>No pude cargar la sesión.</p></div>';
       }
       return;
     }
-    // Plain browser without Telegram identity: the API can't know who you
-    // are, so don't pretend to be an app. localhost keeps working for dev.
     const inTelegram = !!(tg?.initData && tg.initData.length > 10);
     if (!inTelegram && location.hostname !== 'localhost') {
-      $('active-card').innerHTML =
-        '<h2>Esta Mini App vive dentro de Telegram</h2><p>Ábrela desde el chat con tu coach: él te manda el botón. En el navegador solo se pueden ver rutinas compartidas con enlace.</p><p style="margin-top:8px"><a href="https://jlfernandezfernandez.github.io/gym-tracker/" style="color:var(--text);text-decoration:underline">Conoce el proyecto</a></p>';
-      (document.querySelector('.grid') as HTMLElement).style.display = 'none';
+      $('landing').innerHTML =
+        '<div class="empty"><div class="icon">📱</div><p>Esta app vive dentro de Telegram.</p><p>Ábrela desde el chat con tu coach.</p></div>';
       return;
     }
     await initLanding();
