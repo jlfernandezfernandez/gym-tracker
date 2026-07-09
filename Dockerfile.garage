@@ -1,9 +1,0 @@
-FROM dxflrs/garage:v2.3.0 as garage-bin
-
-FROM alpine:3.19
-RUN apk add --no-cache ca-certificates libc6-compat gcompat
-COPY --from=garage-bin /garage /garage
-COPY docker/garage-start.sh /usr/local/bin/garage-start.sh
-COPY docker/garage-init.sh /usr/local/bin/garage-init.sh
-RUN chmod +x /usr/local/bin/garage-start.sh /usr/local/bin/garage-init.sh
-ENTRYPOINT ["/garage"]

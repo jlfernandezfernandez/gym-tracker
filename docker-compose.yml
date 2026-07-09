@@ -1,13 +1,7 @@
 # =============================================================================
 # gym-tracker — Docker Compose (desarrollo local)
 # =============================================================================
-# La misma topología lógica que Coolify: PostgreSQL + Garage + app.
-# Los servicios internos no publican puertos al host salvo la app.
-#
-# Arranque:
-#   docker compose up -d --build
-#   docker compose logs -f app
-#
+# Replica la topología de producción: PostgreSQL 18 + MinIO + app.
 # Los datos sobreviven a `docker compose down` gracias a los volúmenes.
 # Para empezar de cero: `docker compose down -v`.
 # =============================================================================
@@ -30,44 +24,25 @@ services:
       retries: 10
       start_period: 10s
 
-  garage:
-    build:
-      context: .
-      dockerfile: Dockerfile.garage
-    container_name: gym-tracker-garage
+  minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: gym-tracker-minio
     restart: unless-stopped
     environment:
-      GARAGE_ALLOW_WORLD_READABLE_SECRETS: "false"
-      RUST_LOG: ${GARAGE_LOG_LEVEL:-garage=info}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-gym-tracker-access-key}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-gym-tracker-secret-key-change-me}
     volumes:
-      - garage_meta:/var/lib/garage/meta
-      - garage_data:/var/lib/garage/data
-      - garage_snapshots:/var/lib/garage/snapshots
-      - garage_config:/etc/garage
-    entrypoint: []
-    command: ["/usr/local/bin/garage-start.sh"]
+      - minio_data:/data
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    command: ["server", "/data", "--console-address", ":9001"]
     healthcheck:
-      test: ["CMD", "/garage", "-c", "/etc/garage/garage.toml", "status"]
+      test: ["CMD-SHELL", "minio --version >/dev/null 2>&1"]
       interval: 5s
       timeout: 5s
       retries: 20
       start_period: 15s
-
-  garage-init:
-    build:
-      context: .
-      dockerfile: Dockerfile.garage
-    container_name: gym-tracker-garage-init
-    restart: "no"
-    depends_on:
-      garage:
-        condition: service_healthy
-    volumes:
-      - garage_config:/etc/garage:ro
-      - garage_meta:/var/lib/garage/meta:ro
-      - garage_credentials:/run/garage
-    entrypoint: []
-    command: ["/usr/local/bin/garage-init.sh"]
 
   app:
     build:
@@ -83,23 +58,17 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       COACH_API_KEY: ${COACH_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      S3_ENDPOINT: http://garage:3900
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
-      S3_BUCKET: gym-tracker-media
-      S3_REGION: garage
-    volumes:
-      - garage_credentials:/run/garage:ro
+      S3_ENDPOINT: http://minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-gym-tracker-access-key}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-gym-tracker-secret-key-change-me}
+      S3_BUCKET: ${S3_BUCKET:-gym-tracker-media}
+      S3_REGION: ${S3_REGION:-us-east-1}
     depends_on:
       postgres:
         condition: service_healthy
-      garage-init:
-        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
 
 volumes:
   postgres_data:
-  garage_meta:
-  garage_data:
-  garage_snapshots:
-  garage_config:
-  garage_credentials:
+  minio_data:

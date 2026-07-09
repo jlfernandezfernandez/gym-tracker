@@ -89,7 +89,7 @@ docker compose up -d
    - `CORS_ORIGINS` = tu dominio (ej: `https://gym.midominio.com`)
 5. Deploy
 
-El Dockerfile sirve API y Mini App desde un solo contenedor. El **catálogo de ejercicios** (1324 ejercicios con GIFs, imágenes e instrucciones en español) se carga solo en el primer arranque: el JSON viaja con el repo (`backend/exercise_data/exercises.json`) y los binarios (imágenes/GIFs) se descargan bajo demanda del [dataset upstream](https://github.com/hasaneyldrm/exercises-dataset) al primer boot — el repo no empaqueta los binarios. El esquema de la DB se crea con **Alembic** (`alembic upgrade head` corre solo en el boot).
+El Dockerfile sirve API y Mini App desde un solo contenedor. El **catálogo de ejercicios** (1324 ejercicios bilingües, con GIFs e imágenes) se carga solo en el primer arranque: el JSON viaja con el repo (`backend/exercise_data/exercises.json`) y los binarios se descargan bajo demanda del [fork dataset-es](https://github.com/jlfernandezfernandez/exercises-dataset-es) al primer boot — el repo no empaqueta los binarios. El almacenamiento S3 compatible usa MinIO en producción y desarrollo local. El esquema de la DB se crea con **Alembic** (`alembic upgrade head` corre solo en el boot).
 
 ### Conectar el coach (Hermes)
 
