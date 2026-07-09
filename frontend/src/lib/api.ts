@@ -2,7 +2,7 @@
  * loading states are TanStack Query's job. */
 import { tg } from './telegram';
 
-const API_BASE = (window as any).API_BASE_URL || location.origin + '/api';
+const API_BASE = location.origin + '/api';
 
 export async function apiFetch(method: string, path: string, body?: unknown) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };

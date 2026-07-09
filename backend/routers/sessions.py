@@ -10,7 +10,6 @@ from database import get_session as get_db_session
 from telegram_auth import current_user_id
 from models import Exercise, WorkoutSession, PlannedExercise, PerformedSet
 from schemas import (
-    SessionCreate,
     SessionOut,
     SessionSummary,
     PerformedSetCreate,
@@ -97,61 +96,6 @@ def _current_state(workout: WorkoutSession) -> dict:
         "total_sets": total_sets,
         "is_complete": bool(planned) and completed_exercises == len(planned),
     }
-
-
-@router.post("", response_model=SessionOut)
-async def create_session(
-    body: SessionCreate,
-    db: AsyncSession = Depends(get_db_session),
-    user_id: Optional[int] = Depends(current_user_id),
-):
-    """Create a full session with planned exercises."""
-    workout = WorkoutSession(
-        title=body.title,
-        goal=body.goal,
-        status="planned",
-        energy=body.energy,
-        discomfort=body.discomfort,
-        duration_estimated=body.duration_estimated,
-        telegram_user_id=user_id,
-    )
-    db.add(workout)
-    await db.flush()
-
-    for exercise_spec in body.exercises:
-        planned_exercise = PlannedExercise(
-            session_id=workout.id,
-            exercise_id=exercise_spec.exercise_id,
-            order=exercise_spec.order,
-            target_sets=exercise_spec.target_sets,
-            target_reps=exercise_spec.target_reps,
-            suggested_weight=exercise_spec.suggested_weight,
-            notes=exercise_spec.notes,
-        )
-        db.add(planned_exercise)
-
-    await db.commit()
-    return await _load_session(workout.id, db)
-
-
-@router.get("/today", response_model=SessionOut)
-async def get_today_session(
-    db: AsyncSession = Depends(get_db_session),
-    user_id: Optional[int] = Depends(current_user_id),
-):
-    """Get today's latest session if it exists."""
-    statement = select(WorkoutSession).where(WorkoutSession.session_date == date.today())
-    if user_id:
-        statement = statement.where(WorkoutSession.telegram_user_id == user_id)
-    statement = statement.order_by(WorkoutSession.id.desc()).limit(1).options(
-        selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.performed_sets),
-        selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.exercise),
-    )
-    result = await db.execute(statement)
-    workout = result.scalar_one_or_none()
-    if not workout:
-        raise HTTPException(status_code=404, detail="No session found for today")
-    return workout
 
 
 @router.get("/active")
@@ -406,10 +350,11 @@ async def delete_session(
 @router.get("", response_model=list[SessionSummary])
 async def list_sessions(
     limit: int = 10,
+    on_date: Optional[date] = None,
     db: AsyncSession = Depends(get_db_session),
     user_id: Optional[int] = Depends(current_user_id),
 ):
-    """List last N sessions with summary info."""
+    """List last N sessions with summary info, optionally for one date (e.g. today)."""
     statement = (
         select(WorkoutSession)
         .options(
@@ -418,6 +363,8 @@ async def list_sessions(
             )
         )
     )
+    if on_date:
+        statement = statement.where(WorkoutSession.session_date == on_date)
     if user_id:
         statement = statement.where(WorkoutSession.telegram_user_id == user_id)
     statement = statement.order_by(WorkoutSession.session_date.desc(), WorkoutSession.id.desc()).limit(limit)

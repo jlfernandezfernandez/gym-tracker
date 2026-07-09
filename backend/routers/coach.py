@@ -31,8 +31,6 @@ async def coach_plan(
             status_code=422,
             detail="exercises is required: pick exercises from list_exercises and send them in the plan.",
         )
-    exercises_data = [exercise.model_dump() for exercise in body.exercises]
-
     workout = WorkoutSession(
         title=body.title or "Entreno de hoy",
         goal=body.goal,
@@ -45,15 +43,15 @@ async def coach_plan(
     db.add(workout)
     await db.flush()
 
-    for position, exercise_data in enumerate(exercises_data):
+    for exercise_spec in body.exercises:
         db.add(PlannedExercise(
             session_id=workout.id,
-            exercise_id=exercise_data["exercise_id"],
-            order=exercise_data.get("order", position),
-            target_sets=exercise_data.get("target_sets", 3),
-            target_reps=exercise_data.get("target_reps", 10),
-            suggested_weight=exercise_data.get("suggested_weight", 0.0),
-            notes=exercise_data.get("notes", ""),
+            exercise_id=exercise_spec.exercise_id,
+            order=exercise_spec.order,
+            target_sets=exercise_spec.target_sets,
+            target_reps=exercise_spec.target_reps,
+            suggested_weight=exercise_spec.suggested_weight,
+            notes=exercise_spec.notes,
         ))
 
     await db.commit()

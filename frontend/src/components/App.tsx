@@ -14,7 +14,7 @@ import { Records } from './screens/Records';
 import { RecordDetail } from './screens/RecordDetail';
 import { Profile } from './screens/Profile';
 
-export type View =
+type View =
   | { name: 'landing' }
   | { name: 'plan' }
   | { name: 'exercise'; plannedId: number }

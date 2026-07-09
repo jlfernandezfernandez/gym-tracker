@@ -41,7 +41,7 @@ export function mediaUrl(url?: string) {
   return url.startsWith('http') ? url : location.origin + url;
 }
 
-export function splitMuscles(muscleList?: string) {
+function splitMuscles(muscleList?: string) {
   return String(muscleList || '')
     .split(',')
     .map((muscle) => muscle.trim())

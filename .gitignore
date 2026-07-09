@@ -49,3 +49,7 @@ logs/
 # =============================================================================
 .DS_Store
 Thumbs.db
+
+# Exercise media is downloaded from the upstream dataset on boot (issue #7)
+backend/exercise_data/images/
+backend/exercise_data/videos/

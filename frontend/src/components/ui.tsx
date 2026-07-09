@@ -50,8 +50,18 @@ export function BusyButton({
   onClick: () => void;
   children: any;
 }) {
+  // Synchronous double-click guard: `busy` (React state) only updates on the
+  // next render, so two clicks in the same tick would both fire without it.
+  const lastClickAtRef = useRef(0);
+  const handleClick = () => {
+    const now = Date.now();
+    if (busy || now - lastClickAtRef.current < 350) return;
+    lastClickAtRef.current = now;
+    onClick();
+  };
+
   return (
-    <button class={cssClass} disabled={busy} onClick={onClick}>
+    <button class={cssClass} disabled={busy} onClick={handleClick}>
       {busy ? (
         <>
           <span class="btn-spinner" />

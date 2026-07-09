@@ -146,15 +146,16 @@ def get_session(session_id: int) -> dict[str, Any]:
 
 
 @mcp.tool()
-def get_today_session(telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Get today's latest workout session."""
-    return _request("GET", "/sessions/today", user_id=telegram_user_id)
+def list_sessions(limit: int = 10, on_date: str = "", telegram_user_id: int | None = None) -> list[dict[str, Any]]:
+    """List recent workout sessions (summary: date, title, status, sets).
 
-
-@mcp.tool()
-def list_sessions(limit: int = 10, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
-    """List recent workout sessions (summary: date, title, status, sets). Use it to adapt new plans to recent training."""
-    qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 50))})
+    Use it to adapt new plans to recent training. For today's session pass
+    on_date as an ISO date (YYYY-MM-DD).
+    """
+    params: dict[str, Any] = {"limit": max(1, min(int(limit), 50))}
+    if on_date:
+        params["on_date"] = on_date
+    qs = urllib.parse.urlencode(params)
     return _request("GET", f"/sessions?{qs}", user_id=telegram_user_id)
 
 

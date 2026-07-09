@@ -46,16 +46,6 @@ async def list_muscle_groups(
     return [muscle_group for (muscle_group,) in result.all() if muscle_group]
 
 
-@router.get("/equipment", response_model=list[str])
-async def list_equipment(
-    db: AsyncSession = Depends(get_db_session),
-):
-    """List distinct equipment types."""
-    statement = select(Exercise.equipment).distinct().order_by(Exercise.equipment)
-    result = await db.execute(statement)
-    return [equipment for (equipment,) in result.all() if equipment]
-
-
 @router.get("/records")
 async def personal_records(
     db: AsyncSession = Depends(get_db_session),

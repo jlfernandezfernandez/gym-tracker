@@ -15,15 +15,6 @@ class PlannedExerciseCreate(BaseModel):
     notes: str = ""
 
 
-class SessionCreate(BaseModel):
-    title: str = ""
-    goal: str = ""
-    energy: int = Field(default=5, ge=1, le=10)
-    discomfort: str = ""
-    duration_estimated: int = 0
-    exercises: list[PlannedExerciseCreate] = []
-
-
 class PerformedSetCreate(BaseModel):
     set_number: int
     weight: float = 0.0
@@ -98,17 +89,9 @@ class AthleteMeasurementIn(BaseModel):
     notes: str = ""
 
 
-class AthleteMeasurementOut(BaseModel):
+class AthleteMeasurementOut(AthleteMeasurementIn):
     id: int
     measured_at: datetime
-    source: str = "manual"
-    weight_kg: Optional[float] = None
-    muscle_kg: Optional[float] = None
-    fat_kg: Optional[float] = None
-    body_fat_pct: Optional[float] = None
-    visceral_fat: Optional[float] = None
-    score: Optional[float] = None
-    notes: str = ""
 
 
 # ── Response schemas ──

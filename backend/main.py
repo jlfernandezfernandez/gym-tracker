@@ -4,12 +4,11 @@ Gym Tracker — FastAPI Backend
 Endpoints for workout session management, exercise catalog, and Hermes AI coach.
 """
 
-from contextlib import asynccontextmanager
-import os
-
+import asyncio
 import logging
+import os
+from contextlib import asynccontextmanager
 
-from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -18,7 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from database import init_db
 from routers import sessions, exercises, coach, profile
 
-load_dotenv()
+# dotenv already loaded by database.py on import.
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
 
@@ -35,13 +34,14 @@ async def lifespan(app: FastAPI):
     # Seed the exercise catalog on first boot (no-op if already seeded).
     try:
         from database import async_session
-        from seed.exercises import seed_exercises
-        async with async_session() as session:
-            n = await seed_exercises(session)
-            if n:
-                logger.info("Seeded %d exercises", n)
-    except Exception as e:
-        logger.warning("Exercise seed skipped: %s", e)
+        from seed.exercises import seed_exercises, download_missing_media
+        async with async_session() as db_session:
+            await seed_exercises(db_session)
+        # Media is not vendored: pull missing files in the background so
+        # startup stays fast and the API serves immediately.
+        asyncio.create_task(download_missing_media())
+    except Exception as error:
+        logger.warning("Exercise seed skipped: %s", error)
     yield
 
 
@@ -85,18 +85,12 @@ if os.path.isdir(_media_dir):
 # In Docker the built frontend is copied to ./static; in local dev use ../frontend/dist.
 _static_dir = next((d for d in ("static", "../frontend/dist") if os.path.isdir(d)), None)
 
-
-def _frontend_index() -> str:
-    assert _static_dir is not None
-    return os.path.join(_static_dir, "index.html")
-
-
-# Clean client-side routes. These return the Mini App shell; app.ts reads path params.
+# Clean client-side routes. These return the Mini App shell; the island reads path params.
 if _static_dir:
     @app.get("/", include_in_schema=False)
     @app.get("/session/share/{share_token}", include_in_schema=False)
     @app.get("/session/share/{share_token}/exercise/{planned_exercise_id}", include_in_schema=False)
     async def frontend_shell():
-        return FileResponse(_frontend_index())
+        return FileResponse(os.path.join(_static_dir, "index.html"))
 
     app.mount("/", StaticFiles(directory=_static_dir, html=True), name="frontend")

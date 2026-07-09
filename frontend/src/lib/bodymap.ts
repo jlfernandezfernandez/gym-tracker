@@ -37,7 +37,7 @@ const MUSCLE_MAP: Record<string, string[]> = {
   wrists: ['forearm'],
 };
 
-export function toModelMuscles(muscleGroups: string[]): string[] {
+function toModelMuscles(muscleGroups: string[]): string[] {
   const modelMuscles = new Set<string>();
   for (const group of muscleGroups) {
     for (const muscle of MUSCLE_MAP[String(group || '').toLowerCase()] ?? []) modelMuscles.add(muscle);
