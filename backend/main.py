@@ -44,7 +44,10 @@ def _get_s3() -> boto3.client:
             aws_access_key_id=S3_ACCESS_KEY,
             aws_secret_access_key=S3_SECRET_KEY,
             region_name=S3_REGION,
-            config=BotoConfig(signature_version="s3v4"),
+            config=BotoConfig(
+                signature_version="s3v4",
+                s3={"addressing_style": "path"},
+            ),
         )
     return _s3_client
 
