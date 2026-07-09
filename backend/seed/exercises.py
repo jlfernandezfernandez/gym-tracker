@@ -17,7 +17,7 @@ from typing import Any
 
 import boto3
 from botocore.config import Config as BotoConfig
-from sqlalchemy import select, func
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from models import Exercise
@@ -63,8 +63,9 @@ def _s3_enabled() -> bool:
 
 def _parse_exercise(raw: dict[str, Any]) -> dict[str, Any] | None:
     """Map a dataset entry to Exercise model fields."""
-    name = raw.get("name", "").strip()
-    if not name:
+    name_en = (raw.get("name_en") or raw.get("name") or "").strip()
+    name_es = (raw.get("name_es") or name_en).strip()
+    if not name_en:
         return None
 
     instructions = raw.get("instructions") or {}
@@ -73,7 +74,9 @@ def _parse_exercise(raw: dict[str, Any]) -> dict[str, Any] | None:
 
     return {
         "external_id": raw.get("id", ""),
-        "name": name,
+        "name": name_es,
+        "name_en": name_en,
+        "name_es": name_es,
         "muscle_group": raw.get("muscle_group") or raw.get("target") or "other",
         "secondary_muscles": ", ".join(raw.get("secondary_muscles") or []),
         "target": raw.get("target", ""),
@@ -87,25 +90,31 @@ def _parse_exercise(raw: dict[str, Any]) -> dict[str, Any] | None:
 
 
 async def seed_exercises(db: AsyncSession) -> int:
-    """Seed exercises from the local JSON. Returns number of rows inserted."""
-    result = await db.execute(select(func.count(Exercise.id)))
-    count = result.scalar()
-    if count and count > 0:
-        return 0
+    """Idempotently upsert exercise metadata without changing relations."""
 
     with open(DATA_DIR / "exercises.json", encoding="utf-8") as f:
         data = json.load(f)
 
     inserted = 0
+    updated = 0
     for raw in data:
         parsed = _parse_exercise(raw)
         if parsed is None:
             continue
-        db.add(Exercise(**parsed))
-        inserted += 1
+        result = await db.execute(
+            select(Exercise).where(Exercise.external_id == parsed["external_id"])
+        )
+        existing = result.scalar_one_or_none()
+        if existing is None:
+            db.add(Exercise(**parsed))
+            inserted += 1
+        else:
+            for field, value in parsed.items():
+                setattr(existing, field, value)
+            updated += 1
 
     await db.commit()
-    logger.info("Seeded %d exercises from local dataset", inserted)
+    logger.info("Upserted exercises: %d inserted, %d updated", inserted, updated)
     return inserted
 
 

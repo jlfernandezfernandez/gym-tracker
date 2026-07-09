@@ -101,6 +101,8 @@ class ExerciseOut(BaseModel):
     id: int
     external_id: str = ""
     name: str
+    name_en: str = ""
+    name_es: str = ""
     muscle_group: str
     secondary_muscles: str = ""
     target: str = ""

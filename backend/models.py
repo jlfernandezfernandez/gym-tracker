@@ -11,6 +11,8 @@ class Exercise(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     external_id: str = Field(default="", index=True, unique=True)
     name: str = Field(index=True)
+    name_en: str = Field(default="", index=True)
+    name_es: str = Field(default="", index=True)
     muscle_group: str = Field(index=True)
     secondary_muscles: str = Field(default="")
     target: str = Field(default="", index=True)
