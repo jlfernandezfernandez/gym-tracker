@@ -40,6 +40,7 @@ class WorkoutSession(SQLModel, table=True):
     coach_summary: str = Field(default="")
     share_token: str = Field(default_factory=lambda: uuid4().hex)
     telegram_user_id: Optional[int] = Field(default=None, index=True)
+    started_at: Optional[datetime] = Field(default=None)
 
     planned_exercises: list["PlannedExercise"] = Relationship(back_populates="session")
 

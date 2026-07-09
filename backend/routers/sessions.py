@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -268,6 +268,8 @@ async def log_set(
 
     if s.status == "planned":
         s.status = "in_progress"
+        if not s.started_at:
+            s.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
 
     logged_sets = len(pe.performed_sets or []) + 1
     if logged_sets >= pe.target_sets:
@@ -319,7 +321,15 @@ async def finish_session(
     _check_owner(s, uid)
 
     s.status = "completed"
-    s.duration_actual = body.duration_actual
+    # Auto-calculate duration from started_at if not provided.
+    if body.duration_actual:
+        s.duration_actual = body.duration_actual
+    elif s.started_at:
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        delta = (now - s.started_at).total_seconds()
+        s.duration_actual = max(1, int(delta / 60))
+    else:
+        s.duration_actual = body.duration_actual
     s.feedback = body.feedback
     s.energy = body.energy
     s.discomfort = body.discomfort

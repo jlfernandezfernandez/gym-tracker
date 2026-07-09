@@ -146,11 +146,13 @@ function renderLandingActive(data: any, profile?: any) {
   const c = $('active-card');
   const greeting = profile?.name ? `Hola, ${profile.name}` : 'Hola';
   $('landing-greeting').textContent = greeting;
+  c.style.display = 'block';
+  c.onclick = null;
   if (!data) {
     $('landing-sub').textContent = 'Sin sesión activa. Empieza hablando con el coach.';
     c.innerHTML =
       '<div class="empty"><div class="icon">🏋️</div><p>Sin sesión activa.</p><p>Empieza hablando con el coach. Él crea el entrenamiento y te manda el botón.</p></div>';
-    ($('open-active') as HTMLButtonElement).disabled = true;
+    c.classList.remove('tap');
     return;
   }
   const p = normalize(data.session);
@@ -161,6 +163,8 @@ function renderLandingActive(data: any, profile?: any) {
   const pct = cur.total_sets ? Math.round((cur.completed_sets / cur.total_sets) * 100) : 0;
   $('landing-sub').textContent = 'Esta es tu sesión activa de hoy';
   c.innerHTML = `<h2>${esc(p.title || 'Entrenamiento')}</h2><p>${esc(cur.exercise_count || p.exercises.length)} ejercicios · ${esc(STATUS_ES[p.status] || p.status)}</p><div class="progress" style="margin-top:10px"><div style="width:${pct}%"></div></div><div class="row" style="margin-top:8px"><span class="pill active">▶ ${esc(cur.current_exercise_name || '—')}</span><span class="pill">Serie ${esc(cur.current_set_number || 1)}/${esc(cur.target_sets || '-')}</span></div>`;
+  c.classList.add('tap');
+  c.onclick = () => renderPlan(true);
 }
 
 async function initLanding() {
@@ -325,7 +329,6 @@ async function finishSession() {
   try {
     const feedback = prompt('Feedback para el coach (opcional)') || '';
     const updated = await api('POST', '/sessions/' + state.session.id + '/finish', {
-      duration_actual: 0,
       feedback,
       energy: state.session.energy || 5,
       discomfort: state.session.discomfort || '',
@@ -382,7 +385,7 @@ async function renderProfile(push = true) {
       ['Edad', p.age],
       ['Altura', p.height_cm && p.height_cm + ' cm'],
       ['Peso', p.weight_kg && p.weight_kg + ' kg'],
-      ['Lesiones', p.injuries],
+      ['Patologías', p.injuries],
       ['Limitaciones', p.limitations],
       ['Gym', p.gym_name],
       ['Equipamiento', p.available_equipment],
@@ -413,7 +416,6 @@ export function init() {
   $('exercise-back').onclick = () => popScreen();
   $('profile-back').onclick = () => popScreen();
   $('history-back').onclick = () => popScreen();
-  $('open-active').onclick = () => (state.plan ? renderPlan(true) : toast('No hay sesión activa', 'err'));
   $('open-history').onclick = () => renderHistory(true);
   $('open-profile').onclick = () => renderProfile(true);
 

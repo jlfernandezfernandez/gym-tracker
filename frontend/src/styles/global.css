@@ -79,7 +79,7 @@ label p{font-size:12px;margin:0}
 .steps p{padding:9px 0;border-bottom:1px solid var(--border)}
 .steps p:last-child{border:0}
 /* Body map (react-body-highlighter models, front + back side by side) */
-.bodymap{display:flex;justify-content:center;gap:8px;margin-top:8px}
+.bodymap{display:flex;justify-content:center;gap:8px;margin-top:8px;background:#f5f0eb;border-radius:var(--r-sm);padding:12px 8px}
 .bodymap>div{width:130px}
 .bodymap-labels{display:flex;justify-content:center;gap:64px;margin-top:2px}
 .bodymap-labels span{font-size:9px;color:var(--hint);letter-spacing:.05em;text-transform:uppercase}

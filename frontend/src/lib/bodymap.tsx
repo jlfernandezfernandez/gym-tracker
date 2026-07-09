@@ -48,9 +48,8 @@ export function toModelMuscles(muscleGroups: string[]): Muscle[] {
 
 export function renderBodyMap(container: HTMLElement, muscleGroups: string[]): void {
   const data = [{ name: 'hoy', muscles: toModelMuscles(muscleGroups) }];
-  const accent =
-    getComputedStyle(document.documentElement).getPropertyValue('--btn').trim() || '#fafafa';
-  const props = { data, bodyColor: 'rgba(255,255,255,.10)', highlightedColors: [accent] };
+  // Realistic skin tone on a dark card, with a vibrant accent for worked muscles.
+  const props = { data, bodyColor: '#d4a373', highlightedColors: ['#3b82f6'] };
   createRoot(container).render(
     <div>
       <div className="bodymap">
