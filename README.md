@@ -46,7 +46,7 @@ Tú ──Telegram──> Coach (Hermes) ──MCP──> API ──> Base de da
                         └──deep link──> Mini App (visual)
 ```
 
-La aplicación es **agnóstica al agente**. No sabe ni le importa quién la llama. Todo se controla via MCP (23 herramientas):
+La aplicación es **agnóstica al agente**. No sabe ni le importa quién la llama. Todo se controla via MCP (22 herramientas):
 
 | Categoría | Qué hace el agente |
 |---|---|
@@ -89,7 +89,7 @@ docker compose up -d
    - `CORS_ORIGINS` = tu dominio (ej: `https://gym.midominio.com`)
 5. Deploy
 
-El Dockerfile sirve API y Mini App desde un solo contenedor. El catálogo de ejercicios (1324 ejercicios con GIFs, imágenes e instrucciones en español) viene incluido en el repo y se carga solo en el primer arranque — sin dependencias externas.
+El Dockerfile sirve API y Mini App desde un solo contenedor. El **catálogo de ejercicios** (1324 ejercicios con GIFs, imágenes e instrucciones en español) se carga solo en el primer arranque: el JSON viaja con el repo (`backend/exercise_data/exercises.json`) y los binarios (imágenes/GIFs) se descargan bajo demanda del [dataset upstream](https://github.com/hasaneyldrm/exercises-dataset) al primer boot — el repo no empaqueta los binarios. El esquema de la DB se crea con **Alembic** (`alembic upgrade head` corre solo en el boot).
 
 ### Conectar el coach (Hermes)
 
@@ -160,7 +160,7 @@ Si despliegas tu propia instancia, tus datos están en tu Postgres, en tu servid
 3. **Elige tú los ejercicios**: `list_exercises` / `list_muscle_groups` → pásalos en `exercises_json` de `create_plan`. La API rechaza planes sin ejercicios (422).
 4. **Preview antes de entrenar**: `create_plan` deja la sesión en `planned`; manda `session_web_url`. ¿No convence? `delete_session` y otra.
 5. **Durante el entreno actualiza estado, no solo respondas**: "he hecho 12" → `log_set`; "me duele el hombro" → alternativa + guarda en perfil; "no hay máquina" → `patch_athlete_profile` + `update_planned_exercise` con `new_exercise_id`. Posición actual: `get_active_session` / `get_current_state`.
-6. **Al terminar**: `finish_session` con feedback. Úsalo (y `list_sessions`) para adaptar el siguiente plan.
+6. **Al terminar**: `finish_session` con feedback. La duración se calcula sola desde `started_at` — no envíes `duration_actual` salvo que el atleta lo diga. Sin sets loggeados y sin `duration_actual` el endpoint responde 422 (no hay fallback a 0). Úsalo (y `list_sessions`) para adaptar el siguiente plan.
 7. **Datos corporales**: peso, composición, básculas, escáneres → `record_body_measurement` (con fecha y fuente); evolución → `list_measurements`.
 8. **Compartir**: `share_web_url(share_token)` → link solo lectura para un compañero en cualquier navegador.
 9. **Multi-usuario**: pasa siempre `telegram_user_id` (id de Telegram del chat) en tools de perfil/sesión. Sin él, acceso sin filtro — solo instancias personales.
@@ -171,7 +171,7 @@ Si despliegas tu propia instancia, tus datos están en tu Postgres, en tu servid
 
 ---
 
-## MCP — las 23 herramientas del coach
+## MCP — las 22 herramientas del coach
 
 El coach controla toda la app via MCP. Estas son las herramientas:
 
@@ -187,8 +187,7 @@ El coach controla toda la app via MCP. Estas son las herramientas:
 | `get_exercise` | Detalle completo de un ejercicio |
 | `exercise_progress` | Progresión de un ejercicio (peso, volumen) |
 | `get_session` | Ver una sesión completa |
-| `list_sessions` | Historial de sesiones (para adaptar planes) |
-| `get_today_session` | Ver la sesión de hoy |
+| `list_sessions` | Historial de sesiones (para adaptar planes; filtra por fecha) |
 | `get_active_session` | Ver sesión en curso + estado actual |
 | `get_current_state` | Saber qué ejercicio y serie toca ahora |
 | `create_plan` | Crear un plan con los ejercicios que elige el agente |
@@ -197,7 +196,7 @@ El coach controla toda la app via MCP. Estas son las herramientas:
 | `complete_exercise` | Marcar ejercicio como completado |
 | `delete_set` | Borrar una serie mal registrada |
 | `update_planned_exercise` | Cambiar/saltar un ejercicio |
-| `finish_session` | Terminar sesión con feedback |
+| `finish_session` | Terminar sesión con feedback (duración auto, idempotente) |
 | `session_web_url` | Generar link a la Mini App (`/session/share/<token>`) |
 | `share_web_url` | Generar link compartible (solo lectura) |
 
@@ -208,7 +207,7 @@ Al conectarte, el servidor MCP también expone unas `instructions` con el manual
 ## Stack
 
 - **Backend**: FastAPI + SQLModel + Postgres
-- **Frontend**: Astro (estático, TypeScript vanilla) + Chart.js + body-highlighter → Mini App de Telegram
+- **Frontend**: Astro + Preact (islas) + TanStack Query + Tailwind + Chart.js + body-highlighter → Mini App de Telegram
 - **MCP**: Python (FastMCP) — el puente entre agente y app
 - **Deploy**: Docker multi-stage, Coolify o docker compose
 - **Auth**: Telegram InitData HMAC (sin passwords)
@@ -223,14 +222,18 @@ Al conectarte, el servidor MCP también expone unas `instructions` con el manual
 │   ├── models.py     # SQLModel tables
 │   ├── schemas.py    # Pydantic schemas
 │   ├── telegram_auth.py  # HMAC InitData validation
-│   ├── seed/         # Exercise catalog seeder
-│   └── exercise_data/    # Catálogo vendorizado: JSON + imágenes + GIFs
-├── frontend/         # Mini App (Astro + TypeScript)
+│   ├── seed/         # Exercise catalog seeder (baja media del upstream)
+│   ├── migrations/   # Alembic migrations (initial schema en versions/)
+│   ├── alembic.ini   # Config de Alembic (migraciones auto-aplicadas en boot)
+│   └── exercise_data/    # Catálogo: JSON en el repo; imágenes/GIFs se descargan al arrancar
+├── frontend/         # Mini App (Astro + Preact + TanStack Query + Tailwind)
 │   └── src/
-│       ├── pages/    # index.astro (markup de pantallas)
-│       ├── lib/      # app.ts (lógica), chart.ts, bodymap.ts
-│       └── styles/   # global.css
-├── mcp/              # MCP server (23 tools)
+│       ├── pages/        # index.astro (shell)
+│       ├── layouts/      # AppLayout
+│       ├── components/   # App.tsx (island + router), ui.tsx, screens/*
+│       ├── lib/          # api.ts, helpers.ts, chart.ts, bodymap.ts, telegram.ts
+│       └── styles/       # global.css
+├── mcp/              # MCP server (22 tools)
 ├── templates/        # SOUL.md + SKILL.md for coach profile
 ├── docs/             # Setup guide + landing
 ├── Dockerfile        # Multi-stage: build frontend + API + estáticos

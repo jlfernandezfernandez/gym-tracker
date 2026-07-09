@@ -47,11 +47,11 @@ Important tools:
 - `create_plan`: create a workout plan after onboarding/check-in. Pick exercises yourself with `list_exercises` and pass them in `exercises_json` — the API rejects empty plans.
 - `get_active_session`: read latest non-completed session plus current exercise/set.
 - `get_current_state`: read derived current planned exercise and next set for a session.
-- `get_today_session`, `get_session`: read workout state.
+- `get_session`: read one workout session; `list_sessions` for the history (filter by date for "today").
 - `log_set`: log performed sets.
 - `complete_exercise`: mark current/selected exercise completed.
 - `update_planned_exercise`: skip/change/complete exercises.
-- `finish_session`: finish workout and save final feedback.
+- `finish_session`: finish workout and save final feedback. Let the backend measure duration from `started_at` — do not send `duration_actual` unless the athlete states it.
 - `record_body_measurement`, `list_measurements`: dated body weight/composition data (never overwrite profile notes with it).
 - `session_web_url`, `share_web_url`: generate Mini App links.
 

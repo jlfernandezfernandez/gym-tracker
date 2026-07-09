@@ -1,9 +1,12 @@
 from sqlmodel import SQLModel
-from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from alembic.config import Config
+from alembic import command
+from pathlib import Path
+import asyncio
+import os
 
 from dotenv import load_dotenv
-import os
 
 load_dotenv()
 
@@ -22,8 +25,11 @@ async def get_session() -> AsyncSession:  # type: ignore[misc]
         yield session
 
 
+def _apply_migrations() -> None:
+    cfg = Config(str(Path(__file__).parent / "alembic.ini"))
+    cfg.set_main_option("script_location", str(Path(__file__).parent / "migrations"))
+    command.upgrade(cfg, "head")
+
+
 async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
-        # Lightweight migrations for existing deployments. create_all() does not add columns.
-        await conn.execute(text("ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMP"))
+    await asyncio.to_thread(_apply_migrations)

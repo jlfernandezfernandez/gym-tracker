@@ -39,7 +39,9 @@ Operating rules:
 5. During the workout update state, don't just chat: "did 12 reps" → log_set; pain →
    alternative + patch_athlete_profile; machine busy → update_planned_exercise with
    new_exercise_id. Current position: get_active_session / get_current_state.
-6. When done: finish_session with feedback. Use it and list_sessions to adapt the next plan.
+6. When done: finish_session with feedback (let the backend measure duration from
+   started_at — do not send duration_actual unless the athlete states it). Use it
+   and list_sessions to adapt the next plan.
 7. Body data (weight, composition, scans): record_body_measurement, never overwrite notes.
 8. Sharing: share_web_url(share_token) gives a read-only link for a companion.
 9. Multi-user: always pass telegram_user_id (Telegram id of the chat) on profile/session tools.
@@ -140,9 +142,12 @@ def exercise_progress(exercise_id: int, limit: int = 20, telegram_user_id: int |
 
 
 @mcp.tool()
-def get_session(session_id: int) -> dict[str, Any]:
-    """Get a workout session with planned exercises and logged sets."""
-    return _request("GET", f"/sessions/{int(session_id)}")
+def get_session(session_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Get a workout session with planned exercises and logged sets.
+
+    Pass telegram_user_id on multi-user instances so the API can scope ownership.
+    """
+    return _request("GET", f"/sessions/{int(session_id)}", user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -166,15 +171,15 @@ def get_active_session(telegram_user_id: int | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
-def get_current_state(session_id: int) -> dict[str, Any]:
+def get_current_state(session_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
     """Get derived current planned exercise and next set for a session."""
-    return _request("GET", f"/sessions/{int(session_id)}/current")
+    return _request("GET", f"/sessions/{int(session_id)}/current", user_id=telegram_user_id)
 
 
 @mcp.tool()
-def complete_exercise(session_id: int, planned_exercise_id: int) -> dict[str, Any]:
+def complete_exercise(session_id: int, planned_exercise_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
     """Mark the current/selected planned exercise as completed."""
-    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/complete")
+    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/complete", user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -219,7 +224,7 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
 
 
 @mcp.tool()
-def log_set(session_id: int, planned_exercise_id: int, set_number: int, weight: float = 0.0, reps: int = 0, rpe: float | None = None, sensation: str = "", notes: str = "") -> dict[str, Any]:
+def log_set(session_id: int, planned_exercise_id: int, set_number: int, weight: float = 0.0, reps: int = 0, rpe: float | None = None, sensation: str = "", notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
     """Log one performed set for a planned exercise."""
     payload: dict[str, Any] = {
         "set_number": int(set_number),
@@ -230,7 +235,7 @@ def log_set(session_id: int, planned_exercise_id: int, set_number: int, weight: 
     }
     if rpe is not None:
         payload["rpe"] = float(rpe)
-    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets", payload)
+    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets", payload, user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -240,23 +245,30 @@ def delete_set(session_id: int, planned_exercise_id: int, set_id: int, telegram_
 
 
 @mcp.tool()
-def update_planned_exercise(session_id: int, planned_exercise_id: int, status: str = "completed", new_exercise_id: int | None = None, notes: str = "") -> dict[str, Any]:
+def update_planned_exercise(session_id: int, planned_exercise_id: int, status: str = "completed", new_exercise_id: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
     """Mark an exercise completed/skipped/changed; optionally replace it with another catalog exercise."""
     payload: dict[str, Any] = {"status": status, "notes": notes}
     if new_exercise_id is not None:
         payload["new_exercise_id"] = int(new_exercise_id)
-    return _request("PUT", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", payload)
+    return _request("PUT", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", payload, user_id=telegram_user_id)
 
 
 @mcp.tool()
-def finish_session(session_id: int, duration_actual: int = 0, feedback: str = "", energy: int = 5, discomfort: str = "") -> dict[str, Any]:
-    """Finish a workout session and store final feedback."""
-    return _request("POST", f"/sessions/{int(session_id)}/finish", {
-        "duration_actual": int(duration_actual),
+def finish_session(session_id: int, feedback: str = "", energy: int = 5, discomfort: str = "", duration_actual: int | None = None, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Finish a workout session and store final feedback.
+
+    Leave duration_actual empty (recommended) — the backend measures it from
+    started_at. Send a value only when the athlete explicitly states how long
+    it took; sending 0 records a 0-minute session.
+    """
+    payload: dict[str, Any] = {
         "feedback": feedback,
         "energy": int(energy),
         "discomfort": discomfort,
-    })
+    }
+    if duration_actual is not None:
+        payload["duration_actual"] = int(duration_actual)
+    return _request("POST", f"/sessions/{int(session_id)}/finish", payload, user_id=telegram_user_id)
 
 
 @mcp.tool()

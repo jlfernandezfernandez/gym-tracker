@@ -141,8 +141,11 @@ async def complete_planned_exercise(
     """Mark one planned exercise completed and keep session active."""
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
-    planned_exercise = await db.get(PlannedExercise, planned_id)
-    if not planned_exercise or planned_exercise.session_id != session_id:
+    planned_exercise = next(
+        (planned for planned in workout.planned_exercises or [] if planned.id == planned_id),
+        None,
+    )
+    if not planned_exercise:
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
     planned_exercise.status = "completed"
     if workout.status == "planned":
@@ -162,8 +165,12 @@ async def update_planned_exercise(
     """Update a planned exercise: change status, swap the exercise, or set notes."""
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
-    planned_exercise = await db.get(PlannedExercise, planned_id)
-    if not planned_exercise or planned_exercise.session_id != session_id:
+    # Reuse the eager-loaded relation from _load_session.
+    planned_exercise = next(
+        (planned for planned in workout.planned_exercises or [] if planned.id == planned_id),
+        None,
+    )
+    if not planned_exercise:
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
 
     if body.status is not None:
@@ -178,6 +185,12 @@ async def update_planned_exercise(
             planned_exercise.status = "changed"
     if body.notes is not None:
         planned_exercise.notes = body.notes
+
+    # Recompute completion from logged sets (issue #9): swapping or changing an
+    # exercise must not strand it in in_progress/changed when all target sets
+    # are already logged.
+    if planned_exercise.target_sets > 0 and len(planned_exercise.performed_sets or []) >= planned_exercise.target_sets:
+        planned_exercise.status = "completed"
 
     if workout.status == "planned" and planned_exercise.status in {"in_progress", "completed"}:
         workout.status = "in_progress"
@@ -230,8 +243,11 @@ async def log_set(
     """Log a performed set for a planned exercise."""
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
-    planned_exercise = await db.get(PlannedExercise, planned_id)
-    if not planned_exercise or planned_exercise.session_id != session_id:
+    planned_exercise = next(
+        (planned for planned in workout.planned_exercises or [] if planned.id == planned_id),
+        None,
+    )
+    if not planned_exercise:
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
 
     # Idempotency guard: rapid duplicate submits (double-tap, retry) of the same
@@ -269,8 +285,6 @@ async def log_set(
         planned_exercise.status = "in_progress"
 
     await db.commit()
-    # Expire cached objects so the reload includes the set we just inserted
-    # (expire_on_commit=False keeps the identity map otherwise).
     db.expire_all()
     return await _load_session(session_id, db)
 
@@ -286,8 +300,11 @@ async def delete_set(
     """Delete a performed set (fix a wrongly logged one)."""
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
-    planned_exercise = await db.get(PlannedExercise, planned_id)
-    if not planned_exercise or planned_exercise.session_id != session_id:
+    planned_exercise = next(
+        (planned for planned in workout.planned_exercises or [] if planned.id == planned_id),
+        None,
+    )
+    if not planned_exercise:
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
     performed_set = await db.get(PerformedSet, set_id)
     if not performed_set or performed_set.planned_exercise_id != planned_id:
@@ -307,20 +324,28 @@ async def finish_session(
     db: AsyncSession = Depends(get_db_session),
     user_id: Optional[int] = Depends(current_user_id),
 ):
-    """Finish a workout session, save feedback and actual duration."""
+    """Finish a workout session, save feedback and actual duration.
+
+    Idempotent: already-completed sessions are returned untouched.
+    """
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
+    if workout.status == "completed":
+        return workout
 
-    workout.status = "completed"
-    # Auto-calculate duration from started_at if not provided.
-    if body.duration_actual:
-        workout.duration_actual = body.duration_actual
+    if body.duration_actual is not None:
+        duration = body.duration_actual
     elif workout.started_at:
         now = datetime.now(timezone.utc).replace(tzinfo=None)
-        elapsed_seconds = (now - workout.started_at).total_seconds()
-        workout.duration_actual = max(1, int(elapsed_seconds / 60))
+        duration = max(1, int((now - workout.started_at).total_seconds() / 60))
     else:
-        workout.duration_actual = body.duration_actual
+        raise HTTPException(
+            status_code=422,
+            detail="Cannot derive duration: session has no started_at and duration_actual is missing. Log at least one set or pass duration_actual.",
+        )
+
+    workout.status = "completed"
+    workout.duration_actual = duration
     workout.feedback = body.feedback
     workout.energy = body.energy
     workout.discomfort = body.discomfort

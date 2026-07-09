@@ -176,7 +176,7 @@ function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) 
           <span>kg volumen</span>
         </div>
         <div class="stat">
-          <b>{plan.duration_actual || plan.duration_estimated || 0}min</b>
+          <b>{plan.duration_actual || plan.duration_estimated || '—'}{plan.duration_actual || plan.duration_estimated ? 'min' : ''}</b>
           <span>duración</span>
         </div>
       </div>

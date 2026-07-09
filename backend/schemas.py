@@ -31,7 +31,8 @@ class PlannedExerciseUpdate(BaseModel):
 
 
 class SessionFinish(BaseModel):
-    duration_actual: int = 0
+    # None = let the backend compute from started_at (issue #8).
+    duration_actual: Optional[int] = None
     feedback: str = ""
     energy: int = Field(default=5, ge=1, le=10)
     discomfort: str = ""

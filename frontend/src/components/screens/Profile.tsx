@@ -33,7 +33,6 @@ export function Profile() {
 
   const profile = profileQuery.data;
   const measurements: any[] = measurementsQuery.data || [];
-  const latestMeasurement = measurements[0];
 
   const fixedFacts: [string, unknown][] = profile
     ? [
@@ -41,6 +40,7 @@ export function Profile() {
         ['Experiencia', profile.experience_level],
         ['Días/semana', profile.training_days_per_week],
         ['Min/sesión', profile.usual_session_minutes],
+        ['Peso', profile.weight_kg && `${profile.weight_kg} kg`],
         ['Edad', profile.age],
         ['Altura', profile.height_cm && `${profile.height_cm} cm`],
         ['Gym', profile.gym_name],
@@ -70,21 +70,13 @@ export function Profile() {
           <div class="card">
             <h1>{profile.name || 'Atleta'}</h1>
             <p>{profile.onboarding_complete ? 'Perfil deportivo activo' : 'Onboarding pendiente — habla con el coach'}</p>
-            {(latestMeasurement || profile.weight_kg) && (
-              <div class="profile-grid mt-3">
-                <ProfileTile
-                  label="Peso actual"
-                  value={
-                    (latestMeasurement?.weight_kg || profile.weight_kg) &&
-                    `${latestMeasurement?.weight_kg || profile.weight_kg} kg`
-                  }
-                />
-                <ProfileTile label="Músculo" value={latestMeasurement?.muscle_kg && `${latestMeasurement.muscle_kg} kg`} />
-                <ProfileTile label="Grasa" value={latestMeasurement?.fat_kg && `${latestMeasurement.fat_kg} kg`} />
-                <ProfileTile label="Score" value={latestMeasurement?.score} />
-              </div>
-            )}
           </div>
+
+          {!app.readOnly && (
+            <button class="btn ghost mt-2.5" onClick={() => app.push({ name: 'editProfile' })}>
+              ✎ Editar perfil
+            </button>
+          )}
 
           <div class="card">
             <h2>Datos fijos</h2>

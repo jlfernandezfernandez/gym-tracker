@@ -13,6 +13,7 @@ import { History } from './screens/History';
 import { Records } from './screens/Records';
 import { RecordDetail } from './screens/RecordDetail';
 import { Profile } from './screens/Profile';
+import { EditProfile } from './screens/EditProfile';
 
 type View =
   | { name: 'landing' }
@@ -21,7 +22,8 @@ type View =
   | { name: 'history' }
   | { name: 'records' }
   | { name: 'recordDetail'; exerciseId: number; title: string }
-  | { name: 'profile' };
+  | { name: 'profile' }
+  | { name: 'editProfile' };
 
 interface AppContextValue {
   push: (view: View) => void;
@@ -109,17 +111,17 @@ function Router() {
   }
 
   const activeView = viewStack[viewStack.length - 1];
-  return (
-    <AppContext.Provider value={appContext}>
-      {activeView.name === 'landing' && <Landing />}
-      {activeView.name === 'plan' && <Plan />}
-      {activeView.name === 'exercise' && <Exercise plannedId={activeView.plannedId} />}
-      {activeView.name === 'history' && <History />}
-      {activeView.name === 'records' && <Records />}
-      {activeView.name === 'recordDetail' && <RecordDetail exerciseId={activeView.exerciseId} title={activeView.title} />}
-      {activeView.name === 'profile' && <Profile />}
-    </AppContext.Provider>
-  );
+  const screens: Record<string, any> = {
+    landing: <Landing />,
+    plan: <Plan />,
+    exercise: <Exercise plannedId={activeView.plannedId} />,
+    history: <History />,
+    records: <Records />,
+    recordDetail: <RecordDetail exerciseId={activeView.exerciseId} title={activeView.title} />,
+    profile: <Profile />,
+    editProfile: <EditProfile />,
+  };
+  return <AppContext.Provider value={appContext}>{screens[activeView.name]}</AppContext.Provider>;
 }
 
 export default function App() {

@@ -12,9 +12,9 @@ export default defineConfig({
 		plugins: [tailwindcss()],
 		server: {
 			proxy: {
-				// Local dev: `npm run dev` against the compose stack on :8010.
-				'/api': 'http://localhost:8010',
-				'/exercise-media': 'http://localhost:8010',
+				// Local dev: `npm run dev` against the compose stack on :8000.
+				'/api': 'http://localhost:8000',
+				'/exercise-media': 'http://localhost:8000',
 			},
 		},
 	},

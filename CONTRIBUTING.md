@@ -8,7 +8,7 @@
 git clone https://github.com/jlfernandezfernandez/gym-tracker.git
 cd gym-tracker
 cp .env.example .env      # TELEGRAM_BOT_TOKEN vacío = auth desactivada (modo dev)
-docker compose up -d      # app en http://localhost:8000 (el catálogo de ejercicios se carga solo)
+docker compose up -d      # app en http://localhost:8000 (el catálogo JSON se carga solo; las imágenes/GIFs se bajan del upstream al primer boot)
 ```
 
 Sin Docker: levanta un Postgres, `pip install -r backend/requirements.txt` y
@@ -19,9 +19,11 @@ que FastAPI sirva `frontend/dist/`.
 ## Estructura
 
 - `backend/` — FastAPI + SQLModel. Routers en `backend/routers/`.
-- `backend/exercise_data/` — catálogo vendorizado (JSON + imágenes + GIFs); el seed lo carga en el primer arranque.
-- `frontend/` — Mini App en Astro: `src/pages/index.astro` (markup), `src/lib/app.ts` (lógica), `chart.ts` (Chart.js), `bodymap.tsx` (react-body-highlighter).
-- `mcp/gym_tracker_mcp.py` — servidor MCP (21 tools) que habla con la API pública.
+- `backend/` — FastAPI + SQLModel + Alembic ( migraciones en `backend/migrations/`). Routers en `backend/routers/`.
+- `backend/exercise_data/` — catálogo (JSON en el repo; imágenes/GIFs se descargan del upstream en el primer arranque).
+- Para crear migraciones: `cd backend && alembic revision --autogenerate -m "desc"`. Se aplican solo en el boot.
+- `frontend/` — Mini App en Astro + Preact: `src/pages/index.astro` (shell), `src/components/App.tsx` (island + router), `src/components/screens/*` (pantallas), `src/lib/*` (api, helpers, chart, bodymap).
+- `mcp/gym_tracker_mcp.py` — servidor MCP (22 tools) que habla con la API pública.
 - `templates/` — SOUL.md y SKILL.md para el perfil del agente coach.
 - `docs/` — GitHub Pages + guía de setup.
 

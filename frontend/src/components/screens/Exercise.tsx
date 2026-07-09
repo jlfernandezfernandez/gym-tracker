@@ -7,6 +7,37 @@ import { haptic } from '../../lib/telegram';
 import { useApp, useSession } from '../App';
 import { BodyMap, BusyButton, Empty, Loading, ProgressChart, TopBar } from '../ui';
 
+function SetRow({ set, sessionId, plannedId }: { set: any; sessionId: number; plannedId: number }) {
+  const queryClient = useQueryClient();
+  const del = useMutation({
+    mutationFn: () => apiFetch('DELETE', `/sessions/${sessionId}/exercises/${plannedId}/sets/${set.id}`),
+    onSuccess: (updated: any) => {
+      queryClient.setQueryData(['session', sessionId], updated);
+      queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['progress', set.exercise_id] });
+      queryClient.invalidateQueries({ queryKey: ['active'] });
+      queryClient.invalidateQueries({ queryKey: ['records'] });
+      haptic('ok');
+      showToast('Serie borrada', 'ok');
+    },
+    onError: (error: any) => {
+      haptic('bad');
+      showToast(error.message, 'err');
+    },
+  });
+  return (
+    <div class="set-row" key={set.id}>
+      <span class="n">Serie {set.set_number}</span>
+      <span class="v">
+        {set.reps} reps · {set.weight}kg
+        <button class="set-del" disabled={del.isPending} onClick={() => del.mutate()} aria-label="Borrar serie">
+          ✕
+        </button>
+      </span>
+    </div>
+  );
+}
+
 export function Exercise({ plannedId }: { plannedId: number }) {
   const app = useApp();
   const sessionQuery = useSession();
@@ -81,19 +112,25 @@ export function Exercise({ plannedId }: { plannedId: number }) {
           <h3>Series registradas</h3>
           <div class="sets mt-2">
             {(exercise.performed_sets || []).map((performedSet: any) => (
-              <div class="set-row" key={performedSet.id}>
-                <span class="n">Serie {performedSet.set_number}</span>
-                <span class="v">
-                  {performedSet.reps} reps · {performedSet.weight}kg
-                </span>
-              </div>
+              <SetRow key={performedSet.id} set={performedSet} sessionId={plan.id} plannedId={exercise.planned_id} />
             ))}
           </div>
         </div>
       )}
 
       {/* key={loggedSetCount}: remount per set so inputs re-prefill from the last logged set. */}
-      {!app.readOnly && <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} />}
+      {!app.readOnly && exercise.status !== 'completed' && (
+        <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} />
+      )}
+      {!app.readOnly && exercise.status === 'completed' && (
+        <div class="card done-card">
+          <div class="done-check">✓</div>
+          <h3>Ejercicio completado</h3>
+          <button class="btn ghost mt-2.5" onClick={app.pop}>
+            Volver al plan
+          </button>
+        </div>
+      )}
     </>
   );
 }
