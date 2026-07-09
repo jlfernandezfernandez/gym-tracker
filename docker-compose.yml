@@ -31,7 +31,9 @@ services:
       start_period: 10s
 
   garage:
-    image: dxflrs/garage:v2.3.0
+    build:
+      context: .
+      dockerfile: Dockerfile.garage
     container_name: gym-tracker-garage
     restart: unless-stopped
     environment:
@@ -42,35 +44,8 @@ services:
       - garage_data:/var/lib/garage/data
       - garage_snapshots:/var/lib/garage/snapshots
       - garage_config:/etc/garage
-    entrypoint: ["/bin/sh", "-ec"]
-    command: |
-      umask 077
-      if [ ! -f /etc/garage/garage.toml ]; then
-        RPC_SECRET="$$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
-        ADMIN_TOKEN="$$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
-        cat > /etc/garage/garage.toml <<EOF
-      metadata_dir = "/var/lib/garage/meta"
-      data_dir = "/var/lib/garage/data"
-      metadata_snapshots_dir = "/var/lib/garage/snapshots"
-      metadata_auto_snapshot_interval = "6h"
-      db_engine = "sqlite"
-      replication_factor = 1
-      block_size = "1M"
-      rpc_bind_addr = "[::]:3901"
-      rpc_public_addr = "garage:3901"
-      rpc_secret = "$$RPC_SECRET"
-      [s3_api]
-      api_bind_addr = "[::]:3900"
-      s3_region = "garage"
-      [admin]
-      api_bind_addr = "[::]:3903"
-      admin_token = "$$ADMIN_TOKEN"
-      metrics_token = "$$ADMIN_TOKEN"
-      metrics_require_token = true
-      EOF
-        chmod 600 /etc/garage/garage.toml
-      fi
-      exec /garage -c /etc/garage/garage.toml server
+    entrypoint: []
+    command: ["/usr/local/bin/garage-start.sh"]
     healthcheck:
       test: ["CMD", "/garage", "-c", "/etc/garage/garage.toml", "status"]
       interval: 5s
@@ -79,7 +54,9 @@ services:
       start_period: 15s
 
   garage-init:
-    image: dxflrs/garage:v2.3.0
+    build:
+      context: .
+      dockerfile: Dockerfile.garage
     container_name: gym-tracker-garage-init
     restart: "no"
     depends_on:
@@ -87,24 +64,10 @@ services:
         condition: service_healthy
     volumes:
       - garage_config:/etc/garage:ro
+      - garage_meta:/var/lib/garage/meta:ro
       - garage_credentials:/run/garage
-    entrypoint: ["/bin/sh", "-ec"]
-    command: |
-      CONFIG=/etc/garage/garage.toml
-      GARAGE="/garage -c $$CONFIG"
-      NODE_ID="$$($$GARAGE status | awk 'NR==5 {print $$1}')"
-      test -n "$$NODE_ID"
-      $$GARAGE layout assign "$$NODE_ID" -z dc1 -c 10G || true
-      $$GARAGE layout apply --version 1 || true
-      $$GARAGE bucket create gym-tracker-media 2>/dev/null || true
-      if [ ! -s /run/garage/access_key ]; then
-        $$GARAGE key create gym-tracker > /run/garage/key.txt
-        awk '/Key ID:/ {print $$3}' /run/garage/key.txt > /run/garage/access_key
-        awk '/Secret key:/ {print $$3}' /run/garage/key.txt > /run/garage/secret_key
-      fi
-      $$GARAGE bucket allow --read --write --owner gym-tracker-media --key gym-tracker || true
-      chmod 600 /run/garage/access_key /run/garage/secret_key
-      printf 'Garage local storage ready\n'
+    entrypoint: []
+    command: ["/usr/local/bin/garage-init.sh"]
 
   app:
     build:
