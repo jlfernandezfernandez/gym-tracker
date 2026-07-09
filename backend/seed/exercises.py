@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -26,7 +27,7 @@ logger = logging.getLogger(__name__)
 DATA_DIR = Path(__file__).resolve().parent.parent / "exercise_data"
 MEDIA_URL_PREFIX = "/exercise-media"
 UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main"
-DOWNLOAD_CONCURRENCY = 16
+DOWNLOAD_CONCURRENCY = 8
 
 # ── S3 / Garage ──────────────────────────────────────────────────────────────
 S3_ENDPOINT = os.getenv("S3_ENDPOINT", "")
@@ -136,22 +137,38 @@ def _upload_to_s3(key: str, content: bytes, content_type: str) -> None:
 
 
 def _download_and_upload(relative_path: str) -> None:
-    """Download a media file from upstream and upload it to Garage S3."""
+    """Download a media file from upstream and upload it to Garage S3 (with retries)."""
     url = f"{UPSTREAM_BASE_URL}/{relative_path}"
-    with urllib.request.urlopen(url, timeout=30) as response:
-        content = response.read()
-        content_type = response.headers.get("Content-Type", "application/octet-stream")
-
-    _upload_to_s3(relative_path, content, content_type)
+    attempts = 3
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(url, timeout=15) as response:
+                content = response.read()
+                content_type = response.headers.get("Content-Type", "application/octet-stream")
+            _upload_to_s3(relative_path, content, content_type)
+            return
+        except Exception:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(1 + attempt * 2)
 
 
 def _download_to_disk(relative_path: str) -> None:
-    """Fallback: download media to local disk (when S3 is not configured)."""
+    """Fallback: download media to local disk (when S3 is not configured) (with retries)."""
     target = DATA_DIR / relative_path
     target.parent.mkdir(parents=True, exist_ok=True)
-    with urllib.request.urlopen(f"{UPSTREAM_BASE_URL}/{relative_path}", timeout=30) as response:
-        content = response.read()
-    target.write_bytes(content)
+    url = f"{UPSTREAM_BASE_URL}/{relative_path}"
+    attempts = 3
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(url, timeout=15) as response:
+                content = response.read()
+            target.write_bytes(content)
+            return
+        except Exception:
+            if attempt == attempts - 1:
+                raise
+            time.sleep(1 + attempt * 2)
 
 
 async def download_missing_media() -> None:
