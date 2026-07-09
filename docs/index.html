@@ -60,14 +60,20 @@ nav .links a:hover{color:var(--text)}
 .appsim .prog{height:4px;background:var(--border);border-radius:2px;margin:12px 0 2px;overflow:hidden}
 .appsim .prog div{height:100%;background:var(--text);border-radius:2px;width:0;animation:prog 16s infinite}
 @keyframes prog{0%{width:0}20%{width:5%}40%{width:33%}62%{width:66%}84%{width:100%}95%{width:100%}100%{width:100%}}
-.exrow{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-top:8px;font-size:13px}
+.exrow{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--border);border-radius:10px;padding:8px 12px 8px 8px;margin-top:8px;font-size:13px}
 .exrow i{font-style:normal;color:var(--dim);font-size:12px;margin-left:auto}
 .exrow em{font-style:normal;font-size:11px;border:1px solid rgba(34,197,94,.4);color:#4ade80;border-radius:6px;padding:1px 7px;opacity:0;animation:bub 16s infinite}
-.bmap{width:100%;max-width:290px;display:block;margin:14px auto 10px}
-.bmap .b{fill:rgba(255,255,255,.07)}
-.bmap .mh{fill:rgba(255,255,255,.07);animation:musc 14s infinite}
-.bmap .t{fill:var(--dim);font-size:9px;letter-spacing:.06em}
-@keyframes musc{0%,4%{fill:rgba(255,255,255,.07)}8%,86%{fill:#fafafa}94%,100%{fill:rgba(255,255,255,.07)}}
+.ethumb{width:38px;height:38px;border-radius:8px;background:#fff;object-fit:cover;flex:0 0 auto}
+.bmap-live{display:flex;gap:12px;justify-content:center;margin:14px auto 4px;min-height:180px}
+.bmap-live>div{width:118px}
+.bmap-labels{display:flex;justify-content:center;gap:70px;margin-bottom:8px}
+.bmap-labels span{font-size:9px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.excards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:28px}
+.excard{border:1px solid var(--border);border-radius:12px;background:var(--sec);overflow:hidden}
+.excard img{width:100%;aspect-ratio:1;object-fit:cover;background:#fff;display:block}
+.excard .exinfo{padding:12px 14px}
+.excard h3{font-size:14px;font-weight:600;letter-spacing:-.01em;margin-bottom:4px}
+.excard span{font-size:11px;border:1px solid var(--border);color:var(--hint);border-radius:6px;padding:1px 8px}
 .zpill{font-size:11px;border:1px solid var(--border-hi);color:var(--hint);border-radius:6px;padding:2px 8px;opacity:0;animation:bub 14s infinite}
 .zpill.pr{border-color:rgba(34,197,94,.45);color:#4ade80;font-weight:600}
 .pchart{width:100%;margin-top:14px}
@@ -109,6 +115,7 @@ footer a:hover{color:var(--text)}
   .hero h1{font-size:36px}
   .features{grid-template-columns:1fr}
   .feats{grid-template-columns:1fr 1fr}
+  .excards{grid-template-columns:1fr}
   .flow{flex-direction:column}
   .flink{flex:none;width:1px;height:36px;margin:8px 0;max-width:none;min-width:0}
   .flink::after{right:-3.5px;top:auto;bottom:-2px;border:4px solid transparent;border-top-color:var(--border-hi)}
@@ -155,10 +162,10 @@ footer a:hover{color:var(--text)}
     <div class="sim appsim">
       <div class="h"><div class="av">📋</div><div><b>Push + Pull — hoy</b><span style="color:var(--dim)">Mini App · creada por el coach</span></div></div>
       <div class="prog"><div></div></div>
-      <div class="exrow"><span>Press banca</span><i>3×8 · 60kg</i><em style="animation-delay:5s">hecho ✓</em></div>
-      <div class="exrow"><span>Jalón al pecho</span><i>3×10 · 55kg</i><em style="animation-delay:8.5s">hecho ✓</em></div>
-      <div class="exrow"><span>Press militar</span><i>3×10 · 18kg</i><em style="animation-delay:12s">hecho ✓</em></div>
-      <div class="exrow"><span>Remo en polea</span><i>3×12 · 50kg</i><em style="animation-delay:14.5s">hecho ✓</em></div>
+      <div class="exrow"><img class="ethumb" src="media/0025-EIeI8Vf.gif" alt="" loading="lazy"><span>Press banca</span><i>3×8 · 60kg</i><em style="animation-delay:5s">hecho ✓</em></div>
+      <div class="exrow"><img class="ethumb" src="media/0032-ila4NZS.gif" alt="" loading="lazy"><span>Peso muerto</span><i>3×6 · 90kg</i><em style="animation-delay:8.5s">hecho ✓</em></div>
+      <div class="exrow"><img class="ethumb" src="media/0043-qXTaZnJ.gif" alt="" loading="lazy"><span>Sentadilla</span><i>3×10 · 70kg</i><em style="animation-delay:12s">hecho ✓</em></div>
+      <div class="exrow"><img class="ethumb" src="media/0861-fUBheHs.gif" alt="" loading="lazy"><span>Remo en polea</span><i>3×12 · 50kg</i><em style="animation-delay:14.5s">hecho ✓</em></div>
     </div>
     </div>
   </div>
@@ -169,9 +176,10 @@ footer a:hover{color:var(--text)}
   <div class="sims" style="padding:52px 0 8px;margin-top:0">
     <div class="sim">
       <div class="h"><div class="av">🫀</div><div><b>Zonas de hoy</b><span style="color:var(--dim)">el coach pinta el plan sobre tu cuerpo</span></div></div>
-      <svg viewBox="0 0 340 196" class="bmap" aria-hidden="true"><circle cx="85" cy="20" r="11" class="b"/><circle cx="255" cy="20" r="11" class="b"/><rect x="249" y="32" width="12" height="5" rx="2" class="b"/><rect x="72" y="87" width="26" height="10" rx="5" class="b"/><circle cx="54" cy="102" r="4" class="b"/><circle cx="116" cy="102" r="4" class="b"/><circle cx="224" cy="102" r="4" class="b"/><circle cx="286" cy="102" r="4" class="b"/><rect x="70" y="134" width="11" height="26" rx="5" class="b"/><rect x="89" y="134" width="11" height="26" rx="5" class="b"/><rect x="68" y="162" width="13" height="6" rx="3" class="b"/><rect x="89" y="162" width="13" height="6" rx="3" class="b"/><rect x="238" y="145" width="13" height="6" rx="3" class="b"/><rect x="259" y="145" width="13" height="6" rx="3" class="b"/><rect x="220" y="78" width="9" height="20" rx="4" class="b"/><rect x="281" y="78" width="9" height="20" rx="4" class="b"/><rect x="79" y="32" width="12" height="7" rx="3" class="b"/><circle cx="61" cy="46" r="9" class="mh" style="animation-delay:3.5s"/><circle cx="109" cy="46" r="9" class="mh" style="animation-delay:3.5s"/><circle cx="231" cy="46" r="9" class="mh" style="animation-delay:3.5s"/><circle cx="279" cy="46" r="9" class="mh" style="animation-delay:3.5s"/><rect x="66" y="42" width="18" height="15" rx="6" class="mh" style="animation-delay:2s"/><rect x="86" y="42" width="18" height="15" rx="6" class="mh" style="animation-delay:2s"/><rect x="52" y="57" width="10" height="19" rx="5" class="b"/><rect x="108" y="57" width="10" height="19" rx="5" class="b"/><rect x="50" y="78" width="9" height="20" rx="4" class="b"/><rect x="111" y="78" width="9" height="20" rx="4" class="b"/><rect x="74" y="59" width="22" height="26" rx="7" class="b"/><rect x="68" y="99" width="14" height="32" rx="7" class="b"/><rect x="88" y="99" width="14" height="32" rx="7" class="b"/><rect x="62" y="99" width="5" height="22" rx="2" class="b"/><rect x="103" y="99" width="5" height="22" rx="2" class="b"/><rect x="83" y="99" width="4" height="20" rx="2" class="b"/><rect x="243" y="33" width="24" height="9" rx="4" class="b"/><rect x="246" y="46" width="18" height="12" rx="5" class="mh" style="animation-delay:6.5s"/><rect x="235" y="57" width="10" height="20" rx="4" class="mh" style="animation-delay:5s"/><rect x="275" y="57" width="10" height="20" rx="4" class="mh" style="animation-delay:5s"/><rect x="246" y="61" width="18" height="12" rx="5" class="b"/><rect x="222" y="57" width="10" height="19" rx="5" class="b"/><rect x="278" y="57" width="10" height="19" rx="5" class="b"/><rect x="242" y="75" width="26" height="14" rx="7" class="b"/><rect x="238" y="91" width="13" height="28" rx="6" class="b"/><rect x="259" y="91" width="13" height="28" rx="6" class="b"/><rect x="240" y="121" width="11" height="22" rx="5" class="b"/><rect x="260" y="121" width="11" height="22" rx="5" class="b"/><text x="85" y="192" text-anchor="middle" class="t">FRENTE</text><text x="255" y="192" text-anchor="middle" class="t">ESPALDA</text></svg>
+      <div id="bodymap" class="bmap-live" aria-hidden="true"></div>
+      <div class="bmap-labels"><span>Frente</span><span>Espalda</span></div>
       <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
-        <span class="zpill" style="animation-delay:2s">chest</span><span class="zpill" style="animation-delay:3.5s">shoulders</span><span class="zpill" style="animation-delay:5s">lats</span><span class="zpill" style="animation-delay:6.5s">middle back</span>
+        <span class="zpill" style="animation-delay:2s">chest</span><span class="zpill" style="animation-delay:3.5s">shoulders</span><span class="zpill" style="animation-delay:5s">lats</span><span class="zpill" style="animation-delay:6.5s">upper back</span>
       </div>
     </div>
     <div class="sim">
@@ -203,12 +211,23 @@ footer a:hover{color:var(--text)}
     <div class="feats">
       <div class="feat"><div class="ic">💬</div><h3>Onboarding por chat</h3><p>El coach te conoce conversando: objetivo, lesiones, equipamiento. Sin formularios.</p></div>
       <div class="feat"><div class="ic">📋</div><h3>Preview del plan</h3><p>Ves el entreno antes de empezar. ¿No convence? Lo descarta y crea otro.</p></div>
-      <div class="feat"><div class="ic">🫀</div><h3>Mapa muscular</h3><p>Cada plan muestra el cuerpo con las zonas a trabajar resaltadas.</p></div>
+      <div class="feat"><div class="ic">🫀</div><h3>Mapa muscular</h3><p>Cuerpo anatómico (frente y espalda) con las zonas del plan resaltadas.</p></div>
       <div class="feat"><div class="ic">📈</div><h3>Progresión</h3><p>Gráfica de peso máximo por sesión en cada ejercicio. El coach elige cargas con datos.</p></div>
       <div class="feat"><div class="ic">✍️</div><h3>Registro en un toque</h3><p>Series, pesos y sensaciones desde la Mini App o dictándoselo al coach.</p></div>
       <div class="feat"><div class="ic">🔁</div><h3>Cambios en caliente</h3><p>Máquina ocupada o molestia: lo dices por chat y cambia el ejercicio al momento.</p></div>
       <div class="feat"><div class="ic">🔗</div><h3>Comparte tu rutina</h3><p>Link de solo lectura para que un compañero la vea en cualquier navegador.</p></div>
       <div class="feat"><div class="ic">👥</div><h3>Multi-usuario</h3><p>Una instancia, varios atletas. Cada uno con su perfil, historial y sesiones.</p></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <p class="eyebrow">Catálogo</p>
+    <h2>1.324 ejercicios con demostración</h2>
+    <p class="lead">Cada ejercicio trae GIF animado, músculos trabajados e instrucciones paso a paso en español. Incluido en el repo — nada que descargar.</p>
+    <div class="excards" aria-hidden="true">
+      <div class="excard"><img src="media/0025-EIeI8Vf.gif" alt="Press banca" loading="lazy"><div class="exinfo"><h3>Press banca</h3><span>chest</span></div></div>
+      <div class="excard"><img src="media/0032-ila4NZS.gif" alt="Peso muerto" loading="lazy"><div class="exinfo"><h3>Peso muerto</h3><span>hamstrings</span></div></div>
+      <div class="excard"><img src="media/0043-qXTaZnJ.gif" alt="Sentadilla" loading="lazy"><div class="exinfo"><h3>Sentadilla</h3><span>quadriceps</span></div></div>
     </div>
   </div>
 
@@ -248,7 +267,7 @@ footer a:hover{color:var(--text)}
   <div class="section" id="setup">
     <p class="eyebrow">Setup</p>
     <h2>Montar tu propio coach</h2>
-    <p class="lead">Docker Compose en local o Coolify con dominio. Sin build steps: un contenedor, un Postgres.</p>
+    <p class="lead">Docker Compose en local o Coolify con dominio. Un contenedor, un Postgres — el Dockerfile compila la Mini App y carga el catálogo solo.</p>
 
     <h3 class="sub">1 — Levanta la app</h3>
     <pre><b>git clone</b> https://github.com/jlfernandezfernandez/gym-tracker.git
@@ -272,7 +291,7 @@ footer a:hover{color:var(--text)}
     <h2>Simple a propósito</h2>
     <div class="features">
       <div class="feature"><h3>FastAPI + SQLModel</h3><p>Backend async sobre Postgres. Auth HMAC de Telegram initData, scoping por usuario.</p></div>
-      <div class="feature"><h3>Mini App vanilla</h3><p>Un solo HTML estático con el SDK de Telegram. Cero dependencias, cero build.</p></div>
+      <div class="feature"><h3>Mini App en Astro</h3><p>Estática, TypeScript vanilla. Chart.js para progresión y body map anatómico como única isla React.</p></div>
       <div class="feature"><h3>FastMCP</h3><p>21 herramientas por stdio. Docstrings = documentación que el agente lee al conectarse.</p></div>
       <div class="feature"><h3>Docker</h3><p>API + Mini App en un contenedor. Compose local o Coolify en producción.</p></div>
     </div>
@@ -291,5 +310,39 @@ footer a:hover{color:var(--text)}
 
 </div>
 
+<script type="module">
+// Body map: same react-body-highlighter the Mini App uses, via CDN (no build on Pages).
+import { createElement as h } from 'https://esm.sh/react@19';
+import { createRoot } from 'https://esm.sh/react-dom@19/client';
+import Model from 'https://esm.sh/react-body-highlighter@2?deps=react@19,react-dom@19';
+
+const slot = document.getElementById('bodymap');
+if (slot) {
+  const root = createRoot(slot);
+  const draw = (muscles) => {
+    const props = {
+      data: [{ name: 'hoy', muscles }],
+      bodyColor: 'rgba(255,255,255,.08)',
+      highlightedColors: ['#fafafa'],
+      style: { width: '118px' },
+    };
+    root.render(h('div', { style: { display: 'contents' } },
+      h(Model, { ...props, type: 'anterior' }),
+      h(Model, { ...props, type: 'posterior' })));
+  };
+  // Synced with the .zpill CSS delays (14s loop).
+  const steps = [
+    [0, []],
+    [2, ['chest']],
+    [3.5, ['chest', 'front-deltoids', 'back-deltoids']],
+    [5, ['chest', 'front-deltoids', 'back-deltoids', 'upper-back']],
+    [6.5, ['chest', 'front-deltoids', 'back-deltoids', 'upper-back', 'trapezius']],
+    [12.5, []],
+  ];
+  const loop = () => steps.forEach(([t, m]) => setTimeout(() => draw(m), t * 1000));
+  loop();
+  setInterval(loop, 14000);
+}
+</script>
 </body>
 </html>
