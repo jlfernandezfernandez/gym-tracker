@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
 from telegram_auth import current_user_id
+from ownership import adopt_legacy_unscoped_data
 from models import AthleteProfile
 from schemas import AthleteProfileIn, AthleteProfileOut
 
@@ -15,6 +16,7 @@ router = APIRouter(prefix="/api/profile", tags=["profile"])
 
 async def _get_or_create_profile(db: AsyncSession, uid: int | None = None) -> AthleteProfile:
     """Get the athlete profile for a given Telegram user, or create one."""
+    await adopt_legacy_unscoped_data(db, uid)
     if uid:
         result = await db.execute(
             select(AthleteProfile).where(AthleteProfile.telegram_user_id == uid).limit(1)

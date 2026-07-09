@@ -383,7 +383,8 @@ export function init() {
     if (p.share_token) {
       try {
         await loadSession(null, p.share_token);
-        renderPlan();
+        if (p.exercise_id) openExercise(p.exercise_id);
+        else renderPlan();
       } catch {
         $('plan-body').innerHTML = '<div class="empty"><div class="icon">🔗</div><p>No pude cargar este enlace.</p></div>';
       }

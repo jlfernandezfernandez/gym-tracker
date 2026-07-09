@@ -222,10 +222,17 @@ def finish_session(session_id: int, duration_actual: int = 0, feedback: str = ""
 
 @mcp.tool()
 def session_web_url(session_id: int, planned_exercise_id: int | None = None) -> str:
-    """Return a Mini App URL for a session or a specific exercise screen."""
-    if planned_exercise_id is None:
-        return f"{APP_BASE}/?session_id={int(session_id)}"
-    return f"{APP_BASE}/?session_id={int(session_id)}&exercise_id={int(planned_exercise_id)}"
+    """Return a Mini App URL for a session or a specific exercise screen.
+
+    User-facing links must not expose sequential session ids. Resolve the
+    session through the API using the coach key, then build a share-token URL.
+    """
+    session = _request("GET", f"/sessions/{int(session_id)}")
+    token = urllib.parse.quote(str(session["share_token"]), safe="")
+    url = f"{APP_BASE}/?share_token={token}"
+    if planned_exercise_id is not None:
+        url += f"&exercise_id={int(planned_exercise_id)}"
+    return url
 
 
 @mcp.tool()
