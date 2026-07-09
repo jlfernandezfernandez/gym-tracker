@@ -1,0 +1,24 @@
+---
+/**
+ * App screen shell: topbar with back button + body container.
+ * Convention: `#{id}-back`, `#{id}-title`, `#{id}-subtitle`, `#{id}-body`.
+ */
+interface Props {
+	id: string;
+	title: string;
+	subtitle?: string;
+}
+const { id, title, subtitle = '' } = Astro.props;
+---
+<section id={id} class="screen">
+	<div class="topbar">
+		<button class="back" id={`${id}-back`} aria-label="Volver">←</button>
+		<div style="flex:1;min-width:0">
+			<h2 id={`${id}-title`}>{title}</h2>
+			<p id={`${id}-subtitle`}>{subtitle}</p>
+		</div>
+	</div>
+	<div id={`${id}-body`}>
+		<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
+	</div>
+</section>

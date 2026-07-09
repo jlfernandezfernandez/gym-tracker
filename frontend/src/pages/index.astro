@@ -1,106 +1,21 @@
 ---
-import '../styles/global.css';
+import AppLayout from '../layouts/AppLayout.astro';
+import Landing from '../components/Landing.astro';
+import Screen from '../components/Screen.astro';
+import FinishDialog from '../components/FinishDialog.astro';
 ---
-<!doctype html>
-<html lang="es">
-	<head>
-		<meta charset="UTF-8" />
-		<meta
-			name="viewport"
-			content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
-		/>
-		<meta name="theme-color" content="#f6f7f9" />
-		<title>Gym Coach</title>
-		<script is:inline src="https://telegram.org/js/telegram-web-app.js"></script>
-	</head>
-	<body>
-		<main class="app">
-			<!-- LANDING -->
-			<section id="landing" class="screen active">
-				<div class="hero">
-					<h1 id="landing-greeting">Hola</h1>
-					<p id="landing-sub">Cargando sesión...</p>
-				</div>
-				<div id="active-card" class="card tap" style="display:none"></div>
-				<div class="grid" style="margin-top:14px">
-					<div class="row">
-						<button class="btn ghost" id="open-history">Historial</button>
-						<button class="btn ghost" id="open-records">Marcas</button>
-						<button class="btn ghost" id="open-profile">Perfil</button>
-					</div>
-				</div>
-			</section>
+<AppLayout>
+	<Landing />
+	<Screen id="plan" title="Plan" />
+	<Screen id="exercise" title="Ejercicio" />
+	<Screen id="profile" title="Tu perfil" subtitle="Lo que el coach sabe de ti" />
+	<Screen id="history" title="Historial" subtitle="Últimas sesiones" />
+	<Screen id="records" title="Mis marcas" subtitle="Peso máximo por ejercicio" />
+	<Screen id="record-detail" title="Ejercicio" />
+	<FinishDialog />
+</AppLayout>
 
-			<!-- PLAN -->
-			<section id="plan" class="screen">
-				<div class="topbar">
-					<button class="back" id="plan-back">←</button>
-					<div style="flex:1;min-width:0"><h2 id="plan-title">Plan</h2><p id="plan-subtitle"></p></div>
-				</div>
-				<div id="plan-body">
-					<div class="loading"><div class="spinner"></div><p>Cargando plan...</p></div>
-				</div>
-			</section>
-
-			<!-- EXERCISE -->
-			<section id="exercise" class="screen">
-				<div class="topbar">
-					<button class="back" id="exercise-back">←</button>
-					<div style="flex:1;min-width:0"><h2 id="ex-title">Ejercicio</h2><p id="ex-subtitle"></p></div>
-				</div>
-				<div id="ex-body">
-					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
-				</div>
-			</section>
-
-			<!-- PROFILE -->
-			<section id="profile" class="screen">
-				<div class="topbar">
-					<button class="back" id="profile-back">←</button>
-					<div style="flex:1;min-width:0"><h2>Tu perfil</h2><p>Lo que el coach sabe de ti</p></div>
-				</div>
-				<div id="profile-body">
-					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
-				</div>
-			</section>
-
-			<!-- RECORDS -->
-			<section id="records" class="screen">
-				<div class="topbar">
-					<button class="back" id="records-back">←</button>
-					<div style="flex:1;min-width:0"><h2>Mis marcas</h2><p>Peso máximo por ejercicio</p></div>
-				</div>
-				<div id="records-body">
-					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
-				</div>
-			</section>
-
-			<!-- RECORD DETAIL -->
-			<section id="record-detail" class="screen">
-				<div class="topbar">
-					<button class="back" id="record-back">←</button>
-					<div style="flex:1;min-width:0"><h2 id="record-title">Ejercicio</h2><p id="record-subtitle"></p></div>
-				</div>
-				<div id="record-body">
-					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
-				</div>
-			</section>
-
-			<!-- HISTORY -->
-			<section id="history" class="screen">
-				<div class="topbar">
-					<button class="back" id="history-back">←</button>
-					<div style="flex:1;min-width:0"><h2>Historial</h2><p>Últimas sesiones</p></div>
-				</div>
-				<div id="hist-body">
-					<div class="loading"><div class="spinner"></div><p>Cargando...</p></div>
-				</div>
-			</section>
-		</main>
-
-		<script>
-			import { init } from '../lib/app';
-			init();
-		</script>
-	</body>
-</html>
+<script>
+	import { init } from '../lib/app';
+	init();
+</script>
