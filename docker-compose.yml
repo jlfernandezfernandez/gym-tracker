@@ -2,8 +2,9 @@
 # gym-tracker — docker-compose.yml (local dev)
 # =============================================================================
 # Usage:
-#   docker compose up -d          # start app + db
+#   docker compose up -d          # start app + db + garage
 #   docker compose down           # stop everything
+#   docker compose down -v        # stop + delete volumes (fresh start)
 #   docker compose logs -f        # follow logs
 # =============================================================================
 
@@ -24,6 +25,78 @@ services:
       timeout: 5s
       retries: 5
 
+  garage:
+    image: dxflrs/garage:v2.1.0
+    container_name: gym-tracker-garage
+    restart: unless-stopped
+    environment:
+      GARAGE_ALLOW_WORLD_READABLE_SECRETS: "true"
+      RUST_LOG: garage=info
+    volumes:
+      - garage_meta:/meta
+      - garage_data:/data
+    command: |
+      sh -c "
+      cat > /etc/garage.toml <<'EOF'
+      metadata_dir = \"/meta\"
+      data_dir = \"/data\"
+      db_engine = \"sqlite\"
+      replication_factor = 1
+      rpc_bind_addr = \"[::]:3901\"
+      rpc_secret = \"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2\"
+      [s3_api]
+      s3_region = \"garage\"
+      api_bind_addr = \"[::]:3900\"
+      root_domain = \".s3.garage.localhost\"
+      [admin]
+      api_bind_addr = \"[::]:3903\"
+      admin_token = \"dev-admin-token-change-me\"
+      EOF
+      /garage server
+      "
+    healthcheck:
+      test: ["CMD", "/garage", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  garage-init:
+    image: dxflrs/garage:v2.1.0
+    container_name: gym-tracker-garage-init
+    depends_on:
+      garage:
+        condition: service_healthy
+    environment:
+      GARAGE_RPC_SECRET: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"
+      GARAGE_ADMIN_TOKEN: "dev-admin-token-change-me"
+    entrypoint: |
+      sh -c "
+      set -e
+      echo 'Waiting for Garage admin API...'
+      for i in \$(seq 1 30); do
+        if /garage -h http://garage:3903 status 2>/dev/null; then break; fi
+        sleep 2
+      done
+
+      # Configure layout
+      NODE_ID=\$(/garage -h http://garage:3903 status 2>/dev/null | grep -oP '[a-f0-9]{16}' | head -1)
+      echo \"Node: \$NODE_ID\"
+      /garage -h http://garage:3903 layout assign \"\$NODE_ID\" -z dc1 -c 10G
+      /garage -h http://garage:3903 layout apply --version 1
+
+      # Create bucket and key (idempotent)
+      /garage -h http://garage:3903 bucket create gym-tracker-media 2>/dev/null || true
+      /garage -h http://garage:3903 key create gym-tracker 2>/dev/null || true
+      /garage -h http://garage:3903 bucket allow --read --write --owner gym-tracker-media --key gym-tracker 2>/dev/null || true
+
+      # Print credentials for .env
+      echo ''
+      echo '==== Garage ready ===='
+      /garage -h http://garage:3903 key info gym-tracker 2>/dev/null | grep -E 'Key ID|Secret key'
+      echo '======================'
+      "
+
   app:
     build:
       context: .
@@ -38,9 +111,19 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       COACH_API_KEY: ${COACH_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      # Garage S3
+      S3_ENDPOINT: http://garage:3900
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_BUCKET: gym-tracker-media
+      S3_REGION: garage
     depends_on:
       db:
         condition: service_healthy
+      garage-init:
+        condition: service_completed_successfully
 
 volumes:
   pgdata:
+  garage_meta:
+  garage_data:

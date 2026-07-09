@@ -9,9 +9,11 @@ import logging
 import os
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+import boto3
+from botocore.config import Config as BotoConfig
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from database import init_db
@@ -20,6 +22,34 @@ from routers import sessions, exercises, coach, profile
 # dotenv already loaded by database.py on import.
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 logger = logging.getLogger(__name__)
+
+# ── S3 / Garage ──────────────────────────────────────────────────────────────
+S3_ENDPOINT = os.getenv("S3_ENDPOINT", "")
+S3_ACCESS_KEY = os.getenv("S3_ACCESS_KEY", "")
+S3_SECRET_KEY = os.getenv("S3_SECRET_KEY", "")
+S3_BUCKET = os.getenv("S3_BUCKET", "gym-tracker-media")
+S3_REGION = os.getenv("S3_REGION", "garage")
+
+_s3_client: boto3.client | None = None
+
+
+def _get_s3() -> boto3.client:
+    """Lazy-init the S3 client (Garage-compatible)."""
+    global _s3_client
+    if _s3_client is None:
+        _s3_client = boto3.client(
+            "s3",
+            endpoint_url=S3_ENDPOINT,
+            aws_access_key_id=S3_ACCESS_KEY,
+            aws_secret_access_key=S3_SECRET_KEY,
+            region_name=S3_REGION,
+            config=BotoConfig(signature_version="s3v4"),
+        )
+    return _s3_client
+
+
+def _s3_enabled() -> bool:
+    return bool(S3_ENDPOINT)
 
 
 @asynccontextmanager
@@ -75,10 +105,41 @@ async def health():
     return {"status": "ok", "version": "1.0.0"}
 
 
-# Serve exercise images/GIFs from the vendored dataset.
+# ── Exercise media ───────────────────────────────────────────────────────────
+# When S3 is configured, serve from Garage. Otherwise fall back to local disk.
+
 _media_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "exercise_data")
-if os.path.isdir(_media_dir):
-    app.mount("/exercise-media", StaticFiles(directory=_media_dir), name="exercise-media")
+
+
+@app.get("/exercise-media/{path:path}", include_in_schema=False)
+async def serve_media(path: str):
+    """Serve exercise images/GIFs from Garage S3 or local disk."""
+    if _s3_enabled():
+        try:
+            s3 = _get_s3()
+            obj = s3.get_object(Bucket=S3_BUCKET, Key=path)
+            return StreamingResponse(
+                obj["Body"],
+                media_type=obj.get("ContentType", "application/octet-stream"),
+                headers={
+                    "Cache-Control": "public, max-age=31536000, immutable",
+                },
+            )
+        except Exception as e:
+            # boto3 ClientError wraps the S3 error; check for NoSuchKey
+            error_response = getattr(e, "response", {}) or {}
+            error_code = (error_response.get("Error") or {}).get("Code", "")
+            if error_code == "NoSuchKey":
+                raise HTTPException(status_code=404, detail="Media not found")
+            logger.warning("S3 fetch failed for %s: %s", path, e)
+            raise HTTPException(status_code=502, detail="Storage unavailable")
+
+    # Fallback: serve from local disk
+    file_path = os.path.join(_media_dir, path)
+    if not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="Media not found")
+    return FileResponse(file_path)
+
 
 # Serve the static Telegram Mini App from the same container/domain.
 # Keep this after API routes so /api/* and /health continue to resolve first.
