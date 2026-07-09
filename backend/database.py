@@ -1,4 +1,5 @@
 from sqlmodel import SQLModel
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 
 from dotenv import load_dotenv
@@ -24,3 +25,5 @@ async def get_session() -> AsyncSession:  # type: ignore[misc]
 async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+        # Lightweight migrations for existing deployments. create_all() does not add columns.
+        await conn.execute(text("ALTER TABLE workout_sessions ADD COLUMN IF NOT EXISTS started_at TIMESTAMP"))
