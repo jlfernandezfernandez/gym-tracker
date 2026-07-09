@@ -1,101 +1,110 @@
 # =============================================================================
-# gym-tracker — docker-compose.yml (local dev)
+# gym-tracker — Docker Compose (desarrollo local)
 # =============================================================================
-# Usage:
-#   docker compose up -d          # start app + db + garage
-#   docker compose down           # stop everything
-#   docker compose down -v        # stop + delete volumes (fresh start)
-#   docker compose logs -f        # follow logs
+# La misma topología lógica que Coolify: PostgreSQL + Garage + app.
+# Los servicios internos no publican puertos al host salvo la app.
+#
+# Arranque:
+#   docker compose up -d --build
+#   docker compose logs -f app
+#
+# Los datos sobreviven a `docker compose down` gracias a los volúmenes.
+# Para empezar de cero: `docker compose down -v`.
 # =============================================================================
 
 services:
-  db:
+  postgres:
     image: postgres:16-alpine
-    container_name: gym-tracker-db
+    container_name: gym-tracker-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-gym_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gym_pass}
       POSTGRES_DB: ${POSTGRES_DB:-gym_tracker}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gym_user} -d ${POSTGRES_DB:-gym_tracker}"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  garage:
-    image: dxflrs/garage:v2.1.0
-    container_name: gym-tracker-garage
-    restart: unless-stopped
-    environment:
-      GARAGE_ALLOW_WORLD_READABLE_SECRETS: "true"
-      RUST_LOG: garage=info
-    volumes:
-      - garage_meta:/meta
-      - garage_data:/data
-    command: |
-      sh -c "
-      cat > /etc/garage.toml <<'EOF'
-      metadata_dir = \"/meta\"
-      data_dir = \"/data\"
-      db_engine = \"sqlite\"
-      replication_factor = 1
-      rpc_bind_addr = \"[::]:3901\"
-      rpc_secret = \"a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2\"
-      [s3_api]
-      s3_region = \"garage\"
-      api_bind_addr = \"[::]:3900\"
-      root_domain = \".s3.garage.localhost\"
-      [admin]
-      api_bind_addr = \"[::]:3903\"
-      admin_token = \"dev-admin-token-change-me\"
-      EOF
-      /garage server
-      "
-    healthcheck:
-      test: ["CMD", "/garage", "status"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
 
+  garage:
+    image: dxflrs/garage:v2.3.0
+    container_name: gym-tracker-garage
+    restart: unless-stopped
+    environment:
+      GARAGE_ALLOW_WORLD_READABLE_SECRETS: "false"
+      RUST_LOG: ${GARAGE_LOG_LEVEL:-garage=info}
+    volumes:
+      - garage_meta:/var/lib/garage/meta
+      - garage_data:/var/lib/garage/data
+      - garage_snapshots:/var/lib/garage/snapshots
+      - garage_config:/etc/garage
+    entrypoint: ["/bin/sh", "-ec"]
+    command: |
+      umask 077
+      if [ ! -f /etc/garage/garage.toml ]; then
+        RPC_SECRET="$$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+        ADMIN_TOKEN="$$(od -An -N32 -tx1 /dev/urandom | tr -d ' \n')"
+        cat > /etc/garage/garage.toml <<EOF
+      metadata_dir = "/var/lib/garage/meta"
+      data_dir = "/var/lib/garage/data"
+      metadata_snapshots_dir = "/var/lib/garage/snapshots"
+      metadata_auto_snapshot_interval = "6h"
+      db_engine = "sqlite"
+      replication_factor = 1
+      block_size = "1M"
+      rpc_bind_addr = "[::]:3901"
+      rpc_public_addr = "garage:3901"
+      rpc_secret = "$$RPC_SECRET"
+      [s3_api]
+      api_bind_addr = "[::]:3900"
+      s3_region = "garage"
+      [admin]
+      api_bind_addr = "[::]:3903"
+      admin_token = "$$ADMIN_TOKEN"
+      metrics_token = "$$ADMIN_TOKEN"
+      metrics_require_token = true
+      EOF
+        chmod 600 /etc/garage/garage.toml
+      fi
+      exec /garage -c /etc/garage/garage.toml server
+    healthcheck:
+      test: ["CMD", "/garage", "-c", "/etc/garage/garage.toml", "status"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+
   garage-init:
-    image: dxflrs/garage:v2.1.0
+    image: dxflrs/garage:v2.3.0
     container_name: gym-tracker-garage-init
+    restart: "no"
     depends_on:
       garage:
         condition: service_healthy
-    environment:
-      GARAGE_RPC_SECRET: "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2"
-      GARAGE_ADMIN_TOKEN: "dev-admin-token-change-me"
-    entrypoint: |
-      sh -c "
-      set -e
-      echo 'Waiting for Garage admin API...'
-      for i in \$(seq 1 30); do
-        if /garage -h http://garage:3903 status 2>/dev/null; then break; fi
-        sleep 2
-      done
-
-      # Configure layout
-      NODE_ID=\$(/garage -h http://garage:3903 status 2>/dev/null | grep -oP '[a-f0-9]{16}' | head -1)
-      echo \"Node: \$NODE_ID\"
-      /garage -h http://garage:3903 layout assign \"\$NODE_ID\" -z dc1 -c 10G
-      /garage -h http://garage:3903 layout apply --version 1
-
-      # Create bucket and key (idempotent)
-      /garage -h http://garage:3903 bucket create gym-tracker-media 2>/dev/null || true
-      /garage -h http://garage:3903 key create gym-tracker 2>/dev/null || true
-      /garage -h http://garage:3903 bucket allow --read --write --owner gym-tracker-media --key gym-tracker 2>/dev/null || true
-
-      # Print credentials for .env
-      echo ''
-      echo '==== Garage ready ===='
-      /garage -h http://garage:3903 key info gym-tracker 2>/dev/null | grep -E 'Key ID|Secret key'
-      echo '======================'
-      "
+    volumes:
+      - garage_config:/etc/garage:ro
+      - garage_credentials:/run/garage
+    entrypoint: ["/bin/sh", "-ec"]
+    command: |
+      CONFIG=/etc/garage/garage.toml
+      GARAGE="/garage -c $$CONFIG"
+      NODE_ID="$$($$GARAGE status | awk 'NR==5 {print $$1}')"
+      test -n "$$NODE_ID"
+      $$GARAGE layout assign "$$NODE_ID" -z dc1 -c 10G || true
+      $$GARAGE layout apply --version 1 || true
+      $$GARAGE bucket create gym-tracker-media 2>/dev/null || true
+      if [ ! -s /run/garage/access_key ]; then
+        $$GARAGE key create gym-tracker > /run/garage/key.txt
+        awk '/Key ID:/ {print $$3}' /run/garage/key.txt > /run/garage/access_key
+        awk '/Secret key:/ {print $$3}' /run/garage/key.txt > /run/garage/secret_key
+      fi
+      $$GARAGE bucket allow --read --write --owner gym-tracker-media --key gym-tracker || true
+      chmod 600 /run/garage/access_key /run/garage/secret_key
+      printf 'Garage local storage ready\n'
 
   app:
     build:
@@ -106,24 +115,28 @@ services:
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@db:5432/${POSTGRES_DB:-gym_tracker}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@postgres:5432/${POSTGRES_DB:-gym_tracker}
       CORS_ORIGINS: ${CORS_ORIGINS:-*}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       COACH_API_KEY: ${COACH_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      # Garage S3
       S3_ENDPOINT: http://garage:3900
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_BUCKET: gym-tracker-media
       S3_REGION: garage
+    volumes:
+      - garage_credentials:/run/garage:ro
     depends_on:
-      db:
+      postgres:
         condition: service_healthy
       garage-init:
         condition: service_completed_successfully
 
 volumes:
-  pgdata:
+  postgres_data:
   garage_meta:
   garage_data:
+  garage_snapshots:
+  garage_config:
+  garage_credentials:
