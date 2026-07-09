@@ -117,10 +117,14 @@ def get_telegram_user(init_data: str | None) -> dict[str, Any]:
 
 
 def get_telegram_user_id(init_data: str | None) -> Optional[int]:
-    """Convenience: return just the telegram user id (int) or None."""
+    """Convenience: return just the telegram user id (int) or None.
+
+    The dev user (auth disabled) has id 0 and must behave as "no identity":
+    routers treat None/0 as unscoped, so data is stored and read consistently.
+    """
     user = get_telegram_user(init_data)
     uid = user.get("id")
-    return int(uid) if uid is not None else None
+    return int(uid) if uid else None
 
 
 async def current_user_id(

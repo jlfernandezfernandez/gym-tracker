@@ -203,10 +203,29 @@ function renderLandingActive(data: any, profile?: any) {
   state.current = data.current;
   const cur = data.current;
   const pct = cur.total_sets ? Math.round((cur.completed_sets / cur.total_sets) * 100) : 0;
+  const curEx = currentExercise();
+  const media = mediaUrl(curEx?.gif_url || curEx?.image_url);
+  const lastSet = curEx?.performed_sets?.[curEx.performed_sets.length - 1];
   $('landing-sub').textContent = 'Esta es tu sesión activa de hoy';
-  c.innerHTML = `<h2>${esc(p.title || 'Entrenamiento')}</h2><p>${esc(cur.exercise_count || p.exercises.length)} ejercicios · ${esc(STATUS_ES[p.status] || p.status)}</p><div class="progress" style="margin-top:10px"><div style="width:${pct}%"></div></div><div class="row" style="margin-top:8px"><span class="pill active">▶ ${esc(cur.current_exercise_name || '—')}</span><span class="pill">Serie ${esc(cur.current_set_number || 1)}/${esc(cur.target_sets || '-')}</span></div>`;
-  c.classList.add('tap');
-  c.onclick = () => renderPlan(true);
+  // During a workout the landing IS the workout: current exercise front and center.
+  c.innerHTML = `<div class="exercise-title-row"><h2>${esc(p.title || 'Entrenamiento')}</h2><span class="pill">${esc(cur.completed_sets || 0)}/${esc(cur.total_sets || 0)} series</span></div>
+    <div class="progress"><div style="width:${pct}%"></div></div>
+    <div class="landing-current">
+      <div class="exercise-media">${media ? `<img src="${esc(media)}" loading="eager"/>` : '🏋️'}</div>
+      <div class="landing-current-info">
+        <h3>${esc(cur.current_exercise_name || curEx?.name || '—')}</h3>
+        <p>Serie ${esc(cur.current_set_number || 1)} de ${esc(cur.target_sets || curEx?.sets || '-')}</p>
+        <div class="meta"><span class="pill active">${esc(curEx?.sets || '-')}×${esc(curEx?.reps || '-')}</span><span class="pill">${lastSet ? `último: ${lastSet.weight}kg` : curEx?.weight ? `${curEx.weight}kg` : 'peso corporal'}</span></div>
+      </div>
+    </div>
+    <button class="btn" id="landing-continue" style="margin-top:12px">▶ Continuar entreno</button>
+    <button class="btn ghost" id="landing-plan" style="margin-top:8px">Ver plan completo</button>`;
+  c.classList.remove('tap');
+  $('landing-continue').onclick = () => {
+    renderPlan(true);
+    openExercise(currentExercise()?.planned_id, true);
+  };
+  $('landing-plan').onclick = () => renderPlan(true);
 }
 
 async function initLanding() {
@@ -228,7 +247,7 @@ function renderPlan(push = true) {
   const p = state.plan;
   $('plan-title').textContent = p.title || 'Plan del coach';
   $('plan-subtitle').textContent = state.readOnly
-    ? 'Vista compartida (solo lectura)'
+    ? 'Plan compartido contigo'
     : 'Creado por el coach. Aquí se ejecuta y registra.';
   ($('plan-back') as HTMLButtonElement).style.display = state.readOnly ? 'none' : '';
   ($('exercise-back') as HTMLButtonElement).style.display = '';
@@ -270,14 +289,30 @@ function renderPlan(push = true) {
   }
   if (!state.readOnly && p.status !== 'completed')
     html += `<div class="row" style="margin-top:12px"><button class="btn" id="open-current">▶ Ejercicio actual</button><button class="btn secondary" id="finish">✓ Finalizar</button></div>`;
+  if (!state.readOnly && p.share_token)
+    html += `<button class="btn ghost" id="share-plan" style="margin-top:10px">🔗 Compartir con un compañero</button>`;
   $('plan-body').innerHTML = html;
   const slot = document.getElementById('bodymap-slot');
   if (slot) renderBodyMap(slot, muscles);
   document.querySelectorAll<HTMLElement>('[data-open]').forEach((el) => (el.onclick = () => openExercise(el.dataset.open!, true)));
   document.getElementById('open-current')?.addEventListener('click', () => openExercise(currentExercise()?.planned_id));
   document.getElementById('finish')?.addEventListener('click', finishSession);
+  document.getElementById('share-plan')?.addEventListener('click', () => sharePlan(p));
   if (push) pushScreen('plan');
   else screen('plan');
+}
+
+async function sharePlan(p: any) {
+  const url = `${location.origin}/session/share/${encodeURIComponent(p.share_token)}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    haptic('ok');
+    toast('Enlace copiado — pásaselo a tu compañero', 'ok');
+  } catch {
+    // Clipboard can be blocked (Telegram webview) — fall back to the native share sheet.
+    if (navigator.share) navigator.share({ title: p.title || 'Entrenamiento', url }).catch(() => {});
+    else prompt('Copia el enlace:', url);
+  }
 }
 
 async function openExercise(plannedId?: string, push = true) {
@@ -315,7 +350,6 @@ function renderExercise(ex: any) {
     html += '</div></div>';
   }
   if (state.readOnly) {
-    html += `<div class="card" style="margin-top:10px"><p>📝 Vista compartida de solo lectura.</p></div>`;
     $('ex-body').innerHTML = html;
     const slot = document.getElementById('exercise-bodymap-slot');
     if (slot) renderBodyMap(slot, muscles);
@@ -323,7 +357,9 @@ function renderExercise(ex: any) {
     return;
   }
   const next = done + 1;
-  html += `<div class="card"><h2>Registrar serie ${next}</h2><div class="row" style="margin-top:10px"><label><p>Peso (kg)</p><input id="kg" type="number" inputmode="decimal" step="0.5" value="${esc(ex.weight || 0)}"></label><label><p>Reps</p><input id="reps" type="number" inputmode="numeric" value="${esc(ex.reps || 10)}"></label></div><textarea id="note" style="margin-top:10px" placeholder="Nota: fácil, duro, molestia..."></textarea><button class="btn" style="margin-top:10px" id="save-set">✓ Guardar serie</button></div><button class="btn secondary" style="margin-top:10px" id="complete-ex">✓ Completar</button>`;
+  // Prefill with the athlete's last logged set (they usually repeat or nudge it), else the coach suggestion.
+  const last = ex.performed_sets?.[done - 1];
+  html += `<div class="card"><h2>Registrar serie ${next}</h2><div class="row" style="margin-top:10px"><label><p>Peso (kg)</p><input id="kg" type="number" inputmode="decimal" step="0.5" value="${esc(last?.weight ?? ex.weight ?? 0)}"></label><label><p>Reps</p><input id="reps" type="number" inputmode="numeric" value="${esc(last?.reps ?? ex.reps ?? 10)}"></label></div><textarea id="note" style="margin-top:10px" placeholder="Nota: fácil, duro, molestia..."></textarea><button class="btn" style="margin-top:10px" id="save-set">✓ Guardar serie</button></div><button class="btn secondary" style="margin-top:10px" id="complete-ex">✓ Completar</button>`;
   $('ex-body').innerHTML = html;
   const slot = document.getElementById('exercise-bodymap-slot');
   if (slot) renderBodyMap(slot, muscles);

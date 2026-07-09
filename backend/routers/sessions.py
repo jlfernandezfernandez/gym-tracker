@@ -168,7 +168,8 @@ async def get_active_session(
     s = result.scalar_one_or_none()
     if not s:
         raise HTTPException(status_code=404, detail="No active session found")
-    return {"session": s, "current": _current_state(s)}
+    # Serialize explicitly: without a response_model FastAPI drops ORM relationships.
+    return {"session": SessionOut.model_validate(s, from_attributes=True), "current": _current_state(s)}
 
 
 @router.get("/{session_id}/current")
