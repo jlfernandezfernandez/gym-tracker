@@ -119,21 +119,21 @@ function normalize(s: any) {
 }
 
 function routeParams() {
-  const q: Record<string, string> = Object.fromEntries(new URLSearchParams(location.search).entries());
+  const p: Record<string, string> = {};
   const parts = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
-  // Clean routes:
+  // Only clean routes are supported:
   // /session/share/:token
   // /session/share/:token/exercise/:plannedExerciseId
   // /exercise/share/:token/:plannedExerciseId
   if (parts[0] === 'session' && parts[1] === 'share' && parts[2]) {
-    q.share_token = parts[2];
-    if (parts[3] === 'exercise' && parts[4]) q.exercise_id = parts[4];
+    p.share_token = parts[2];
+    if (parts[3] === 'exercise' && parts[4]) p.exercise_id = parts[4];
   }
   if (parts[0] === 'exercise' && parts[1] === 'share' && parts[2]) {
-    q.share_token = parts[2];
-    if (parts[3]) q.exercise_id = parts[3];
+    p.share_token = parts[2];
+    if (parts[3]) p.exercise_id = parts[3];
   }
-  return q;
+  return p;
 }
 
 function mediaUrl(url?: string) {
@@ -520,16 +520,6 @@ export function init() {
         else renderPlan(false);
       } catch {
         $('plan-body').innerHTML = '<div class="empty"><div class="icon">🔗</div><p>No pude cargar este enlace.</p></div>';
-      }
-      return;
-    }
-    if (p.session_id) {
-      try {
-        await loadSession(p.session_id);
-        if (p.exercise_id) openExercise(p.exercise_id, false);
-        else renderPlan(false);
-      } catch {
-        $('plan-body').innerHTML = '<div class="empty"><div class="icon">⚠️</div><p>No pude cargar la sesión.</p></div>';
       }
       return;
     }
