@@ -106,10 +106,20 @@ volumes:
 ```
 
 ### 3. Configuración en Coolify v4
-1. Desplegar un servicio **MinIO** desde la interfaz de Coolify.
-2. Crear un bucket llamado `gym-tracker-media` en la consola de MinIO (o dejar que la app lo cree si se aplica el cambio del punto 1).
-3. Configurar en el servicio de la App las siguientes variables de entorno apuntando al MinIO de Coolify:
-   * `S3_ENDPOINT`: URL del servicio de MinIO (ej: `http://minio:9000` si están en la misma red de Docker).
-   * `S3_ACCESS_KEY`: El Root User de MinIO.
-   * `S3_SECRET_KEY`: El Root Password de MinIO.
-   * `S3_BUCKET`: `gym-tracker-media`.
+MinIO ya no aparece como un servicio "one-click" preconfigurado de primer nivel en Coolify v4 (fue retirado del catálogo oficial). Sin embargo, se puede desplegar de forma muy sencilla de dos maneras:
+
+#### Opción A: Despliegue en Coolify como Servicio Personalizado (Custom Service)
+1. En el panel de Coolify, haz clic en **"Create New"** > **"Service"** > **"Custom Service" (Docker Compose)**.
+2. Pega la definición de `docker-compose.yml` que se proporciona en la sección anterior. Coolify levantará tanto la App, Postgres como MinIO en la misma red privada de Docker de forma automática.
+3. La App se comunicará con MinIO de forma interna usando la dirección `http://minio:9000`.
+
+#### Opción B: Usar un S3 Gestionado (Recomendado para Producción)
+En lugar de auto-hospedar S3 en el mismo servidor VPS (lo cual añade complejidad con copias de seguridad y espacio en disco):
+1. Se puede utilizar **Cloudflare R2** (cuenta con un nivel gratuito de hasta 10GB/mes y costes de transferencia $0) o **Backblaze B2**.
+2. Basta con configurar las siguientes variables de entorno en la App dentro de Coolify apuntando al proveedor externo:
+   * `S3_ENDPOINT`: URL del Endpoint S3 de Cloudflare/Backblaze.
+   * `S3_ACCESS_KEY`: Access Key ID.
+   * `S3_SECRET_KEY`: Secret Access Key.
+   * `S3_BUCKET`: Nombre del bucket creado en el proveedor.
+   * `S3_REGION`: Región del bucket (ej: `auto` o `us-east-1`).
+
