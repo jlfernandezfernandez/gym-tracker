@@ -22,7 +22,7 @@ router = APIRouter(prefix="/api/coach", tags=["coach"])
 async def coach_plan(
     body: CoachPlanRequest,
     db: AsyncSession = Depends(get_session),
-    uid: Optional[int] = Depends(current_user_id),
+    user_id: Optional[int] = Depends(current_user_id),
 ):
     """Create a workout plan from the coach agent's exercise selection."""
 
@@ -31,30 +31,30 @@ async def coach_plan(
             status_code=422,
             detail="exercises is required: pick exercises from list_exercises and send them in the plan.",
         )
-    exercises_data = [ex.model_dump() for ex in body.exercises]
+    exercises_data = [exercise.model_dump() for exercise in body.exercises]
 
-    db_session = WorkoutSession(
+    workout = WorkoutSession(
         title=body.title or "Entreno de hoy",
         goal=body.goal,
         status="planned",
         energy=body.energy,
         discomfort=body.discomfort,
         duration_estimated=body.time_available,
-        telegram_user_id=uid,
+        telegram_user_id=user_id,
     )
-    db.add(db_session)
+    db.add(workout)
     await db.flush()
 
-    for i, ex in enumerate(exercises_data):
+    for position, exercise_data in enumerate(exercises_data):
         db.add(PlannedExercise(
-            session_id=db_session.id,
-            exercise_id=ex["exercise_id"],
-            order=ex.get("order", i),
-            target_sets=ex.get("target_sets", 3),
-            target_reps=ex.get("target_reps", 10),
-            suggested_weight=ex.get("suggested_weight", 0.0),
-            notes=ex.get("notes", ""),
+            session_id=workout.id,
+            exercise_id=exercise_data["exercise_id"],
+            order=exercise_data.get("order", position),
+            target_sets=exercise_data.get("target_sets", 3),
+            target_reps=exercise_data.get("target_reps", 10),
+            suggested_weight=exercise_data.get("suggested_weight", 0.0),
+            notes=exercise_data.get("notes", ""),
         ))
 
     await db.commit()
-    return await _load_session(db_session.id, db)
+    return await _load_session(workout.id, db)

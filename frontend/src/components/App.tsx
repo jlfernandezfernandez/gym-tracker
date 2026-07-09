@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { createContext } from 'preact';
 import { useContext, useMemo, useState } from 'preact/hooks';
 import { apiFetch } from '../lib/api';
-import { normalize } from '../lib/helpers';
+import { normalizeSession } from '../lib/helpers';
 import { inTelegram } from '../lib/telegram';
 import { Empty } from './ui';
 import { Landing } from './screens/Landing';
@@ -23,18 +23,18 @@ export type View =
   | { name: 'recordDetail'; exerciseId: number; title: string }
   | { name: 'profile' };
 
-interface AppCtxValue {
-  push: (v: View) => void;
+interface AppContextValue {
+  push: (view: View) => void;
   pop: () => void;
   /** Point the plan/exercise screens at a session and navigate to the plan. */
-  openSession: (id: number) => void;
+  openSession: (sessionId: number) => void;
   sessionId?: number;
   shareToken?: string;
   readOnly: boolean;
 }
 
-const AppCtx = createContext<AppCtxValue>(null as any);
-export const useApp = () => useContext(AppCtx);
+const AppContext = createContext<AppContextValue>(null as any);
+export const useApp = () => useContext(AppContext);
 
 /** Session for the currently open plan (by id, or by share token for companions). */
 export function useSession() {
@@ -46,7 +46,7 @@ export function useSession() {
         ? apiFetch('GET', '/sessions/share/' + encodeURIComponent(shareToken))
         : apiFetch('GET', '/sessions/' + sessionId),
     enabled: !!(shareToken || sessionId),
-    select: normalize,
+    select: normalizeSession,
   });
 }
 
@@ -60,38 +60,38 @@ export function useCurrent(sessionId?: number) {
   });
 }
 
-function routeParams() {
-  const p: Record<string, string> = {};
-  const parts = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+function shareRouteParams() {
+  const params: Record<string, string> = {};
+  const pathSegments = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
   // /session/share/:token[/exercise/:plannedExerciseId]
-  if (parts[0] === 'session' && parts[1] === 'share' && parts[2]) {
-    p.share_token = parts[2];
-    if (parts[3] === 'exercise' && parts[4]) p.exercise_id = parts[4];
+  if (pathSegments[0] === 'session' && pathSegments[1] === 'share' && pathSegments[2]) {
+    params.share_token = pathSegments[2];
+    if (pathSegments[3] === 'exercise' && pathSegments[4]) params.exercise_id = pathSegments[4];
   }
-  return p;
+  return params;
 }
 
 function Router() {
-  const route = useMemo(routeParams, []);
+  const route = useMemo(shareRouteParams, []);
   const shareToken = route.share_token;
   const readOnly = !!shareToken && !inTelegram();
 
-  const [stack, setStack] = useState<View[]>(() => {
+  const [viewStack, setViewStack] = useState<View[]>(() => {
     if (shareToken) {
-      const base: View[] = [{ name: 'plan' }];
-      if (route.exercise_id) base.push({ name: 'exercise', plannedId: Number(route.exercise_id) });
-      return base;
+      const initialStack: View[] = [{ name: 'plan' }];
+      if (route.exercise_id) initialStack.push({ name: 'exercise', plannedId: Number(route.exercise_id) });
+      return initialStack;
     }
     return [{ name: 'landing' }];
   });
   const [sessionId, setSessionId] = useState<number>();
 
-  const ctx: AppCtxValue = {
-    push: (v) => setStack((s) => [...s, v]),
-    pop: () => setStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
+  const appContext: AppContextValue = {
+    push: (view) => setViewStack((stack) => [...stack, view]),
+    pop: () => setViewStack((stack) => (stack.length > 1 ? stack.slice(0, -1) : stack)),
     openSession: (id) => {
       setSessionId(id);
-      setStack((s) => [...s, { name: 'plan' }]);
+      setViewStack((stack) => [...stack, { name: 'plan' }]);
     },
     sessionId,
     shareToken,
@@ -108,29 +108,29 @@ function Router() {
     );
   }
 
-  const view = stack[stack.length - 1];
+  const activeView = viewStack[viewStack.length - 1];
   return (
-    <AppCtx.Provider value={ctx}>
-      {view.name === 'landing' && <Landing />}
-      {view.name === 'plan' && <Plan />}
-      {view.name === 'exercise' && <Exercise plannedId={view.plannedId} />}
-      {view.name === 'history' && <History />}
-      {view.name === 'records' && <Records />}
-      {view.name === 'recordDetail' && <RecordDetail exerciseId={view.exerciseId} title={view.title} />}
-      {view.name === 'profile' && <Profile />}
-    </AppCtx.Provider>
+    <AppContext.Provider value={appContext}>
+      {activeView.name === 'landing' && <Landing />}
+      {activeView.name === 'plan' && <Plan />}
+      {activeView.name === 'exercise' && <Exercise plannedId={activeView.plannedId} />}
+      {activeView.name === 'history' && <History />}
+      {activeView.name === 'records' && <Records />}
+      {activeView.name === 'recordDetail' && <RecordDetail exerciseId={activeView.exerciseId} title={activeView.title} />}
+      {activeView.name === 'profile' && <Profile />}
+    </AppContext.Provider>
   );
 }
 
 export default function App() {
-  const [client] = useState(
+  const [queryClient] = useState(
     () =>
       new QueryClient({
         defaultOptions: { queries: { retry: 1, staleTime: 30_000, refetchOnWindowFocus: false } },
       }),
   );
   return (
-    <QueryClientProvider client={client}>
+    <QueryClientProvider client={queryClient}>
       <Router />
     </QueryClientProvider>
   );

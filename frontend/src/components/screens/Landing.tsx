@@ -1,42 +1,44 @@
 /** Home: greeting, active session card and navigation. */
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
-import { currentExercise, mediaUrl, normalize, cleanTitle } from '../../lib/helpers';
+import { cleanTitle, currentExercise, mediaUrl, normalizeSession } from '../../lib/helpers';
 import { useApp } from '../App';
 import { Empty } from '../ui';
 
 export function Landing() {
   const app = useApp();
-  const qc = useQueryClient();
-  const profile = useQuery({ queryKey: ['profile'], queryFn: () => apiFetch('GET', '/profile'), retry: 0 });
-  const active = useQuery({
+  const queryClient = useQueryClient();
+  const profileQuery = useQuery({ queryKey: ['profile'], queryFn: () => apiFetch('GET', '/profile'), retry: 0 });
+  const activeQuery = useQuery({
     queryKey: ['active'],
     queryFn: () => apiFetch('GET', '/sessions/active'),
     retry: 0,
   });
 
-  const data = active.data;
-  const plan = data ? normalize(data.session) : null;
-  const cur = data?.current;
-  const curEx = plan ? currentExercise(plan, cur) : null;
+  const activeData = activeQuery.data;
+  const plan = activeData ? normalizeSession(activeData.session) : null;
+  const currentState = activeData?.current;
+  const activeExercise = plan ? currentExercise(plan, currentState) : null;
 
-  const open = (thenExercise: boolean) => {
+  const openPlan = (goToExercise: boolean) => {
     // Seed the session cache so the plan screen paints instantly.
-    qc.setQueryData(['session', data.session.id], data.session);
-    app.openSession(data.session.id);
-    if (thenExercise && curEx) app.push({ name: 'exercise', plannedId: curEx.planned_id });
+    queryClient.setQueryData(['session', activeData.session.id], activeData.session);
+    app.openSession(activeData.session.id);
+    if (goToExercise && activeExercise) app.push({ name: 'exercise', plannedId: activeExercise.planned_id });
   };
 
-  const pct = cur?.total_sets ? Math.round((cur.completed_sets / cur.total_sets) * 100) : 0;
-  const media = curEx ? mediaUrl(curEx.gif_url || curEx.image_url) : '';
-  const lastSet = curEx?.performed_sets?.[curEx.performed_sets.length - 1];
+  const progressPct = currentState?.total_sets
+    ? Math.round((currentState.completed_sets / currentState.total_sets) * 100)
+    : 0;
+  const mediaSrc = activeExercise ? mediaUrl(activeExercise.gif_url || activeExercise.image_url) : '';
+  const lastSet = activeExercise?.performed_sets?.[activeExercise.performed_sets.length - 1];
 
   return (
     <>
       <div class="hero">
-        <h1>{profile.data?.name ? `Hola, ${profile.data.name}` : 'Hola'}</h1>
+        <h1>{profileQuery.data?.name ? `Hola, ${profileQuery.data.name}` : 'Hola'}</h1>
         <p>
-          {active.isLoading
+          {activeQuery.isLoading
             ? 'Cargando sesión...'
             : plan
               ? 'Esta es tu sesión activa de hoy'
@@ -44,7 +46,7 @@ export function Landing() {
         </p>
       </div>
 
-      {!active.isLoading && (
+      {!activeQuery.isLoading && (
         <div class="card">
           {!plan ? (
             <Empty icon="🏋️">
@@ -57,34 +59,38 @@ export function Landing() {
               <div class="exercise-title-row">
                 <h2>{cleanTitle(plan.title)}</h2>
                 <span class="pill">
-                  {cur?.completed_sets || 0}/{cur?.total_sets || 0} series
+                  {currentState?.completed_sets || 0}/{currentState?.total_sets || 0} series
                 </span>
               </div>
               <div class="progress">
-                <div style={{ width: `${pct}%` }} />
+                <div style={{ width: `${progressPct}%` }} />
               </div>
               {/* During a workout the landing IS the workout: current exercise front and center. */}
               <div class="landing-current">
-                <div class="exercise-media">{media ? <img src={media} loading="eager" /> : '🏋️'}</div>
+                <div class="exercise-media">{mediaSrc ? <img src={mediaSrc} loading="eager" /> : '🏋️'}</div>
                 <div class="landing-current-info">
-                  <h3>{cur?.current_exercise_name || curEx?.name || '—'}</h3>
+                  <h3>{currentState?.current_exercise_name || activeExercise?.name || '—'}</h3>
                   <p>
-                    Serie {cur?.current_set_number || 1} de {cur?.target_sets || curEx?.sets || '-'}
+                    Serie {currentState?.current_set_number || 1} de {currentState?.target_sets || activeExercise?.sets || '-'}
                   </p>
                   <div class="meta">
                     <span class="pill active">
-                      {curEx?.sets || '-'}×{curEx?.reps || '-'}
+                      {activeExercise?.sets || '-'}×{activeExercise?.reps || '-'}
                     </span>
                     <span class="pill">
-                      {lastSet ? `último: ${lastSet.weight}kg` : curEx?.weight ? `${curEx.weight}kg` : 'peso corporal'}
+                      {lastSet
+                        ? `último: ${lastSet.weight}kg`
+                        : activeExercise?.weight
+                          ? `${activeExercise.weight}kg`
+                          : 'peso corporal'}
                     </span>
                   </div>
                 </div>
               </div>
-              <button class="btn mt-3" onClick={() => open(true)}>
+              <button class="btn mt-3" onClick={() => openPlan(true)}>
                 ▶ Continuar entreno
               </button>
-              <button class="btn ghost mt-2" onClick={() => open(false)}>
+              <button class="btn ghost mt-2" onClick={() => openPlan(false)}>
                 Ver plan completo
               </button>
             </>

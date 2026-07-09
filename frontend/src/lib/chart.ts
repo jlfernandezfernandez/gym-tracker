@@ -10,25 +10,25 @@ export interface ProgressPoint {
   sets: number;
 }
 
-export function renderProgressChart(canvas: HTMLCanvasElement, pts: ProgressPoint[]): Chart {
-  const css = getComputedStyle(document.documentElement);
-  const accent = css.getPropertyValue('--btn').trim() || '#4f46e5';
-  const hint = css.getPropertyValue('--hint').trim() || '#6b7280';
-  const border = 'rgba(17,24,39,.08)';
+export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressPoint[]): Chart {
+  const rootStyles = getComputedStyle(document.documentElement);
+  const accentColor = rootStyles.getPropertyValue('--btn').trim() || '#4f46e5';
+  const hintColor = rootStyles.getPropertyValue('--hint').trim() || '#6b7280';
+  const gridColor = 'rgba(17,24,39,.08)';
 
   return new Chart(canvas, {
     type: 'line',
     data: {
-      labels: pts.map((p) => p.date.slice(5)),
+      labels: points.map((point) => point.date.slice(5)),
       datasets: [
         {
-          data: pts.map((p) => p.top_weight),
-          borderColor: accent,
+          data: points.map((point) => point.top_weight),
+          borderColor: accentColor,
           backgroundColor: 'rgba(79,70,229,.08)',
           fill: true,
           tension: 0.3,
           pointRadius: 3,
-          pointBackgroundColor: accent,
+          pointBackgroundColor: accentColor,
           borderWidth: 2,
         },
       ],
@@ -40,18 +40,18 @@ export function renderProgressChart(canvas: HTMLCanvasElement, pts: ProgressPoin
         tooltip: {
           displayColors: false,
           callbacks: {
-            label: (ctx) => {
-              const p = pts[ctx.dataIndex];
-              return [`máx ${p.top_weight} kg`, `${p.sets} series · ${Math.round(p.volume)} kg vol`];
+            label: (tooltipContext) => {
+              const point = points[tooltipContext.dataIndex];
+              return [`máx ${point.top_weight} kg`, `${point.sets} series · ${Math.round(point.volume)} kg vol`];
             },
           },
         },
       },
       scales: {
-        x: { ticks: { color: hint, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
+        x: { ticks: { color: hintColor, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
         y: {
-          ticks: { color: hint, font: { size: 10 }, callback: (v) => `${v}kg` },
-          grid: { color: border },
+          ticks: { color: hintColor, font: { size: 10 }, callback: (value) => `${value}kg` },
+          grid: { color: gridColor },
         },
       },
     },

@@ -38,23 +38,23 @@ const MUSCLE_MAP: Record<string, string[]> = {
 };
 
 export function toModelMuscles(muscleGroups: string[]): string[] {
-  const out = new Set<string>();
-  for (const g of muscleGroups) {
-    for (const m of MUSCLE_MAP[String(g || '').toLowerCase()] ?? []) out.add(m);
+  const modelMuscles = new Set<string>();
+  for (const group of muscleGroups) {
+    for (const muscle of MUSCLE_MAP[String(group || '').toLowerCase()] ?? []) modelMuscles.add(muscle);
   }
-  return [...out];
+  return [...modelMuscles];
 }
 
 export function renderBodyMap(container: HTMLElement, muscleGroups: string[]): void {
   const data = [{ name: 'hoy', muscles: toModelMuscles(muscleGroups) as any }];
   // Realistic skin tone on a light card, with the app accent for worked muscles.
-  const opts = { data, bodyColor: '#e3b58c', highlightedColors: ['#4f46e5'] };
+  const options = { data, bodyColor: '#e3b58c', highlightedColors: ['#4f46e5'] };
   container.innerHTML =
     '<div class="bodymap"><div data-side="anterior"></div><div data-side="posterior"></div></div>' +
     '<div class="bodymap-labels"><span>Frente</span><span>Espalda</span></div>';
   for (const side of ['anterior', 'posterior'] as const) {
     createBodyHighlighter({
-      ...opts,
+      ...options,
       container: container.querySelector<HTMLElement>(`[data-side="${side}"]`)!,
       type: side,
     });

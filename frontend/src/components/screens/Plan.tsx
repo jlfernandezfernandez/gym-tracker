@@ -1,20 +1,28 @@
 /** Plan: session overview, exercise list, share and finish. */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef, useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
-import { STATUS_ES, cleanTitle, completedSets, currentExercise, mediaUrl, sessionMuscles, toast } from '../../lib/helpers';
+import {
+  STATUS_ES,
+  cleanTitle,
+  completedSetCount,
+  currentExercise,
+  mediaUrl,
+  sessionMuscles,
+  showToast,
+} from '../../lib/helpers';
 import { haptic } from '../../lib/telegram';
 import { useApp, useCurrent, useSession } from '../App';
 import { BodyMap, BusyButton, Empty, Loading, TopBar } from '../ui';
 
 export function Plan() {
   const app = useApp();
-  const session = useSession();
-  const p = session.data;
-  const current = useCurrent(p?.id);
+  const sessionQuery = useSession();
+  const plan = sessionQuery.data;
+  const currentQuery = useCurrent(plan?.id);
 
-  if (session.isLoading) return <Loading msg="Cargando plan..." />;
-  if (session.isError || !p)
+  if (sessionQuery.isLoading) return <Loading message="Cargando plan..." />;
+  if (sessionQuery.isError || !plan)
     return (
       <>
         {!app.readOnly && <TopBar title="Plan" onBack={app.pop} />}
@@ -22,19 +30,22 @@ export function Plan() {
       </>
     );
 
-  const exs = p.exercises || [];
-  const doneSets = exs.reduce((a: number, e: any) => a + completedSets(e), 0);
-  const totalSets = exs.reduce((a: number, e: any) => a + (e.sets || 0), 0);
-  const pct = totalSets ? Math.round((doneSets / totalSets) * 100) : 0;
-  const muscles = sessionMuscles(exs);
-  const heroMedia = mediaUrl(exs.find((e: any) => e.gif_url || e.image_url)?.gif_url || exs.find((e: any) => e.image_url)?.image_url);
-  const curId = current.data?.current_planned_exercise_id;
+  const exercises = plan.exercises || [];
+  const completedSetsTotal = exercises.reduce((total: number, exercise: any) => total + completedSetCount(exercise), 0);
+  const targetSetsTotal = exercises.reduce((total: number, exercise: any) => total + (exercise.sets || 0), 0);
+  const progressPct = targetSetsTotal ? Math.round((completedSetsTotal / targetSetsTotal) * 100) : 0;
+  const muscles = sessionMuscles(exercises);
+  const heroMedia = mediaUrl(
+    exercises.find((exercise: any) => exercise.gif_url || exercise.image_url)?.gif_url ||
+      exercises.find((exercise: any) => exercise.image_url)?.image_url,
+  );
+  const currentPlannedId = currentQuery.data?.current_planned_exercise_id;
   const openExercise = (plannedId: number) => app.push({ name: 'exercise', plannedId });
 
   return (
     <>
       <TopBar
-        title={cleanTitle(p.title) || 'Plan del coach'}
+        title={cleanTitle(plan.title) || 'Plan del coach'}
         subtitle={app.readOnly ? 'Plan compartido contigo' : 'Creado por el coach. Aquí se ejecuta y registra.'}
         onBack={app.readOnly ? undefined : app.pop}
       />
@@ -46,27 +57,27 @@ export function Plan() {
         )}
         <div class="session-hero-content">
           <div class="meta">
-            <span class="pill active">{STATUS_ES[p.status] || p.status}</span>
-            <span class="pill">{p.duration_estimated || 0} min</span>
+            <span class="pill active">{STATUS_ES[plan.status] || plan.status}</span>
+            <span class="pill">{plan.duration_estimated || 0} min</span>
           </div>
-          <h1>{cleanTitle(p.title)}</h1>
-          <p>{p.goal || p.coach_summary || 'Plan generado por el coach'}</p>
+          <h1>{cleanTitle(plan.title)}</h1>
+          <p>{plan.goal || plan.coach_summary || 'Plan generado por el coach'}</p>
           <div class="progress">
-            <div style={{ width: `${pct}%` }} />
+            <div style={{ width: `${progressPct}%` }} />
           </div>
           <div class="grid stats mt-2.5">
             <div class="stat">
-              <b>{exs.length}</b>
+              <b>{exercises.length}</b>
               <span>ejercicios</span>
             </div>
             <div class="stat">
               <b>
-                {doneSets}/{totalSets}
+                {completedSetsTotal}/{targetSetsTotal}
               </b>
               <span>series</span>
             </div>
             <div class="stat">
-              <b>{pct}%</b>
+              <b>{progressPct}%</b>
               <span>progreso</span>
             </div>
           </div>
@@ -78,82 +89,94 @@ export function Plan() {
           <h2>Mapa muscular de hoy</h2>
           <BodyMap muscles={muscles} />
           <div class="meta muscle-cloud">
-            {muscles.slice(0, 10).map((m) => (
-              <span class="pill" key={m}>
-                {m}
+            {muscles.slice(0, 10).map((muscle) => (
+              <span class="pill" key={muscle}>
+                {muscle}
               </span>
             ))}
           </div>
         </div>
       )}
 
-      {exs.map((ex: any) => {
-        const isCur = String(ex.planned_id) === String(curId);
-        const media = mediaUrl(ex.gif_url || ex.image_url);
-        const epct = ex.sets ? Math.min(100, Math.round((completedSets(ex) / ex.sets) * 100)) : 0;
-        return (
-          <div class={`card tap exercise-card ${isCur ? 'current' : ''}`} key={ex.planned_id} onClick={() => openExercise(ex.planned_id)}>
-            <div class="exercise-media">{media ? <img src={media} loading="lazy" /> : '🏋️'}</div>
-            <div class="exercise-card-body">
-              <div class="exercise-title-row">
-                <h3>{ex.name || 'Ejercicio'}</h3>
-                <span class="pill">
-                  {completedSets(ex)}/{ex.sets}
-                </span>
-              </div>
-              <p>
-                {ex.target || ex.muscle_group || ''}
-                {ex.equipment ? ` · ${ex.equipment}` : ''}
-              </p>
-              <div class="progress mini">
-                <div style={{ width: `${epct}%` }} />
-              </div>
-              <div class="meta">
-                <span class="pill active">
-                  {ex.sets}×{ex.reps}
-                </span>
-                <span class="pill">{ex.weight ? `${ex.weight}kg` : 'peso corporal'}</span>
-                <span class={`pill st-${ex.status}`}>{STATUS_ES[ex.status] || ex.status}</span>
-                {isCur && <span class="pill active">actual</span>}
-              </div>
-            </div>
-          </div>
-        );
-      })}
+      {exercises.map((exercise: any) => (
+        <ExerciseCard
+          key={exercise.planned_id}
+          exercise={exercise}
+          isCurrent={String(exercise.planned_id) === String(currentPlannedId)}
+          onOpen={() => openExercise(exercise.planned_id)}
+        />
+      ))}
 
-      {p.status === 'completed' && <CompletedSummary p={p} exs={exs} />}
+      {plan.status === 'completed' && <CompletedSummary plan={plan} exercises={exercises} />}
 
-      {!app.readOnly && p.status !== 'completed' && (
+      {!app.readOnly && plan.status !== 'completed' && (
         <div class="row mt-3">
-          <button class="btn" onClick={() => openExercise(currentExercise(p, current.data)?.planned_id)}>
+          <button class="btn" onClick={() => openExercise(currentExercise(plan, currentQuery.data)?.planned_id)}>
             ▶ Ejercicio actual
           </button>
-          <FinishButton sessionId={p.id} energy={p.energy} discomfort={p.discomfort} />
+          <FinishButton sessionId={plan.id} energy={plan.energy} discomfort={plan.discomfort} />
         </div>
       )}
-      {!app.readOnly && p.share_token && <ShareButton title={cleanTitle(p.title)} token={p.share_token} />}
+      {!app.readOnly && plan.share_token && <ShareButton title={cleanTitle(plan.title)} token={plan.share_token} />}
     </>
   );
 }
 
-function CompletedSummary({ p, exs }: { p: any; exs: any[] }) {
-  const vol = exs.reduce((a, e) => a + (e.performed_sets || []).reduce((x: number, ps: any) => x + ps.weight * ps.reps, 0), 0);
-  const tsets = exs.reduce((a, e) => a + (e.performed_sets || []).length, 0);
+function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurrent: boolean; onOpen: () => void }) {
+  const mediaSrc = mediaUrl(exercise.gif_url || exercise.image_url);
+  const progressPct = exercise.sets ? Math.min(100, Math.round((completedSetCount(exercise) / exercise.sets) * 100)) : 0;
+  return (
+    <div class={`card tap exercise-card ${isCurrent ? 'current' : ''}`} onClick={onOpen}>
+      <div class="exercise-media">{mediaSrc ? <img src={mediaSrc} loading="lazy" /> : '🏋️'}</div>
+      <div class="exercise-card-body">
+        <div class="exercise-title-row">
+          <h3>{exercise.name || 'Ejercicio'}</h3>
+          <span class="pill">
+            {completedSetCount(exercise)}/{exercise.sets}
+          </span>
+        </div>
+        <p>
+          {exercise.target || exercise.muscle_group || ''}
+          {exercise.equipment ? ` · ${exercise.equipment}` : ''}
+        </p>
+        <div class="progress mini">
+          <div style={{ width: `${progressPct}%` }} />
+        </div>
+        <div class="meta">
+          <span class="pill active">
+            {exercise.sets}×{exercise.reps}
+          </span>
+          <span class="pill">{exercise.weight ? `${exercise.weight}kg` : 'peso corporal'}</span>
+          <span class={`pill st-${exercise.status}`}>{STATUS_ES[exercise.status] || exercise.status}</span>
+          {isCurrent && <span class="pill active">actual</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) {
+  const totalVolume = exercises.reduce(
+    (total, exercise) =>
+      total + (exercise.performed_sets || []).reduce((sum: number, set: any) => sum + set.weight * set.reps, 0),
+    0,
+  );
+  const totalPerformedSets = exercises.reduce((total, exercise) => total + (exercise.performed_sets || []).length, 0);
   return (
     <div class="card">
       <h2>Sesión completada</h2>
-      {p.feedback && <p>{p.feedback}</p>}
+      {plan.feedback && <p>{plan.feedback}</p>}
       <div class="grid stats mt-2.5">
         <div class="stat">
-          <b>{tsets}</b>
+          <b>{totalPerformedSets}</b>
           <span>series</span>
         </div>
         <div class="stat">
-          <b>{Math.round(vol)}</b>
+          <b>{Math.round(totalVolume)}</b>
           <span>kg volumen</span>
         </div>
         <div class="stat">
-          <b>{p.duration_actual || p.duration_estimated || 0}min</b>
+          <b>{plan.duration_actual || plan.duration_estimated || 0}min</b>
           <span>duración</span>
         </div>
       </div>
@@ -163,15 +186,15 @@ function CompletedSummary({ p, exs }: { p: any; exs: any[] }) {
 
 function ShareButton({ title, token }: { title: string; token: string }) {
   const share = async () => {
-    const url = `${location.origin}/session/share/${encodeURIComponent(token)}`;
+    const shareUrl = `${location.origin}/session/share/${encodeURIComponent(token)}`;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(shareUrl);
       haptic('ok');
-      toast('Enlace copiado — pásaselo a tu compañero', 'ok');
+      showToast('Enlace copiado — pásaselo a tu compañero', 'ok');
     } catch {
       // Clipboard can be blocked (Telegram webview) — fall back to the native share sheet.
-      if (navigator.share) navigator.share({ title, url }).catch(() => {});
-      else prompt('Copia el enlace:', url);
+      if (navigator.share) navigator.share({ title, url: shareUrl }).catch(() => {});
+      else prompt('Copia el enlace:', shareUrl);
     }
   };
   return (
@@ -182,52 +205,51 @@ function ShareButton({ title, token }: { title: string; token: string }) {
 }
 
 function FinishButton({ sessionId, energy, discomfort }: { sessionId: number; energy: number; discomfort: string }) {
-  const app = useApp();
-  const qc = useQueryClient();
-  const [open, setOpen] = useState(false);
-  const dlg = useRef<HTMLDialogElement>(null);
-  const fb = useRef<HTMLTextAreaElement>(null);
+  const queryClient = useQueryClient();
+  const [isOpen, setIsOpen] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const feedbackRef = useRef<HTMLTextAreaElement>(null);
   // Native <dialog>: prompt() is unreliable inside the Telegram webview.
   useEffect(() => {
-    open ? dlg.current?.showModal() : dlg.current?.close();
-  }, [open]);
+    isOpen ? dialogRef.current?.showModal() : dialogRef.current?.close();
+  }, [isOpen]);
 
-  const finish = useMutation({
+  const finishSession = useMutation({
     mutationFn: () =>
       apiFetch('POST', `/sessions/${sessionId}/finish`, {
-        feedback: fb.current?.value || '',
+        feedback: feedbackRef.current?.value || '',
         energy: energy || 5,
         discomfort: discomfort || '',
       }),
-    onSuccess: (updated) => {
-      qc.setQueryData(['session', sessionId], updated);
-      qc.invalidateQueries({ queryKey: ['active'] });
-      qc.invalidateQueries({ queryKey: ['sessions'] });
-      qc.invalidateQueries({ queryKey: ['records'] });
-      setOpen(false);
+    onSuccess: (updatedSession) => {
+      queryClient.setQueryData(['session', sessionId], updatedSession);
+      queryClient.invalidateQueries({ queryKey: ['active'] });
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['records'] });
+      setIsOpen(false);
       haptic('ok');
-      toast('Sesión finalizada', 'ok');
+      showToast('Sesión finalizada', 'ok');
     },
-    onError: (e: any) => {
+    onError: (error: any) => {
       haptic('bad');
-      toast(e.message, 'err');
+      showToast(error.message, 'err');
     },
   });
 
   return (
     <>
-      <button class="btn secondary" onClick={() => setOpen(true)}>
+      <button class="btn secondary" onClick={() => setIsOpen(true)}>
         ✓ Finalizar
       </button>
-      <dialog ref={dlg} class="sheet" onClose={() => setOpen(false)}>
+      <dialog ref={dialogRef} class="sheet" onClose={() => setIsOpen(false)}>
         <h2>Finalizar sesión</h2>
         <p>Cuéntale al coach cómo ha ido (opcional).</p>
-        <textarea ref={fb} placeholder="Fácil, duro, molestias, sensaciones..." />
+        <textarea ref={feedbackRef} placeholder="Fácil, duro, molestias, sensaciones..." />
         <div class="row mt-3">
-          <button class="btn ghost" onClick={() => setOpen(false)}>
+          <button class="btn ghost" onClick={() => setIsOpen(false)}>
             Cancelar
           </button>
-          <BusyButton busy={finish.isPending} busyLabel="Finalizando..." onClick={() => finish.mutate()}>
+          <BusyButton busy={finishSession.isPending} busyLabel="Finalizando..." onClick={() => finishSession.mutate()}>
             ✓ Finalizar
           </BusyButton>
         </div>

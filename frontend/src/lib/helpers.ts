@@ -8,28 +8,30 @@ export const STATUS_ES: Record<string, string> = {
   changed: 'cambiado',
 };
 
-export const fmtDate = (d: string) =>
-  new Date(d + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+export const formatDate = (isoDate: string) =>
+  new Date(isoDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
 /** Legacy titles embed the date ("Pecho · 09/07"); session_date is the source of truth. */
-export const cleanTitle = (t: string) =>
-  String(t || 'Entrenamiento').replace(/\s*[·\-–—]\s*\d{1,2}\/\d{1,2}(\/\d{2,4})?\s*$/, '');
+export const cleanTitle = (title: string) =>
+  String(title || 'Entrenamiento').replace(/\s*[·\-–—]\s*\d{1,2}\/\d{1,2}(\/\d{2,4})?\s*$/, '');
 
-export function normalize(s: any) {
-  const pl = [...(s?.planned_exercises || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+export function normalizeSession(session: any) {
+  const orderedExercises = [...(session?.planned_exercises || [])].sort(
+    (first, second) => (first.order ?? 0) - (second.order ?? 0),
+  );
   return {
-    ...s,
-    exercises: pl.map((pe) => ({
-      planned_id: pe.id,
-      exercise_id: pe.exercise_id,
-      order: pe.order,
-      sets: pe.target_sets || 3,
-      reps: pe.target_reps || 10,
-      weight: pe.suggested_weight || 0,
-      notes: pe.notes || '',
-      status: pe.status || 'pending',
-      performed_sets: pe.performed_sets || [],
-      ...(pe.exercise || {}),
+    ...session,
+    exercises: orderedExercises.map((plannedExercise) => ({
+      planned_id: plannedExercise.id,
+      exercise_id: plannedExercise.exercise_id,
+      order: plannedExercise.order,
+      sets: plannedExercise.target_sets || 3,
+      reps: plannedExercise.target_reps || 10,
+      weight: plannedExercise.suggested_weight || 0,
+      notes: plannedExercise.notes || '',
+      status: plannedExercise.status || 'pending',
+      performed_sets: plannedExercise.performed_sets || [],
+      ...(plannedExercise.exercise || {}),
     })),
   };
 }
@@ -39,36 +41,43 @@ export function mediaUrl(url?: string) {
   return url.startsWith('http') ? url : location.origin + url;
 }
 
-export function splitMuscles(s?: string) {
-  return String(s || '')
+export function splitMuscles(muscleList?: string) {
+  return String(muscleList || '')
     .split(',')
-    .map((x) => x.trim())
+    .map((muscle) => muscle.trim())
     .filter(Boolean);
 }
 
-export function sessionMuscles(exs: any[]) {
+export function sessionMuscles(exercises: any[]) {
   return [
     ...new Set<string>(
-      exs.flatMap((e: any) => [e.target, e.body_part, e.muscle_group, ...splitMuscles(e.secondary_muscles)]).filter(Boolean),
+      exercises
+        .flatMap((exercise: any) => [
+          exercise.target,
+          exercise.body_part,
+          exercise.muscle_group,
+          ...splitMuscles(exercise.secondary_muscles),
+        ])
+        .filter(Boolean),
     ),
   ];
 }
 
-export const completedSets = (ex: any) => ex.performed_sets?.length || 0;
+export const completedSetCount = (exercise: any) => exercise.performed_sets?.length || 0;
 
-export function currentExercise(plan: any, current: any) {
-  const id = current?.current_planned_exercise_id;
+export function currentExercise(plan: any, currentState: any) {
+  const currentPlannedId = currentState?.current_planned_exercise_id;
   return (
-    plan?.exercises?.find((e: any) => String(e.planned_id) === String(id)) ||
-    plan?.exercises?.find((e: any) => ['pending', 'in_progress', 'changed'].includes(e.status)) ||
+    plan?.exercises?.find((exercise: any) => String(exercise.planned_id) === String(currentPlannedId)) ||
+    plan?.exercises?.find((exercise: any) => ['pending', 'in_progress', 'changed'].includes(exercise.status)) ||
     plan?.exercises?.[0]
   );
 }
 
-export function toast(msg: string, type?: string) {
-  const t = document.createElement('div');
-  t.className = 'toast' + (type ? ' ' + type : '');
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(() => t.remove(), 2800);
+export function showToast(message: string, type?: string) {
+  const toastElement = document.createElement('div');
+  toastElement.className = 'toast' + (type ? ' ' + type : '');
+  toastElement.textContent = message;
+  document.body.appendChild(toastElement);
+  setTimeout(() => toastElement.remove(), 2800);
 }

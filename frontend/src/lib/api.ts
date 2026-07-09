@@ -2,29 +2,31 @@
  * loading states are TanStack Query's job. */
 import { tg } from './telegram';
 
-const API = (window as any).API_BASE_URL || location.origin + '/api';
+const API_BASE = (window as any).API_BASE_URL || location.origin + '/api';
 
 export async function apiFetch(method: string, path: string, body?: unknown) {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (tg?.initData && tg.initData.length > 10) headers['X-Telegram-Init-Data'] = tg.initData;
-  let r: Response;
+
+  let response: Response;
   try {
-    r = await fetch(API + path, {
+    response = await fetch(API_BASE + path, {
       method,
       headers,
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(15000),
     });
-  } catch (e: any) {
-    throw e?.name === 'TimeoutError' ? new Error('El servidor no responde. Prueba de nuevo.') : e;
+  } catch (error: any) {
+    throw error?.name === 'TimeoutError' ? new Error('El servidor no responde. Prueba de nuevo.') : error;
   }
-  if (!r.ok) {
-    let d = 'Error';
+
+  if (!response.ok) {
+    let detail = 'Error';
     try {
-      const j = await r.json();
-      d = j.detail || j.error || d;
+      const errorBody = await response.json();
+      detail = errorBody.detail || errorBody.error || detail;
     } catch {}
-    throw new Error(d);
+    throw new Error(detail);
   }
-  return r.json();
+  return response.json();
 }

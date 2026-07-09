@@ -2,19 +2,19 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
-import { completedSets, mediaUrl, sessionMuscles, toast } from '../../lib/helpers';
+import { completedSetCount, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
 import { haptic } from '../../lib/telegram';
 import { useApp, useSession } from '../App';
 import { BodyMap, BusyButton, Empty, Loading, ProgressChart, TopBar } from '../ui';
 
 export function Exercise({ plannedId }: { plannedId: number }) {
   const app = useApp();
-  const session = useSession();
-  const p = session.data;
-  const ex = p?.exercises?.find((e: any) => String(e.planned_id) === String(plannedId));
+  const sessionQuery = useSession();
+  const plan = sessionQuery.data;
+  const exercise = plan?.exercises?.find((candidate: any) => String(candidate.planned_id) === String(plannedId));
 
-  if (session.isLoading) return <Loading />;
-  if (!ex)
+  if (sessionQuery.isLoading) return <Loading />;
+  if (!exercise)
     return (
       <>
         <TopBar title="Ejercicio" onBack={app.pop} />
@@ -22,45 +22,46 @@ export function Exercise({ plannedId }: { plannedId: number }) {
       </>
     );
 
-  const done = completedSets(ex);
-  const media = mediaUrl(ex.gif_url || ex.image_url);
-  const muscles = sessionMuscles([ex]);
-  const instructions = ex.instructions_es || ex.instructions || ex.notes || 'Sigue las indicaciones del coach en Telegram.';
+  const loggedSetCount = completedSetCount(exercise);
+  const mediaSrc = mediaUrl(exercise.gif_url || exercise.image_url);
+  const muscles = sessionMuscles([exercise]);
+  const instructions =
+    exercise.instructions_es || exercise.instructions || exercise.notes || 'Sigue las indicaciones del coach en Telegram.';
 
   return (
     <>
       <TopBar
-        title={ex.name || 'Ejercicio'}
-        subtitle={`${ex.target || ex.muscle_group || ''}${ex.equipment ? ' · ' + ex.equipment : ''}`}
+        title={exercise.name || 'Ejercicio'}
+        subtitle={`${exercise.target || exercise.muscle_group || ''}${exercise.equipment ? ' · ' + exercise.equipment : ''}`}
         onBack={app.pop}
       />
       <div class="exercise-hero">
-        <div class="big-media">{media ? <img src={media} loading="eager" /> : '🏋️'}</div>
+        <div class="big-media">{mediaSrc ? <img src={mediaSrc} loading="eager" /> : '🏋️'}</div>
         <div class="card">
           <div class="exercise-title-row">
-            <h2>{ex.name || 'Ejercicio'}</h2>
+            <h2>{exercise.name || 'Ejercicio'}</h2>
             <span class="pill active">
-              {done}/{ex.sets}
+              {loggedSetCount}/{exercise.sets}
             </span>
           </div>
           <div class="set-dots">
-            {Array.from({ length: ex.sets || 0 }, (_, i) => (
-              <span key={i} class={i < done ? 'done' : i === done ? 'next' : ''}>
-                {i + 1}
+            {Array.from({ length: exercise.sets || 0 }, (_, setIndex) => (
+              <span key={setIndex} class={setIndex < loggedSetCount ? 'done' : setIndex === loggedSetCount ? 'next' : ''}>
+                {setIndex + 1}
               </span>
             ))}
           </div>
           <div class="meta">
             <span class="pill active">
-              {ex.sets}×{ex.reps}
+              {exercise.sets}×{exercise.reps}
             </span>
-            <span class="pill">{ex.weight ? `${ex.weight}kg sugerido` : 'peso corporal'}</span>
-            {ex.equipment && <span class="pill">{ex.equipment}</span>}
+            <span class="pill">{exercise.weight ? `${exercise.weight}kg sugerido` : 'peso corporal'}</span>
+            {exercise.equipment && <span class="pill">{exercise.equipment}</span>}
           </div>
         </div>
       </div>
 
-      <Progression exerciseId={ex.exercise_id} />
+      <Progression exerciseId={exercise.exercise_id} />
 
       {muscles.length > 0 && (
         <div class="card compact-map">
@@ -72,18 +73,18 @@ export function Exercise({ plannedId }: { plannedId: number }) {
       <details class="card details-card">
         <summary>Técnica y notas</summary>
         <p class="instr open">{instructions}</p>
-        {ex.notes && <p class="mt-2">{ex.notes}</p>}
+        {exercise.notes && <p class="mt-2">{exercise.notes}</p>}
       </details>
 
-      {done > 0 && (
+      {loggedSetCount > 0 && (
         <div class="card">
           <h3>Series registradas</h3>
           <div class="sets mt-2">
-            {(ex.performed_sets || []).map((s: any) => (
-              <div class="set-row" key={s.id}>
-                <span class="n">Serie {s.set_number}</span>
+            {(exercise.performed_sets || []).map((performedSet: any) => (
+              <div class="set-row" key={performedSet.id}>
+                <span class="n">Serie {performedSet.set_number}</span>
                 <span class="v">
-                  {s.reps} reps · {s.weight}kg
+                  {performedSet.reps} reps · {performedSet.weight}kg
                 </span>
               </div>
             ))}
@@ -91,103 +92,130 @@ export function Exercise({ plannedId }: { plannedId: number }) {
         </div>
       )}
 
-      {/* key={done}: remount per set so inputs re-prefill from the last logged set. */}
-      {!app.readOnly && <LogSetForm key={done} sessionId={p.id} ex={ex} done={done} />}
+      {/* key={loggedSetCount}: remount per set so inputs re-prefill from the last logged set. */}
+      {!app.readOnly && <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} />}
     </>
   );
 }
 
 function Progression({ exerciseId }: { exerciseId: number }) {
-  const progress = useQuery({
+  const progressQuery = useQuery({
     queryKey: ['progress', exerciseId],
     queryFn: () => apiFetch('GET', `/exercises/${exerciseId}/progress?limit=12`),
   });
-  if (!progress.data || progress.data.length < 2) return null;
+  if (!progressQuery.data || progressQuery.data.length < 2) return null;
   return (
     <div class="card">
       <h3>Progresión</h3>
       <p class="text-xs">Peso máximo por sesión</p>
-      <ProgressChart points={progress.data} />
+      <ProgressChart points={progressQuery.data} />
     </div>
   );
 }
 
-function LogSetForm({ sessionId, ex, done }: { sessionId: number; ex: any; done: number }) {
+function LogSetForm({
+  sessionId,
+  exercise,
+  loggedSetCount,
+}: {
+  sessionId: number;
+  exercise: any;
+  loggedSetCount: number;
+}) {
   const app = useApp();
-  const qc = useQueryClient();
+  const queryClient = useQueryClient();
   // Prefill with the athlete's last logged set (they usually repeat or nudge it), else the coach suggestion.
-  const last = ex.performed_sets?.[done - 1];
-  const [kg, setKg] = useState(String(last?.weight ?? ex.weight ?? 0));
-  const [reps, setReps] = useState(String(last?.reps ?? ex.reps ?? 10));
+  const lastSet = exercise.performed_sets?.[loggedSetCount - 1];
+  const [weight, setWeight] = useState(String(lastSet?.weight ?? exercise.weight ?? 0));
+  const [reps, setReps] = useState(String(lastSet?.reps ?? exercise.reps ?? 10));
   const [note, setNote] = useState('');
 
-  const invalidate = (updated: any) => {
-    qc.setQueryData(['session', sessionId], updated);
-    qc.invalidateQueries({ queryKey: ['current', sessionId] });
-    qc.invalidateQueries({ queryKey: ['progress', ex.exercise_id] });
-    qc.invalidateQueries({ queryKey: ['active'] });
-    qc.invalidateQueries({ queryKey: ['records'] });
+  const refreshAfterMutation = (updatedSession: any) => {
+    queryClient.setQueryData(['session', sessionId], updatedSession);
+    queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
+    queryClient.invalidateQueries({ queryKey: ['progress', exercise.exercise_id] });
+    queryClient.invalidateQueries({ queryKey: ['active'] });
+    queryClient.invalidateQueries({ queryKey: ['records'] });
   };
 
   const logSet = useMutation({
     mutationFn: () =>
-      apiFetch('POST', `/sessions/${sessionId}/exercises/${ex.planned_id}/sets`, {
-        set_number: done + 1,
-        weight: parseFloat(kg || '0'),
+      apiFetch('POST', `/sessions/${sessionId}/exercises/${exercise.planned_id}/sets`, {
+        set_number: loggedSetCount + 1,
+        weight: parseFloat(weight || '0'),
         reps: parseInt(reps || '0'),
         sensation: note.toLowerCase().includes('molest') ? 'molestia' : 'ok',
         notes: note,
       }),
-    onSuccess: (updated) => {
-      invalidate(updated);
+    onSuccess: (updatedSession) => {
+      refreshAfterMutation(updatedSession);
       haptic('ok');
-      toast('Serie guardada', 'ok');
+      showToast('Serie guardada', 'ok');
     },
-    onError: (e: any) => {
+    onError: (error: any) => {
       haptic('bad');
-      toast(e.message, 'err');
+      showToast(error.message, 'err');
     },
   });
 
-  const complete = useMutation({
-    mutationFn: () => apiFetch('POST', `/sessions/${sessionId}/exercises/${ex.planned_id}/complete`),
-    onSuccess: (updated) => {
-      invalidate(updated);
+  const completeExercise = useMutation({
+    mutationFn: () => apiFetch('POST', `/sessions/${sessionId}/exercises/${exercise.planned_id}/complete`),
+    onSuccess: (updatedSession) => {
+      refreshAfterMutation(updatedSession);
       haptic('ok');
-      toast('Ejercicio completado', 'ok');
+      showToast('Ejercicio completado', 'ok');
       app.pop();
     },
-    onError: (e: any) => {
+    onError: (error: any) => {
       haptic('bad');
-      toast(e.message, 'err');
+      showToast(error.message, 'err');
     },
   });
+
+  const saveSet = () => {
+    if (parseInt(reps || '0') <= 0) {
+      showToast('Pon las reps', 'err');
+      return;
+    }
+    logSet.mutate();
+  };
 
   return (
     <>
       <div class="card">
-        <h2>Registrar serie {done + 1}</h2>
+        <h2>Registrar serie {loggedSetCount + 1}</h2>
         <div class="row mt-2.5">
           <label>
             <p>Peso (kg)</p>
-            <input type="number" inputmode="decimal" step="0.5" value={kg} onInput={(e: any) => setKg(e.target.value)} />
+            <input
+              type="number"
+              inputmode="decimal"
+              step="0.5"
+              value={weight}
+              onInput={(event: any) => setWeight(event.target.value)}
+            />
           </label>
           <label>
             <p>Reps</p>
-            <input type="number" inputmode="numeric" value={reps} onInput={(e: any) => setReps(e.target.value)} />
+            <input type="number" inputmode="numeric" value={reps} onInput={(event: any) => setReps(event.target.value)} />
           </label>
         </div>
-        <textarea class="mt-2.5" placeholder="Nota: fácil, duro, molestia..." value={note} onInput={(e: any) => setNote(e.target.value)} />
-        <BusyButton
-          busy={logSet.isPending}
-          busyLabel="Guardando..."
-          class="btn mt-2.5"
-          onClick={() => (parseInt(reps || '0') > 0 ? logSet.mutate() : toast('Pon las reps', 'err'))}
-        >
+        <textarea
+          class="mt-2.5"
+          placeholder="Nota: fácil, duro, molestia..."
+          value={note}
+          onInput={(event: any) => setNote(event.target.value)}
+        />
+        <BusyButton busy={logSet.isPending} busyLabel="Guardando..." class="btn mt-2.5" onClick={saveSet}>
           ✓ Guardar serie
         </BusyButton>
       </div>
-      <BusyButton busy={complete.isPending} busyLabel="Completando..." class="btn secondary mt-2.5" onClick={() => complete.mutate()}>
+      <BusyButton
+        busy={completeExercise.isPending}
+        busyLabel="Completando..."
+        class="btn secondary mt-2.5"
+        onClick={() => completeExercise.mutate()}
+      >
         ✓ Completar
       </BusyButton>
     </>

@@ -3,11 +3,11 @@ import { useEffect, useRef } from 'preact/hooks';
 import { renderBodyMap } from '../lib/bodymap';
 import { renderProgressChart, type ProgressPoint } from '../lib/chart';
 
-export function Loading({ msg = 'Cargando...' }: { msg?: string }) {
+export function Loading({ message = 'Cargando...' }: { message?: string }) {
   return (
     <div class="loading">
       <div class="spinner" />
-      <p>{msg}</p>
+      <p>{message}</p>
     </div>
   );
 }
@@ -40,7 +40,7 @@ export function TopBar({ title, subtitle, onBack }: { title: string; subtitle?: 
 export function BusyButton({
   busy,
   busyLabel,
-  class: cls = 'btn',
+  class: cssClass = 'btn',
   onClick,
   children,
 }: {
@@ -51,7 +51,7 @@ export function BusyButton({
   children: any;
 }) {
   return (
-    <button class={cls} disabled={busy} onClick={onClick}>
+    <button class={cssClass} disabled={busy} onClick={onClick}>
       {busy ? (
         <>
           <span class="btn-spinner" />
@@ -65,23 +65,23 @@ export function BusyButton({
 }
 
 export function BodyMap({ muscles }: { muscles: string[] }) {
-  const ref = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    if (ref.current) renderBodyMap(ref.current, muscles);
+    if (containerRef.current) renderBodyMap(containerRef.current, muscles);
   }, [muscles.join(',')]);
-  return <div ref={ref} />;
+  return <div ref={containerRef} />;
 }
 
 export function ProgressChart({ points }: { points: ProgressPoint[] }) {
-  const ref = useRef<HTMLCanvasElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
-    if (!ref.current) return;
-    const chart = renderProgressChart(ref.current, points);
+    if (!canvasRef.current) return;
+    const chart = renderProgressChart(canvasRef.current, points);
     return () => chart.destroy();
   }, [points]);
   return (
     <div class="chart-wrap">
-      <canvas ref={ref} />
+      <canvas ref={canvasRef} />
     </div>
   );
 }

@@ -13,7 +13,7 @@ specific Telegram user identity — the coach manages all users.
 Usage in routers:
 
     from telegram_auth import get_telegram_user_id
-    uid = get_telegram_user_id(init_data)  # raises 401 if invalid
+    user_id = get_telegram_user_id(init_data)  # raises 401 if invalid
 """
 from __future__ import annotations
 
@@ -80,8 +80,8 @@ def validate_init_data(init_data: str) -> dict[str, Any]:
     # Build data-check string: sorted key=value pairs joined by newline.
     data_parts = []
     for key in sorted(parsed.keys()):
-        for val in parsed[key]:
-            data_parts.append(f"{key}={val}")
+        for value in parsed[key]:
+            data_parts.append(f"{key}={value}")
     data_check_string = "\n".join(data_parts)
 
     computed = hmac.new(_secret_key(), data_check_string.encode(), hashlib.sha256).hexdigest()
@@ -96,8 +96,8 @@ def validate_init_data(init_data: str) -> dict[str, Any]:
 
     # Flatten: return the dict with user as a nested dict
     result: dict[str, Any] = {}
-    for k, v in parsed.items():
-        result[k] = v[0] if len(v) == 1 else v
+    for key, values in parsed.items():
+        result[key] = values[0] if len(values) == 1 else values
     return result
 
 
@@ -123,8 +123,8 @@ def get_telegram_user_id(init_data: str | None) -> Optional[int]:
     routers treat None/0 as unscoped, so data is stored and read consistently.
     """
     user = get_telegram_user(init_data)
-    uid = user.get("id")
-    return int(uid) if uid else None
+    user_id = user.get("id")
+    return int(user_id) if user_id else None
 
 
 async def current_user_id(

@@ -1,48 +1,50 @@
 /** Personal records: max weight per exercise. */
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
-import { fmtDate, mediaUrl } from '../../lib/helpers';
+import { formatDate, mediaUrl } from '../../lib/helpers';
 import { useApp } from '../App';
 import { Empty, Loading, TopBar } from '../ui';
 
 export function Records() {
   const app = useApp();
-  const records = useQuery({ queryKey: ['records'], queryFn: () => apiFetch('GET', '/exercises/records') });
+  const recordsQuery = useQuery({ queryKey: ['records'], queryFn: () => apiFetch('GET', '/exercises/records') });
 
   return (
     <>
       <TopBar title="Mis marcas" subtitle="Peso máximo por ejercicio" onBack={app.pop} />
-      {records.isLoading ? (
+      {recordsQuery.isLoading ? (
         <Loading />
-      ) : records.isError ? (
+      ) : recordsQuery.isError ? (
         <Empty icon="⚠️">No pude cargar las marcas.</Empty>
-      ) : !records.data?.length ? (
+      ) : !recordsQuery.data?.length ? (
         <Empty icon="🏆">
           Sin marcas todavía.
           <br />
           Registra series y aparecerán aquí.
         </Empty>
       ) : (
-        records.data.map((r: any) => (
+        recordsQuery.data.map((record: any) => (
           <div
             class="card tap exercise-card"
-            key={r.exercise_id}
-            onClick={() => app.push({ name: 'recordDetail', exerciseId: r.exercise_id, title: r.name })}
+            key={record.exercise_id}
+            onClick={() => app.push({ name: 'recordDetail', exerciseId: record.exercise_id, title: record.name })}
           >
-            <div class="exercise-media">{r.image_url ? <img src={mediaUrl(r.image_url)} loading="lazy" /> : '🏋️'}</div>
+            <div class="exercise-media">
+              {record.image_url ? <img src={mediaUrl(record.image_url)} loading="lazy" /> : '🏋️'}
+            </div>
             <div class="exercise-card-body">
               <div class="exercise-title-row">
-                <h3>{r.name}</h3>
-                <span class="pill active">{r.max_weight ? `${r.max_weight}kg` : 'corporal'}</span>
+                <h3>{record.name}</h3>
+                <span class="pill active">{record.max_weight ? `${record.max_weight}kg` : 'corporal'}</span>
               </div>
               <p>
-                {r.muscle_group || ''}
-                {r.equipment ? ` · ${r.equipment}` : ''}
+                {record.muscle_group || ''}
+                {record.equipment ? ` · ${record.equipment}` : ''}
               </p>
               <div class="meta">
-                <span class="pill">{fmtDate(r.last_date)}</span>
+                <span class="pill">{formatDate(record.last_date)}</span>
                 <span class="pill">
-                  {r.sessions} {r.sessions === 1 ? 'sesión' : 'sesiones'}
+                  {record.sessions} {record.sessions === 1 ? 'sesión' : 'sesiones'}
                 </span>
               </div>
             </div>
