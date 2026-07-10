@@ -53,4 +53,3 @@ Thumbs.db
 # Exercise media is downloaded from the dataset-es fork on boot
 backend/exercise_data/images/
 backend/exercise_data/videos/
-
