@@ -649,6 +649,10 @@
   .history-main small { font-size: .72rem; color: var(--color-hint); margin-top: 3px; }
   .history-chevron { font-size: 1.4rem; color: var(--color-divider); }
 
+  /* ── Records: muscle group headings ── */
+  .records-group { margin: 20px 3px 2px; }
+  .records-group:first-of-type { margin-top: 10px; }
+
   /* ── Section heading / profile form ── */
   .section-heading { padding: 22px 3px 3px; }
   .section-heading h2 { margin-top: 4px; }
