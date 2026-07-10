@@ -94,8 +94,6 @@ async def add_measurement(
         muscle_kg=body.muscle_kg,
         fat_kg=body.fat_kg,
         body_fat_pct=body.body_fat_pct,
-        visceral_fat=body.visceral_fat,
-        score=body.score,
         notes=body.notes,
     )
     db.add(measurement)

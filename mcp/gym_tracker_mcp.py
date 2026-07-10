@@ -221,8 +221,6 @@ def update_session(updates: dict[str, Any], session_id: int, telegram_user_id: i
       goal, feedback, coach_summary, discomfort: free text.
       energy: 1-10. duration_actual: minutes.
     """
-    if not updates:
-        raise RuntimeError("Nothing to update: pass at least one field in updates")
     return _request("PATCH", f"/sessions/{int(session_id)}", updates, user_id=telegram_user_id)
 
 
@@ -324,7 +322,7 @@ def finish_session(session_id: int, feedback: str = "", energy: int = 5, discomf
 
 @mcp.tool()
 def list_measurements(limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
-    """List historical body measurements: weight, muscle, fat, score, source and date.
+    """List historical body measurements: weight, muscle, fat, source and date.
 
     Use this instead of profile.weight_kg when talking about evolution over time.
     """
@@ -341,8 +339,6 @@ def record_body_measurement(
     muscle_kg: float | None = None,
     fat_kg: float | None = None,
     body_fat_pct: float | None = None,
-    visceral_fat: float | None = None,
-    score: float | None = None,
     notes: str = "",
 ) -> dict[str, Any]:
     """Record a generic dated body measurement.
@@ -363,8 +359,6 @@ def record_body_measurement(
         "muscle_kg": muscle_kg,
         "fat_kg": fat_kg,
         "body_fat_pct": body_fat_pct,
-        "visceral_fat": visceral_fat,
-        "score": score,
     }.items():
         if value is not None:
             body[key] = float(value)

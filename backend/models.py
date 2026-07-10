@@ -131,8 +131,6 @@ class AthleteMeasurement(SQLModel, table=True):
     muscle_kg: Optional[float] = Field(default=None)
     fat_kg: Optional[float] = Field(default=None)
     body_fat_pct: Optional[float] = Field(default=None)
-    visceral_fat: Optional[float] = Field(default=None)
-    score: Optional[float] = Field(default=None)
     notes: str = Field(default="")
 
 

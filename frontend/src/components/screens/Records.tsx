@@ -7,12 +7,7 @@ import { Empty, Loading, TopBar } from '../ui';
 
 /** Groups records by muscle group, largest group first; exercises alphabetical inside each. */
 function groupByMuscle(records: any[]): [string, any[]][] {
-  const groups = new Map<string, any[]>();
-  for (const record of records) {
-    const muscleGroup = record.muscle_group || 'otros';
-    if (!groups.has(muscleGroup)) groups.set(muscleGroup, []);
-    groups.get(muscleGroup)!.push(record);
-  }
+  const groups = Map.groupBy(records, (record: any) => record.muscle_group || 'otros');
   for (const groupRecords of groups.values()) {
     groupRecords.sort((first, second) => String(first.name).localeCompare(String(second.name), 'es'));
   }

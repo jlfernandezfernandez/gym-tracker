@@ -2,16 +2,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
 import { cleanTitle, formatDate } from '../../lib/helpers';
+import { useApp } from '../App';
+import { Empty, Loading, TopBar } from '../ui';
 
-/** Monday of the week containing the given date. */
-function weekStart(isoDate: string): Date {
-  const date = new Date(isoDate + 'T00:00:00');
-  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
-  return date;
+/** Monday 00:00 (local) of the week containing the given date. */
+function weekStart(date: Date): Date {
+  const monday = new Date(date);
+  monday.setHours(0, 0, 0, 0);
+  monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7));
+  return monday;
 }
 
-function weekLabel(start: Date): string {
-  const currentWeekStart = weekStart(new Date().toISOString().slice(0, 10));
+function weekLabel(start: Date, currentWeekStart: Date): string {
   const daysApart = Math.round((currentWeekStart.getTime() - start.getTime()) / 86400000);
   if (daysApart === 0) return 'Esta semana';
   if (daysApart === 7) return 'Semana pasada';
@@ -23,16 +25,13 @@ function weekLabel(start: Date): string {
 
 /** Groups sessions (already newest-first) into weeks, preserving order. */
 function groupByWeek(sessions: any[]): [string, any[]][] {
-  const weeks = new Map<string, any[]>();
-  for (const session of sessions) {
-    const label = weekLabel(weekStart(session.session_date));
-    if (!weeks.has(label)) weeks.set(label, []);
-    weeks.get(label)!.push(session);
-  }
-  return [...weeks.entries()];
+  const currentWeekStart = weekStart(new Date());
+  return [
+    ...Map.groupBy(sessions, (session: any) =>
+      weekLabel(weekStart(new Date(session.session_date + 'T00:00:00')), currentWeekStart),
+    ),
+  ];
 }
-import { useApp } from '../App';
-import { Empty, Loading, TopBar } from '../ui';
 
 export function History() {
   const app = useApp();
