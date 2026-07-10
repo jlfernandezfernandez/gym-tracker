@@ -278,11 +278,13 @@ def delete_set(session_id: int, planned_exercise_id: int, set_id: int, telegram_
 
 
 @mcp.tool()
-def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] = "completed", new_exercise_id: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Mark an exercise completed/skipped; optionally replace it before any set is logged."""
+def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] = "completed", new_exercise_id: int | None = None, target_sets: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Mark an exercise completed/skipped; optionally replace it before any set is logged, or adjust target_sets (1–20)."""
     payload: dict[str, Any] = {"status": status, "notes": notes}
     if new_exercise_id is not None:
         payload["new_exercise_id"] = int(new_exercise_id)
+    if target_sets is not None:
+        payload["target_sets"] = int(target_sets)
     return _request("PUT", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", payload, user_id=telegram_user_id)
 
 

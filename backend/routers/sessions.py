@@ -202,6 +202,14 @@ async def update_planned_exercise(
         if not await db.get(Exercise, body.new_exercise_id):
             raise HTTPException(status_code=404, detail="Exercise not found in catalog")
         planned_exercise.exercise_id = body.new_exercise_id
+    if body.target_sets is not None:
+        logged = len(planned_exercise.performed_sets or [])
+        if body.target_sets < logged:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Cannot reduce target_sets below {logged} (already logged sets)",
+            )
+        planned_exercise.target_sets = body.target_sets
     if body.notes is not None:
         planned_exercise.notes = body.notes
 

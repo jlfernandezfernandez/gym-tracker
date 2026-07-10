@@ -27,6 +27,7 @@ class PerformedSetCreate(BaseModel):
 class PlannedExerciseUpdate(BaseModel):
     status: Optional[Literal["pending", "in_progress", "completed", "skipped"]] = None
     new_exercise_id: Optional[int] = None
+    target_sets: Optional[int] = Field(default=None, ge=1, le=20)
     notes: Optional[str] = None
 
 
