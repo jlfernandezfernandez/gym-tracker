@@ -76,8 +76,8 @@ export function Exercise({ plannedId }: { plannedId: number }) {
           <p>{formatMuscle(exercise.target || exercise.muscle_group || '')}</p>
         </div>
       </div>
-      {!app.readOnly && exercise.status !== 'completed' && loggedSetCount === 0 && (
-        <SetCountControl sessionId={plan.id} plannedId={exercise.planned_id} currentSets={exercise.sets || 0} />
+      {!app.readOnly && exercise.status !== 'completed' && (
+        <SetCountControl sessionId={plan.id} plannedId={exercise.planned_id} currentSets={exercise.sets || 0} loggedSets={loggedSetCount} />
       )}
       <ExerciseProgress exerciseId={exercise.exercise_id} />
       {/* Primary action first: log the set right under the exercise, history below. */}
@@ -164,7 +164,7 @@ function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
   );
 }
 
-function SetCountControl({ sessionId, plannedId, currentSets }: { sessionId: number; plannedId: number; currentSets: number }) {
+function SetCountControl({ sessionId, plannedId, currentSets, loggedSets }: { sessionId: number; plannedId: number; currentSets: number; loggedSets: number }) {
   const queryClient = useQueryClient();
   const [sets, setSets] = useState(currentSets);
   const adjust = useMutation({
@@ -182,7 +182,7 @@ function SetCountControl({ sessionId, plannedId, currentSets }: { sessionId: num
     },
   });
   const step = (delta: number) => {
-    const next = Math.max(1, Math.min(20, sets + delta));
+    const next = Math.max(loggedSets, Math.min(20, sets + delta));
     if (next === sets) return;
     setSets(next);
     adjust.mutate(next);
@@ -191,7 +191,7 @@ function SetCountControl({ sessionId, plannedId, currentSets }: { sessionId: num
     <div class="card set-count-card">
       <span class="eyebrow">Series</span>
       <div class="set-count-row">
-        <button class="set-count-btn" disabled={adjust.isPending || sets <= 1} onClick={() => step(-1)} aria-label="Quitar serie">−</button>
+        <button class="set-count-btn" disabled={adjust.isPending || sets <= loggedSets} onClick={() => step(-1)} aria-label="Quitar serie">−</button>
         <span class="set-count-value">{sets}</span>
         <button class="set-count-btn" disabled={adjust.isPending || sets >= 20} onClick={() => step(1)} aria-label="Añadir serie">+</button>
       </div>
