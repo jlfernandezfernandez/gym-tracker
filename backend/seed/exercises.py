@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "exercise_data"
 MEDIA_URL_PREFIX = "/exercise-media"
-UPSTREAM_BASE_URL = "https://raw.githubusercontent.com/jlfernandezfernandez/exercises-dataset-es/main"
+DATASET_BASE_URL = "https://raw.githubusercontent.com/jlfernandezfernandez/exercises-dataset-es/main"
 DOWNLOAD_CONCURRENCY = 8
 
 # ── S3-compatible object storage ────────────────────────────────────────────
@@ -131,7 +131,7 @@ def _upload_to_s3(key: str, content: bytes, content_type: str) -> None:
 
 def _download_and_upload(relative_path: str) -> None:
     """Download a media file and upload it to S3 (with retries)."""
-    url = f"{UPSTREAM_BASE_URL}/{relative_path}"
+    url = f"{DATASET_BASE_URL}/{relative_path}"
     attempts = 3
     for attempt in range(attempts):
         try:
@@ -150,7 +150,7 @@ def _download_to_disk(relative_path: str) -> None:
     """Fallback: download media to local disk (when S3 is not configured) (with retries)."""
     target = DATA_DIR / relative_path
     target.parent.mkdir(parents=True, exist_ok=True)
-    url = f"{UPSTREAM_BASE_URL}/{relative_path}"
+    url = f"{DATASET_BASE_URL}/{relative_path}"
     attempts = 3
     for attempt in range(attempts):
         try:
@@ -165,7 +165,7 @@ def _download_to_disk(relative_path: str) -> None:
 
 
 async def download_missing_media() -> None:
-    """Fetch exercise images/GIFs from the upstream dataset.
+    """Fetch exercise images/GIFs from the dataset-es fork.
 
     When S3 is configured, uploads to MinIO/S3. Otherwise falls back to local disk.
     Existing objects/files are never re-downloaded.
