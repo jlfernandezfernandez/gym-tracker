@@ -1,9 +1,10 @@
-"""Coach router — plan creation.
+"""Coach router — plan creation and history import.
 
 The coach agent creates plans via MCP `create_plan`, which calls this endpoint.
 No LLM call here — the agent IS the LLM. The agent picks exercises from the
 catalog (`list_exercises`) and must send them in the body.
 """
+from datetime import datetime, time, timezone
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -13,8 +14,8 @@ from sqlalchemy.orm import selectinload
 
 from database import get_session
 from telegram_auth import current_user_id
-from models import AthleteMeasurement, BODYWEIGHT_WEIGHT, Exercise, WorkoutSession, PlannedExercise
-from schemas import CoachPlanRequest, SessionOut, SessionSummary
+from models import AthleteMeasurement, BODYWEIGHT_WEIGHT, Exercise, PerformedSet, WorkoutSession, PlannedExercise
+from schemas import CoachImportRequest, CoachPlanRequest, SessionOut, SessionSummary
 from routers.sessions import _current_state, _load_session
 from routers.profile import _get_or_create_profile
 
@@ -120,6 +121,63 @@ async def coach_plan(
             suggested_weight=suggested_weight if exercise.is_bodyweight else exercise_spec.suggested_weight,
             notes=exercise_spec.notes,
         ))
+
+    await db.commit()
+    return await _load_session(workout.id, db)
+
+
+@router.post("/import", response_model=SessionOut)
+async def coach_import(
+    body: CoachImportRequest,
+    db: AsyncSession = Depends(get_session),
+    user_id: Optional[int] = Depends(current_user_id),
+):
+    """Import one already-performed historical session in a single call.
+
+    Creates a completed session on session_date with its exercises and
+    performed sets, for athletes migrating from another tracker.
+    """
+    workout = WorkoutSession(
+        session_date=body.session_date,
+        title=body.title or "Entreno importado",
+        status="completed",
+        feedback=body.feedback,
+        duration_actual=body.duration_actual,
+        telegram_user_id=user_id,
+    )
+    db.add(workout)
+    await db.flush()
+
+    # ponytail: fixed midday timestamp — the source tracker rarely keeps per-set times
+    performed_at = datetime.combine(body.session_date, time(12, 0), tzinfo=timezone.utc)
+    for exercise_spec in body.exercises:
+        exercise = await db.get(Exercise, exercise_spec.exercise_id)
+        if not exercise:
+            raise HTTPException(status_code=422, detail=f"Exercise {exercise_spec.exercise_id} not found")
+        planned = PlannedExercise(
+            session_id=workout.id,
+            exercise_id=exercise_spec.exercise_id,
+            order=exercise_spec.order,
+            target_sets=len(exercise_spec.sets),
+            target_reps=exercise_spec.sets[0].reps,
+            suggested_weight=BODYWEIGHT_WEIGHT if exercise.is_bodyweight else exercise_spec.sets[0].weight,
+            notes=exercise_spec.notes,
+            status="completed",
+        )
+        db.add(planned)
+        await db.flush()
+        for set_number, set_spec in enumerate(exercise_spec.sets, start=1):
+            if not exercise.is_bodyweight and set_spec.weight == BODYWEIGHT_WEIGHT:
+                raise HTTPException(status_code=422, detail="-1 weight is reserved for bodyweight exercises")
+            db.add(PerformedSet(
+                planned_exercise_id=planned.id,
+                set_number=set_number,
+                weight=BODYWEIGHT_WEIGHT if exercise.is_bodyweight else set_spec.weight,
+                reps=set_spec.reps,
+                rpe=set_spec.rpe,
+                notes=set_spec.notes,
+                timestamp=performed_at,
+            ))
 
     await db.commit()
     return await _load_session(workout.id, db)

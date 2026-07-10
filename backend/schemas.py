@@ -61,6 +61,28 @@ class CoachPlanRequest(BaseModel):
     exercises: list[PlannedExerciseCreate] = Field(default_factory=list)
 
 
+class ImportSet(BaseModel):
+    weight: float = Field(default=0.0, ge=-1)
+    reps: int = Field(ge=1)
+    rpe: Optional[float] = Field(default=None, ge=1, le=10)
+    notes: str = ""
+
+
+class ImportExercise(BaseModel):
+    exercise_id: int = Field(gt=0)
+    order: int = Field(default=0, ge=0)
+    notes: str = ""
+    sets: list[ImportSet] = Field(min_length=1)
+
+
+class CoachImportRequest(BaseModel):
+    session_date: date
+    title: str = ""
+    feedback: str = ""
+    duration_actual: int = Field(default=0, ge=0)
+    exercises: list[ImportExercise] = Field(min_length=1)
+
+
 # ── Athlete profile / onboarding ──
 
 class AthleteProfileIn(BaseModel):

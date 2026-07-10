@@ -46,6 +46,7 @@ Operating rules:
    and list_sessions to adapt the next plan.
 7. Body data (weight, composition, scans): record_body_measurement, never overwrite notes.
 8. Sharing: share_web_url(share_token) gives a read-only link for a companion.
+   Migrating history from another tracker: import_completed_session, one call per past workout.
 9. Multi-user: always pass telegram_user_id (Telegram id of the chat) on profile/session tools.
 
 Persistence split: physical/trainable facts → app profile. Your own agent memory → only
@@ -259,6 +260,40 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
         "energy": int(energy),
         "time_available": int(time_available),
         "discomfort": discomfort,
+        "exercises": exercises,
+    }, user_id=telegram_user_id)
+
+
+@mcp.tool()
+def import_completed_session(
+    session_date: str,
+    exercises: list[dict[str, Any]],
+    title: str = "",
+    feedback: str = "",
+    duration_actual: int = 0,
+    telegram_user_id: int | None = None,
+) -> dict[str, Any]:
+    """Import one already-performed historical workout in a single call.
+
+    Use when the athlete migrates history from another tracker or dictates a
+    past workout. Creates the session directly as 'completed' on session_date
+    (ISO YYYY-MM-DD) with all exercises and sets — no need to create_plan,
+    log_set or finish_session. One call per historical session.
+
+    Resolve exercise ids first with list_exercises / list_exercise_facets;
+    never invent catalog ids. exercises is a native MCP array:
+    [{"exercise_id": 12, "order": 0, "notes": "",
+      "sets": [{"weight": 40.0, "reps": 10, "rpe": 8.0}, {"weight": 40.0, "reps": 8}]}]
+    Bodyweight exercises: send weight 0; the backend stores -1 itself.
+    telegram_user_id is required so the session belongs to the athlete.
+    """
+    if telegram_user_id is None:
+        raise ValueError("telegram_user_id is required so the imported session belongs to the athlete.")
+    return _request("POST", "/coach/import", {
+        "session_date": session_date,
+        "title": title,
+        "feedback": feedback,
+        "duration_actual": int(duration_actual),
         "exercises": exercises,
     }, user_id=telegram_user_id)
 
