@@ -137,6 +137,7 @@ La API aplica las migraciones de Alembic al arrancar y carga el catálogo de eje
 ```text
 backend/              API FastAPI, modelos, migraciones y seed
 frontend/             Mini App Astro + Preact
+landing/              landing page estática (Astro + Tailwind)
 mcp/                  herramientas MCP agnósticas al agente
 Dockerfile             imagen de la API + Mini App
 Dockerfile.mcp        imagen del servidor MCP

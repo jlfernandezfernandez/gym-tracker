@@ -1,0 +1,46 @@
+---
+import '../styles/global.css';
+
+const title = 'Gym Coach — Tu entrenador en Telegram';
+const description =
+	'Conecta un coach de IA a tu Telegram. Él te pregunta, crea tus entrenos y te los abre en una Mini App. Open source, self-hosted, MCP.';
+
+const canonicalUrl = 'https://jlfernandezfernandez.github.io/gym-tracker/';
+
+const jsonLd = JSON.stringify({
+	'@context': 'https://schema.org',
+	'@type': 'SoftwareApplication',
+	name: 'Gym Coach',
+	applicationCategory: 'HealthApplication',
+	operatingSystem: 'Telegram',
+	description:
+		'Coach de gimnasio con IA para Telegram: agente MCP que crea entrenos, guía serie a serie y abre una Mini App visual.',
+	license: 'https://opensource.org/license/mit',
+	url: 'https://github.com/jlfernandezfernandez/gym-tracker',
+	offers: { '@type': 'Offer', price: '0', priceCurrency: 'EUR' },
+});
+---
+
+<!doctype html>
+<html lang="es" class="scroll-smooth">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<title>{title}</title>
+		<meta name="description" content={description} />
+		<meta property="og:title" content={title} />
+		<meta property="og:description" content={description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content={canonicalUrl} />
+		<meta name="twitter:card" content="summary" />
+		<link rel="canonical" href={canonicalUrl} />
+		<link
+			rel="icon"
+			href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏋️</text></svg>"
+		/>
+		<script type="application/ld+json" set:html={jsonLd} />
+	</head>
+	<body class="bg-canvas font-sans text-ink antialiased">
+		<slot />
+	</body>
+</html>

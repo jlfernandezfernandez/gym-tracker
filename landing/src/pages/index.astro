@@ -1,0 +1,153 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+
+const demoExercises = [
+	{ gif: `${base}/media/0025-EIeI8Vf.gif`, name: 'Press banca', sets: '3×8 · 60kg', muscle: 'chest' },
+	{ gif: `${base}/media/0032-ila4NZS.gif`, name: 'Peso muerto', sets: '3×6 · 90kg', muscle: 'hamstrings' },
+	{ gif: `${base}/media/0043-qXTaZnJ.gif`, name: 'Sentadilla', sets: '3×10 · 70kg', muscle: 'quadriceps' },
+	{ gif: `${base}/media/0861-fUBheHs.gif`, name: 'Remo en polea', sets: '3×12 · 50kg', muscle: 'back' },
+];
+
+const features = [
+	{
+		title: 'API',
+		description: 'FastAPI + SQLModel + PostgreSQL. Perfiles, sesiones, ejercicios, series y mediciones persistidos con criterio.',
+	},
+	{
+		title: 'Mini App de Telegram',
+		description: 'Astro + Preact servida por la propia API. El atleta consulta su progreso sin salir de Telegram.',
+	},
+	{
+		title: 'MCP',
+		description: 'FastMCP por Streamable HTTP. Cualquier agente compatible (Hermes, Claude, Codex, ...) actúa como entrenador.',
+	},
+	{
+		title: '1.324 ejercicios',
+		description: 'Catálogo con demostración animada, músculos implicados e instrucciones. Media en MinIO compatible con S3.',
+	},
+	{
+		title: 'Auth',
+		description: 'Telegram InitData para la Mini App y clave compartida para el MCP.',
+	},
+	{
+		title: 'Self-hosted',
+		description: 'Docker Compose o Coolify. Tus datos en tu servidor. Open source, licencia MIT.',
+	},
+];
+---
+
+<Layout>
+	<header class="mx-auto max-w-5xl px-6 pt-24 pb-16 text-center">
+		<p class="mb-4 text-sm font-semibold tracking-widest text-accent uppercase">Open source · Self-hosted · MCP</p>
+		<h1 class="text-4xl font-bold tracking-tight sm:text-6xl">
+			Tu entrenador<br />
+			<span class="text-accent">vive en Telegram</span>
+		</h1>
+		<p class="mx-auto mt-6 max-w-2xl text-lg text-hint">
+			Conecta un agente de IA a tu Telegram: te conoce, crea tus entrenos, te guía serie a serie y te abre tu progreso en
+			una Mini App. Gym Tracker persiste perfiles, sesiones, ejercicios, series y mediciones.
+		</p>
+		<div class="mt-10 flex flex-wrap items-center justify-center gap-4">
+			<a
+				href="https://github.com/jlfernandezfernandez/gym-tracker"
+				class="rounded-control bg-accent px-6 py-3 font-semibold text-canvas transition hover:opacity-90"
+			>
+				Ver en GitHub
+			</a>
+			<a
+				href="#como-funciona"
+				class="rounded-control border border-edge bg-surface px-6 py-3 font-semibold text-ink shadow-card transition hover:bg-hover"
+			>
+				Cómo funciona
+			</a>
+		</div>
+	</header>
+
+	<section class="mx-auto max-w-md px-6 pb-16">
+		<div class="rounded-card border border-edge bg-surface p-4 shadow-card">
+			<p class="mb-3 px-1 text-xs font-semibold tracking-wide text-hint uppercase">Entreno de hoy · Empuje</p>
+			<ul class="divide-y divide-edge">
+				{
+					demoExercises.map((exercise) => (
+						<li class="flex items-center gap-3 py-3">
+							<img
+								src={exercise.gif}
+								alt={exercise.name}
+								loading="lazy"
+								width="48"
+								height="48"
+								class="size-12 rounded-control bg-white object-cover"
+							/>
+							<div class="min-w-0 flex-1">
+								<p class="truncate font-semibold text-ink">{exercise.name}</p>
+								<p class="text-sm text-hint">{exercise.sets}</p>
+							</div>
+							<span class="rounded-pill bg-ok-bg px-2.5 py-1 text-xs font-semibold text-ok">hecho ✓</span>
+						</li>
+					))
+				}
+			</ul>
+		</div>
+	</section>
+
+	<section id="como-funciona" class="mx-auto max-w-5xl px-6 py-16">
+		<h2 class="text-center text-3xl font-bold">Cómo funciona</h2>
+		<pre
+			class="mx-auto mt-8 max-w-md overflow-x-auto rounded-card border border-edge bg-surface p-6 text-sm leading-relaxed text-ink shadow-card">
+Agente (Hermes, Claude, Codex, ...)
+              │ MCP
+              ▼
+        gym-tracker-mcp
+              │ API
+              ▼
+     gym-tracker + Postgres + MinIO
+              │
+              ▼
+       Mini App de Telegram</pre>
+	</section>
+
+	<section class="mx-auto max-w-5xl px-6 py-16">
+		<h2 class="text-center text-3xl font-bold">Todo lo que hace</h2>
+		<div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+			{
+				features.map((feature) => (
+					<div class="rounded-card border border-edge bg-surface p-6 shadow-card">
+						<h3 class="text-lg font-semibold text-accent">{feature.title}</h3>
+						<p class="mt-2 text-sm text-hint">{feature.description}</p>
+					</div>
+				))
+			}
+		</div>
+	</section>
+
+	<section class="mx-auto max-w-5xl px-6 py-16">
+		<h2 class="text-center text-3xl font-bold">Ejercicios con demostración</h2>
+		<div class="mt-10 grid grid-cols-2 gap-6 sm:grid-cols-4">
+			{
+				demoExercises.map((exercise) => (
+					<div class="overflow-hidden rounded-card border border-edge bg-surface shadow-card">
+						<img src={exercise.gif} alt={exercise.name} loading="lazy" class="aspect-square w-full bg-white object-cover" />
+						<div class="p-3">
+							<h3 class="text-sm font-semibold text-ink">{exercise.name}</h3>
+							<span class="text-xs text-hint">{exercise.muscle}</span>
+						</div>
+					</div>
+				))
+			}
+		</div>
+	</section>
+
+	<section class="mx-auto max-w-5xl px-6 py-16 text-center">
+		<h2 class="text-3xl font-bold">Montar tu propio coach</h2>
+		<pre
+			class="mx-auto mt-8 max-w-xl overflow-x-auto rounded-card border border-edge bg-surface p-6 text-left text-sm text-ink shadow-card"><code>cp .env.example .env
+docker compose up -d</code></pre>
+	</section>
+
+	<footer class="border-t border-edge py-10 text-center text-sm text-hint">
+		Gym Tracker · Licencia MIT ·
+		<a href="https://github.com/jlfernandezfernandez/gym-tracker" class="text-accent hover:underline">GitHub</a>
+	</footer>
+</Layout>
