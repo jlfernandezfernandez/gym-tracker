@@ -52,18 +52,30 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
               <ProgressChart points={points} />
             </div>
           )}
-          <div class="card">
-            <h3>Sesiones</h3>
-            <div class="sets mt-2">
-              {[...points].reverse().map((point: any) => (
-                <div class="set-row" key={point.date}>
-                  <span class="n">{formatDate(point.date)}</span>
-                  <span class="v">
-                    {usesWeight ? `${point.top_weight}kg máx · ${point.sets} series · ${Math.round(point.volume)}kg vol` : `${point.top_reps} reps máx · ${point.sets} series`}
-                  </span>
-                </div>
-              ))}
-            </div>
+          <div class="section-heading">
+            <p class="eyebrow">Historial</p>
+            <h2>{points.length} sesiones</h2>
+          </div>
+          <div class="history-list">
+            {[...points].reverse().map((point: any) => (
+              <button
+                class="history-row"
+                key={point.session_id}
+                onClick={() => app.openSession(point.session_id)}
+              >
+                <span class="history-date">{formatDate(point.date)}</span>
+                <span class="history-main">
+                  <b>
+                    {usesWeight ? `${point.top_weight} kg` : `${point.top_reps} reps`}
+                    {point.sets > 1 ? ` · ${point.sets} series` : ' · 1 serie'}
+                  </b>
+                  <small>
+                    {usesWeight ? `${Math.round(point.volume)} kg volumen` : `${point.sets} series`}
+                  </small>
+                </span>
+                <span class="history-chevron">›</span>
+              </button>
+            ))}
           </div>
         </>
       )}

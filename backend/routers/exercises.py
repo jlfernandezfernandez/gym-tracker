@@ -105,6 +105,7 @@ async def exercise_progress(
     """Per-session progression for one exercise: top weight, volume and sets."""
     statement = (
         select(
+            WorkoutSession.id,
             WorkoutSession.session_date,
             func.max(PerformedSet.weight),
             func.max(PerformedSet.reps),
@@ -125,13 +126,14 @@ async def exercise_progress(
     rows = (await db.execute(statement)).all()
     return [
         {
+            "session_id": session_id,
             "date": session_date.isoformat(),
             "top_weight": float(top_weight or 0),
             "top_reps": int(top_reps or 0),
             "volume": float(volume or 0),
             "sets": set_count,
         }
-        for session_date, top_weight, top_reps, volume, set_count in reversed(rows)
+        for session_id, session_date, top_weight, top_reps, volume, set_count in reversed(rows)
     ]
 
 

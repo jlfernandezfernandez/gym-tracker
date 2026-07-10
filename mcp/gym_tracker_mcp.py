@@ -162,7 +162,7 @@ def list_exercise_facets() -> dict[str, list[str]]:
 
 @mcp.tool()
 def exercise_progress(exercise_id: int, limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
-    """Progression by session: top_weight, top_reps, volume, and sets. Bodyweight exercises use top_reps."""
+    """Progression by session: session_id, date, top_weight, top_reps, volume, and sets. Bodyweight exercises use top_reps. Use session_id to open a past session with session_web_url."""
     qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 100))})
     return _request("GET", f"/exercises/{int(exercise_id)}/progress?{qs}", user_id=telegram_user_id)
 
