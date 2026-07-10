@@ -16,11 +16,12 @@
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
+  color-scheme:dark;
   --bg:#09090b;--sec:#131315;--text:#fafafa;--hint:#a1a1aa;--dim:#71717a;
   --border:rgba(255,255,255,.09);--border-hi:rgba(255,255,255,.18);
 }
-html{scroll-behavior:smooth}
-body{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;text-wrap:pretty}
 a{color:var(--text);text-decoration:none}
 .container{max-width:960px;margin:0 auto;padding:0 24px}
 nav{display:flex;justify-content:space-between;align-items:center;padding:20px 0;border-bottom:1px solid var(--border)}
@@ -32,10 +33,10 @@ nav .links a:hover{color:var(--text)}
 .hero::before{content:"";position:absolute;inset:0;background:radial-gradient(600px 300px at 50% 0%,rgba(255,255,255,.06),transparent);pointer-events:none}
 .badge{display:inline-flex;align-items:center;gap:8px;padding:5px 14px;border-radius:999px;border:1px solid var(--border);color:var(--hint);font-size:12.5px;font-weight:500;margin-bottom:24px;background:var(--sec)}
 .badge b{color:var(--text);font-weight:600}
-.hero h1{font-size:56px;line-height:1.03;letter-spacing:-.045em;font-weight:700;margin-bottom:18px;background:linear-gradient(180deg,#fff 30%,#a1a1aa);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero h1{font-size:56px;line-height:1.03;letter-spacing:-.045em;font-weight:700;margin-bottom:18px;background:linear-gradient(180deg,#fff 30%,#a1a1aa);-webkit-background-clip:text;background-clip:text;color:transparent;text-wrap:balance}
 .hero p{font-size:17px;color:var(--hint);max-width:540px;margin:0 auto;line-height:1.65}
 .cta{display:flex;gap:10px;justify-content:center;margin-top:32px;flex-wrap:wrap}
-.btn{padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;border:1px solid transparent;cursor:pointer;transition:opacity .15s,background .15s,border-color .15s;letter-spacing:-.01em;display:inline-block}
+.btn{padding:11px 22px;border-radius:8px;font-weight:600;font-size:14px;border:1px solid transparent;cursor:pointer;transition:opacity .15s,background .15s,border-color .15s;letter-spacing:-.01em;display:inline-block}.btn:focus-visible{outline:2px solid var(--text);outline-offset:3px}
 .btn.primary{background:var(--text);color:var(--bg)}
 .btn.primary:hover{opacity:.85}
 .btn.secondary{background:transparent;color:var(--text);border-color:var(--border)}
@@ -90,7 +91,7 @@ nav .links a:hover{color:var(--text)}
 .flink span{position:absolute;top:-24px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--dim);white-space:nowrap;text-transform:uppercase;letter-spacing:.06em}
 .section{padding:72px 0 0}
 .eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:10px}
-.section h2{font-size:30px;font-weight:700;letter-spacing:-.03em;margin-bottom:12px}
+.section h2{font-size:30px;font-weight:700;letter-spacing:-.03em;margin-bottom:12px;text-wrap:balance}
 .section>.container>p,.lead{color:var(--hint);font-size:15.5px;max-width:640px}
 .features{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:28px}
 .feature{border:1px solid var(--border);border-radius:12px;padding:22px;background:var(--sec);transition:border-color .2s}
