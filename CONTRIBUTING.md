@@ -8,7 +8,7 @@
 git clone https://github.com/jlfernandezfernandez/gym-tracker.git
 cd gym-tracker
 cp .env.example .env      # TELEGRAM_BOT_TOKEN vacío = auth desactivada (modo dev)
-docker compose up -d      # app en http://localhost:8000 (el catálogo JSON se carga solo; las imágenes/GIFs se bajan del upstream al primer boot)
+docker compose up -d      # app en http://localhost:8000 (el catálogo bilingüe se carga solo; las imágenes/GIFs se bajan del fork dataset-es al primer boot)
 ```
 
 Sin Docker: levanta un Postgres, `pip install -r backend/requirements.txt` y
@@ -20,7 +20,7 @@ que FastAPI sirva `frontend/dist/`.
 
 - `backend/` — FastAPI + SQLModel. Routers en `backend/routers/`.
 - `backend/` — FastAPI + SQLModel + Alembic ( migraciones en `backend/migrations/`). Routers en `backend/routers/`.
-- `backend/exercise_data/` — catálogo (JSON en el repo; imágenes/GIFs se descargan del upstream en el primer arranque).
+- `backend/exercise_data/` — catálogo bilingüe (JSON en el repo; imágenes/GIFs se descargan del fork dataset-es en el primer arranque).
 - Para crear migraciones: `cd backend && alembic revision --autogenerate -m "desc"`. Se aplican solo en el boot.
 - `frontend/` — Mini App en Astro + Preact: `src/pages/index.astro` (shell), `src/components/App.tsx` (island + router), `src/components/screens/*` (pantallas), `src/lib/*` (api, helpers, chart, bodymap).
 - `mcp/gym_tracker_mcp.py` — servidor MCP (22 tools) que habla con la API pública.

@@ -222,7 +222,7 @@ Al conectarte, el servidor MCP también expone unas `instructions` con el manual
 │   ├── models.py     # SQLModel tables
 │   ├── schemas.py    # Pydantic schemas
 │   ├── telegram_auth.py  # HMAC InitData validation
-│   ├── seed/         # Exercise catalog seeder (baja media del upstream)
+│   ├── seed/         # Exercise catalog seeder (baja media del fork dataset-es)
 │   ├── migrations/   # Alembic migrations (initial schema en versions/)
 │   ├── alembic.ini   # Config de Alembic (migraciones auto-aplicadas en boot)
 │   └── exercise_data/    # Catálogo: JSON en el repo; imágenes/GIFs se descargan al arrancar
