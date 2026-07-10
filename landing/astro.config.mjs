@@ -1,5 +1,6 @@
 // @ts-check
 
+import sitemap from '@astrojs/sitemap';
 import tailwindcss from '@tailwindcss/vite';
 import { defineConfig } from 'astro/config';
 
@@ -8,6 +9,7 @@ export default defineConfig({
 	// GitHub Pages: https://jlfernandezfernandez.github.io/gym-tracker/
 	site: 'https://jlfernandezfernandez.github.io',
 	base: '/gym-tracker',
+	integrations: [sitemap()],
 	vite: {
 		plugins: [tailwindcss()],
 	},

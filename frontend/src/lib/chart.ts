@@ -1,7 +1,10 @@
 /**
  * Progression chart (top weight per session) with Chart.js.
  */
-import Chart from 'chart.js/auto';
+import { CategoryScale, Chart, Filler, LineController, LineElement, LinearScale, PointElement, Tooltip } from 'chart.js';
+
+// Only line charts are used; registering just their pieces keeps the rest of chart.js out of the bundle.
+Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Filler, Tooltip);
 
 export interface ProgressPoint {
   date: string;
