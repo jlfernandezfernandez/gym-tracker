@@ -114,8 +114,8 @@ export function Plan() {
 function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurrent: boolean; onOpen: () => void }) {
   const mediaSrc = mediaUrl(exercise.image_url || exercise.gif_url);
   return (
-    <div class={`card tap exercise-card ${isCurrent ? 'current' : ''}`} onClick={onOpen}>
-      <div class="exercise-media">{mediaSrc ? <img src={mediaSrc} loading="lazy" /> : '🏋️'}</div>
+    <button class={`card tap exercise-card ${isCurrent ? 'current' : ''}`} onClick={onOpen}>
+      <div class="exercise-media">{mediaSrc ? <img src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}</div>
       <div class="exercise-card-body">
         <div class="exercise-title-row">
           <h3>{exercise.name || 'Ejercicio'}</h3>
@@ -134,7 +134,7 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
           <span class={`pill st-${exercise.status}`}>{formatStatus(exercise.status)}</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 

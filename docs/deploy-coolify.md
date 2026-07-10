@@ -55,7 +55,7 @@ Dockerfile: /Dockerfile
 Puerto: 8000
 ```
 
-Healthcheck:
+Healthcheck de proceso:
 
 ```text
 GET /health
@@ -92,6 +92,17 @@ GET /health
 
 Debe devolver HTTP 200. El endpoint `/mcp` no sirve como healthcheck porque
 un `GET` directo sin negociación MCP puede responder `406` correctamente.
+
+Antes de desplegar o escalar la App, ejecuta una vez el trabajo de release con
+la misma imagen y variables de la App:
+
+```text
+python operations.py
+```
+
+Aplica migraciones y sincroniza el catálogo. Para descargar medios pendientes
+de forma explícita, usa `python operations.py --media`; nunca se hace desde
+cada réplica web.
 
 ## 2. Conectar la red interna
 
@@ -181,10 +192,11 @@ Configura TLS, conserva `COACH_API_KEY` y limita el acceso en el proxy inverso. 
 Después de desplegar:
 
 ```bash
-curl https://gym.example.com/health
+curl https://gym.example.com/ready
 ```
 
-Debe responder HTTP 200.
+Debe responder HTTP 200 cuando PostgreSQL y MinIO estén disponibles. `/health`
+queda como liveness del proceso.
 
 Comprueba también:
 

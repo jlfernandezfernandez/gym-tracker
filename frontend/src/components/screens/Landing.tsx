@@ -84,7 +84,7 @@ export function Landing() {
               <div class="landing-next">
                 <div class="landing-current">
                   <div class="exercise-media">
-                    {mediaSrc ? <img src={mediaSrc} loading="eager" /> : "🏋️"}
+                    {mediaSrc ? <img src={mediaSrc} alt={activeExercise?.name || 'Ejercicio actual'} loading="eager" /> : "🏋️"}
                   </div>
                   <div class="landing-current-info">
                     <p class="eyebrow">Serie actual</p>

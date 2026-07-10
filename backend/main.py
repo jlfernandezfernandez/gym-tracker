@@ -17,8 +17,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
-from database import init_db
+from database import async_session
 from routers import sessions, exercises, coach, profile
 
 # dotenv already loaded by database.py on import.
@@ -80,25 +81,7 @@ def _ensure_s3_bucket() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize DB on startup, clean up on shutdown."""
-    try:
-        await init_db()
-        logger.info("Database initialized successfully")
-        await asyncio.to_thread(_ensure_s3_bucket)
-    except Exception as e:
-        logger.error("Failed to initialize database: %s", e)
-        raise
-    # Seed the exercise catalog on first boot (no-op if already seeded).
-    try:
-        from database import async_session
-        from seed.exercises import seed_exercises, download_missing_media
-        async with async_session() as db_session:
-            await seed_exercises(db_session)
-        # Media is not vendored: pull missing files in the background so
-        # startup stays fast and the API serves immediately.
-        asyncio.create_task(download_missing_media())
-    except Exception as error:
-        logger.warning("Exercise seed skipped: %s", error)
+    """The API only serves traffic; release work runs in operations.py."""
     yield
 
 
@@ -130,6 +113,21 @@ app.include_router(profile.router)
 @app.get("/api/health")
 async def health():
     return {"status": "ok", "version": "1.0.0"}
+
+
+@app.get("/ready")
+@app.get("/api/ready")
+async def ready():
+    """Dependency readiness for deploy orchestration, separate from liveness."""
+    try:
+        async with async_session() as session:
+            await session.execute(text("SELECT 1"))
+        if _s3_enabled():
+            await asyncio.to_thread(_get_s3().head_bucket, Bucket=S3_BUCKET)
+    except Exception as error:
+        logger.warning("Readiness failed: %s", error)
+        raise HTTPException(status_code=503, detail="Dependencies unavailable")
+    return {"status": "ready"}
 
 
 # ── Exercise media ───────────────────────────────────────────────────────────

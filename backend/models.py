@@ -3,6 +3,7 @@ from typing import Optional
 from uuid import uuid4
 
 from sqlmodel import Field, SQLModel, Relationship
+from sqlalchemy import CheckConstraint, UniqueConstraint
 
 BODYWEIGHT_WEIGHT = -1.0
 
@@ -38,6 +39,9 @@ class Exercise(SQLModel, table=True):
 
 class WorkoutSession(SQLModel, table=True):
     __tablename__ = "workout_sessions"
+    __table_args__ = (
+        CheckConstraint("status IN ('planned', 'in_progress', 'completed', 'cancelled')", name="ck_session_status"),
+    )
 
     id: int = Field(default=None, primary_key=True)
     session_date: date = Field(default_factory=lambda: date.today(), index=True)
@@ -67,6 +71,12 @@ class WorkoutSession(SQLModel, table=True):
 
 class PlannedExercise(SQLModel, table=True):
     __tablename__ = "planned_exercises"
+    __table_args__ = (
+        UniqueConstraint("session_id", "order", name="uq_planned_exercise_order"),
+        CheckConstraint("target_sets > 0", name="ck_planned_target_sets"),
+        CheckConstraint("target_reps > 0", name="ck_planned_target_reps"),
+        CheckConstraint("status IN ('pending', 'in_progress', 'completed', 'skipped')", name="ck_planned_status"),
+    )
 
     id: int = Field(default=None, primary_key=True)
     session_id: int = Field(foreign_key="workout_sessions.id")
@@ -89,6 +99,9 @@ class PlannedExercise(SQLModel, table=True):
 
 class PerformedSet(SQLModel, table=True):
     __tablename__ = "performed_sets"
+    __table_args__ = (
+        UniqueConstraint("planned_exercise_id", "set_number", name="uq_performed_set_number"),
+    )
 
     id: int = Field(default=None, primary_key=True)
     planned_exercise_id: int = Field(foreign_key="planned_exercises.id")

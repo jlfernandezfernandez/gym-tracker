@@ -327,7 +327,7 @@
   }
   .pill.active { color: var(--color-accent); background: var(--color-accent-bg); }
   .pill.ok, .st-completed { color: var(--color-ok); background: var(--color-ok-bg); }
-  .pill.warn, .st-skipped, .st-changed { color: var(--color-warn); background: var(--color-warn-bg); }
+  .pill.warn, .st-skipped { color: var(--color-warn); background: var(--color-warn-bg); }
   .pill.err { color: var(--color-err); background: var(--color-err-bg); }
   .st-in_progress { color: var(--color-accent); }
   .current {
@@ -499,6 +499,11 @@
   .session-hero { padding: 20px; }
   .session-hero h1 { margin: 13px 0 5px; }
   .exercise-card {
+    width: 100%;
+    border: 0;
+    color: var(--color-ink);
+    font: inherit;
+    text-align: left;
     display: grid;
     grid-template-columns: 88px 1fr;
     gap: 13px;

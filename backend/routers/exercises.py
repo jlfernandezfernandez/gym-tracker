@@ -61,15 +61,9 @@ async def personal_records(
     """Personal records with a backend-owned weight mode."""
     statement = (
         select(
-            Exercise.id,
-            Exercise.name,
-            Exercise.muscle_group,
-            Exercise.equipment,
-            Exercise.image_url,
-            func.max(PerformedSet.weight),
-            func.max(PerformedSet.reps),
-            func.max(WorkoutSession.session_date),
-            func.count(func.distinct(WorkoutSession.id)),
+            Exercise.id, Exercise.name, Exercise.muscle_group, Exercise.equipment,
+            Exercise.image_url, PerformedSet.weight, PerformedSet.reps,
+            WorkoutSession.session_date, WorkoutSession.id,
         )
         .join(PlannedExercise, PerformedSet.planned_exercise_id == PlannedExercise.id)
         .join(WorkoutSession, PlannedExercise.session_id == WorkoutSession.id)
@@ -77,22 +71,30 @@ async def personal_records(
     )
     if user_id:
         statement = statement.where(WorkoutSession.telegram_user_id == user_id)
-    statement = statement.group_by(Exercise.id).order_by(func.max(WorkoutSession.session_date).desc())
+    statement = statement.order_by(
+        Exercise.id, PerformedSet.weight.desc(), PerformedSet.reps.desc(),
+        WorkoutSession.session_date.desc(), PerformedSet.id.desc(),
+    )
     rows = (await db.execute(statement)).all()
+    records: dict[int, dict] = {}
+    for exercise_id, name, muscle_group, equipment, image_url, weight, reps, session_date, session_id in rows:
+        record = records.get(exercise_id)
+        if record is None:
+            records[exercise_id] = {
+                "exercise_id": exercise_id, "name": name, "muscle_group": muscle_group,
+                "equipment": equipment, "image_url": image_url,
+                # The first row is one real best set, never a synthetic weight/reps pair.
+                "max_weight": BODYWEIGHT_WEIGHT if equipment == "body weight" else float(weight or 0),
+                "max_reps": int(reps or 0),
+                "weight_mode": "bodyweight" if equipment == "body weight" else "weighted" if weight and weight > 0 else "unloaded",
+                "last_date": session_date, "sessions": {session_id},
+            }
+        else:
+            record["sessions"].add(session_id)
+            record["last_date"] = max(record["last_date"], session_date)
     return [
-        {
-            "exercise_id": exercise_id,
-            "name": name,
-            "muscle_group": muscle_group,
-            "equipment": equipment,
-            "image_url": image_url,
-            "max_weight": float(max_weight or 0) if equipment != "body weight" else BODYWEIGHT_WEIGHT,
-            "max_reps": int(max_reps or 0),
-            "weight_mode": "bodyweight" if equipment == "body weight" else "weighted" if max_weight and max_weight > 0 else "unloaded",
-            "last_date": last_date.isoformat(),
-            "sessions": session_count,
-        }
-        for exercise_id, name, muscle_group, equipment, image_url, max_weight, max_reps, last_date, session_count in rows
+        {**record, "last_date": record["last_date"].isoformat(), "sessions": len(record["sessions"])}
+        for record in sorted(records.values(), key=lambda item: item["last_date"], reverse=True)
     ]
 
 

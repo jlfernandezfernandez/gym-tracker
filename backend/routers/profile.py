@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from database import get_session
 from telegram_auth import current_user_id
 from models import AthleteProfile, AthleteMeasurement
-from schemas import AthleteProfileIn, AthleteProfileOut, AthleteMeasurementIn, AthleteMeasurementOut
+from schemas import AthleteProfilePatch, AthleteProfileOut, AthleteMeasurementIn, AthleteMeasurementOut
 
 router = APIRouter(prefix="/api/profile", tags=["profile"])
 
@@ -45,16 +45,14 @@ async def get_profile(
 
 @router.patch("", response_model=AthleteProfileOut)
 async def patch_profile(
-    body: dict[str, Any],
+    body: AthleteProfilePatch,
     db: AsyncSession = Depends(get_session),
     user_id: Optional[int] = Depends(current_user_id),
 ):
     """Patch selected profile fields. Intended for conversational incremental updates."""
-    allowed = set(AthleteProfileIn.model_fields.keys())
     profile = await _get_or_create_profile(db, user_id)
-    for key, value in body.items():
-        if key in allowed:
-            setattr(profile, key, value)
+    for key, value in body.model_dump(exclude_unset=True).items():
+        setattr(profile, key, value)
     if user_id is not None:
         profile.telegram_user_id = user_id
     profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)

@@ -25,13 +25,13 @@ export function Records() {
       ) : (
         <div class="records-grid">
         {recordsQuery.data.map((record: any) => (
-          <div
+          <button
             class="card tap exercise-card"
             key={record.exercise_id}
             onClick={() => app.push({ name: 'recordDetail', exerciseId: record.exercise_id, title: record.name })}
           >
             <div class="exercise-media">
-              {record.image_url ? <img src={mediaUrl(record.image_url)} loading="lazy" /> : '🏋️'}
+              {record.image_url ? <img src={mediaUrl(record.image_url)} alt={record.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}
             </div>
             <div class="exercise-card-body">
               <div class="exercise-title-row">
@@ -49,7 +49,7 @@ export function Records() {
                 </span>
               </div>
             </div>
-          </div>
+          </button>
         ))}
         </div>
       )}

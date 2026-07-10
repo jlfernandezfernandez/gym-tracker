@@ -17,5 +17,18 @@ jobs:
         run: |
           python -m compileall -q backend mcp
           cd backend && python -c "import main, telegram_auth, schemas, models"
-      - name: Docker build
+          python -m unittest test_session_integrity.py
+      - name: Frontend build
+        run: cd frontend && npm ci && npm run build
+      - name: Docker builds
         run: docker build -t gym-tracker .
+      - run: docker build -f Dockerfile.mcp -t gym-tracker-mcp .
+      - name: Compose smoke
+        run: |
+          docker compose up -d --build
+          for attempt in {1..30}; do curl -fsS http://localhost:8000/ready && curl -fsS http://localhost:8001/ready && break; sleep 2; done
+          curl -fsS http://localhost:8000/health
+          curl -fsS http://localhost:8001/health
+      - name: Stop Compose
+        if: always()
+        run: docker compose down -v

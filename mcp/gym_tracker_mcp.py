@@ -29,13 +29,13 @@ profile, exercise catalog, sessions and sets. You are the brain; Telegram chat i
 product and the Mini App (deep links) is the visual surface.
 
 Operating rules:
-1. Onboarding first: get_athlete_profile. If onboarding_complete is false, don't plan yet —
+1. Start each coaching turn with training_snapshot. If onboarding_complete is false, don't plan yet —
    ask like a real trainer (goal, experience, days/time and preferences) in short
    blocks and save with patch_athlete_profile (finish with {"onboarding_complete": true}).
 2. Never invent weight, height, preferences or history. Read the profile, check
    list_sessions / exercise_progress / list_measurements, or ask.
 3. Pick exercises yourself: call list_exercise_facets for valid filters, use list_exercises,
-   then send returned exercise ids in create_plan exercises_json. Never invent catalog ids.
+   then send returned exercise ids in create_plan exercises. Never invent catalog ids.
 4. Preview before training: create_plan leaves the session as 'planned'; send session_web_url.
    Not convincing? delete_session and create another.
 5. During the workout update state, don't just chat: "did 12 reps" → log_set; pain →
@@ -58,6 +58,16 @@ mcp = FastMCP("gym-tracker", instructions=COACH_GUIDE)
 async def health_check(_: Request) -> JSONResponse:
     """Liveness endpoint for Docker, Coolify, and reverse proxies."""
     return JSONResponse({"status": "ok", "service": "gym-tracker-mcp"})
+
+
+@mcp.custom_route("/ready", methods=["GET"])
+async def readiness_check(_: Request) -> JSONResponse:
+    """Readiness means the API dependency can serve a request too."""
+    try:
+        _request("GET", "/ready")
+    except RuntimeError as error:
+        return JSONResponse({"status": "not ready", "detail": str(error)}, status_code=503)
+    return JSONResponse({"status": "ready", "service": "gym-tracker-mcp"})
 
 
 def _request(method: str, path: str, payload: dict[str, Any] | None = None, user_id: int | None = None) -> Any:
@@ -105,16 +115,8 @@ def get_athlete_profile(telegram_user_id: int | None = None) -> dict[str, Any]:
 
 
 @mcp.tool()
-def patch_athlete_profile(updates_json: str, telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Update athlete profile fields from a JSON object string.
-
-    Use after onboarding (include "onboarding_complete": true) and for any
-    incremental facts learned in chat.
-    Example: {"goal": "hipertrofia", "onboarding_complete": true}
-    """
-    updates = json.loads(updates_json or "{}")
-    if not isinstance(updates, dict):
-        raise ValueError("updates_json must be a JSON object")
+def patch_athlete_profile(updates: dict[str, Any], telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Update profile facts with a native MCP object, never a JSON-encoded string."""
     return _request("PATCH", "/profile", updates, user_id=telegram_user_id)
 
 
@@ -215,7 +217,7 @@ def delete_session(session_id: int, telegram_user_id: int | None = None) -> dict
 
 
 @mcp.tool()
-def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available: int = 45, discomfort: str = "", exercises_json: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available: int = 45, discomfort: str = "", exercises: list[dict[str, Any]] | None = None, telegram_user_id: int | None = None) -> dict[str, Any]:
     """Create a workout plan owned by the Telegram athlete.
 
     title: workout name only (e.g. "Pecho + Tríceps"). Never embed the date —
@@ -225,7 +227,7 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
     unscoped session that share links can open, but the Telegram Mini App cannot
     show as the athlete's active session.
 
-    exercises_json: JSON array of the exercises you picked from list_exercises, e.g.
+    exercises: native MCP array of the exercises you picked from list_exercises, e.g.
     [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
       "suggested_weight": 40.0, "notes": "controla la bajada"}]
     Required: pick the exercises yourself from list_exercises; the API rejects empty plans.
@@ -236,9 +238,7 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
             "the workout as the athlete's active session. Pass the Telegram user id "
             "from the current chat/context."
         )
-    exercises = json.loads(exercises_json) if exercises_json else []
-    if not isinstance(exercises, list):
-        raise ValueError("exercises_json must be a JSON array")
+    exercises = exercises or []
     return _request("POST", "/coach/plan", {
         "title": title,
         "goal": goal,
@@ -247,6 +247,13 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
         "discomfort": discomfort,
         "exercises": exercises,
     }, user_id=telegram_user_id)
+
+
+@mcp.tool()
+def training_snapshot(telegram_user_id: int, session_limit: int = 5) -> dict[str, Any]:
+    """Read the athlete context for one coach turn: profile, active workout, recent sessions and measurements."""
+    qs = urllib.parse.urlencode({"limit": max(1, min(int(session_limit), 10))})
+    return _request("GET", f"/coach/snapshot?{qs}", user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -271,8 +278,8 @@ def delete_set(session_id: int, planned_exercise_id: int, set_id: int, telegram_
 
 
 @mcp.tool()
-def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped", "changed"] = "completed", new_exercise_id: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Mark an exercise completed/skipped/changed; optionally replace it with another catalog exercise."""
+def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] = "completed", new_exercise_id: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Mark an exercise completed/skipped; optionally replace it before any set is logged."""
     payload: dict[str, Any] = {"status": status, "notes": notes}
     if new_exercise_id is not None:
         payload["new_exercise_id"] = int(new_exercise_id)

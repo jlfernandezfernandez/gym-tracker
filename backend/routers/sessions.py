@@ -1,7 +1,7 @@
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing import Optional
@@ -46,18 +46,41 @@ def _check_owner(workout: WorkoutSession, user_id: int | None):
         raise HTTPException(status_code=403, detail="This session belongs to another user")
 
 
+def _start_session(workout: WorkoutSession) -> None:
+    """Transition once; every path that starts work shares the same timestamp."""
+    if workout.status == "planned":
+        workout.status = "in_progress"
+    if workout.status == "in_progress" and not workout.started_at:
+        workout.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
+
+
+def _ensure_replaceable(planned_exercise: PlannedExercise) -> None:
+    """A set belongs permanently to the exercise it was performed for."""
+    if planned_exercise.performed_sets:
+        raise HTTPException(status_code=422, detail="Cannot replace an exercise after logging sets")
+
+
 def _current_state(workout: WorkoutSession) -> dict:
     """Derive active exercise/set from persisted exercise statuses and logged sets."""
     planned = sorted(workout.planned_exercises or [], key=lambda planned_exercise: planned_exercise.order)
+    if workout.status in {"completed", "cancelled"}:
+        return {
+            "session_id": workout.id, "session_status": workout.status,
+            "current_planned_exercise_id": None, "current_set_number": None,
+            "exercise_order": None, "exercise_count": len(planned),
+            "completed_exercises": sum(1 for item in planned if item.status in {"completed", "skipped"}),
+            "completed_sets": sum(len(item.performed_sets or []) for item in planned),
+            "total_sets": sum(item.target_sets for item in planned), "is_complete": True,
+        }
     current = None
     for planned_exercise in planned:
-        if planned_exercise.status in {"pending", "in_progress", "changed"}:
+        if planned_exercise.status in {"pending", "in_progress"}:
             current = planned_exercise
             break
     if current is None and planned:
         current = planned[-1]
 
-    completed_exercises = sum(1 for planned_exercise in planned if planned_exercise.status == "completed")
+    completed_exercises = sum(1 for planned_exercise in planned if planned_exercise.status in {"completed", "skipped"})
     total_sets = sum(planned_exercise.target_sets for planned_exercise in planned)
     completed_sets = sum(len(planned_exercise.performed_sets or []) for planned_exercise in planned)
 
@@ -103,10 +126,10 @@ async def get_active_session(
     user_id: Optional[int] = Depends(current_user_id),
 ):
     """Get latest non-completed session with derived current exercise state."""
-    statement = select(WorkoutSession).where(WorkoutSession.status != "completed")
+    statement = select(WorkoutSession).where(WorkoutSession.status.in_(("planned", "in_progress")))
     if user_id:
         statement = statement.where(WorkoutSession.telegram_user_id == user_id)
-    statement = statement.order_by(WorkoutSession.session_date.desc(), WorkoutSession.id.desc()).limit(1).options(
+    statement = statement.order_by(case((WorkoutSession.status == "in_progress", 0), else_=1), WorkoutSession.session_date.desc(), WorkoutSession.id.desc()).limit(1).options(
         selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.performed_sets),
         selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.exercise),
     )
@@ -148,8 +171,7 @@ async def complete_planned_exercise(
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
 
     planned_exercise.status = "completed"
-    if workout.status == "planned":
-        workout.status = "in_progress"
+    _start_session(workout)
     await db.commit()
     return await _load_session(session_id, db)
 
@@ -176,11 +198,10 @@ async def update_planned_exercise(
     if body.status is not None:
         planned_exercise.status = body.status
     if body.new_exercise_id is not None:
+        _ensure_replaceable(planned_exercise)
         if not await db.get(Exercise, body.new_exercise_id):
             raise HTTPException(status_code=404, detail="Exercise not found in catalog")
         planned_exercise.exercise_id = body.new_exercise_id
-        if body.status is None:
-            planned_exercise.status = "changed"
     if body.notes is not None:
         planned_exercise.notes = body.notes
 
@@ -190,8 +211,8 @@ async def update_planned_exercise(
     if planned_exercise.target_sets > 0 and len(planned_exercise.performed_sets or []) >= planned_exercise.target_sets:
         planned_exercise.status = "completed"
 
-    if workout.status == "planned" and planned_exercise.status in {"in_progress", "completed"}:
-        workout.status = "in_progress"
+    if planned_exercise.status in {"in_progress", "completed", "skipped"}:
+        _start_session(workout)
     await db.commit()
     db.expire_all()
     return await _load_session(session_id, db)
@@ -255,17 +276,9 @@ async def log_set(
     else:
         weight = body.weight
 
-    # Idempotency guard: rapid duplicate submits (double-tap, retry) of the same
-    # set land as identical rows within seconds. Return current state instead.
-    now = datetime.now(timezone.utc).replace(tzinfo=None)
-    for existing_set in planned_exercise.performed_sets or []:
-        if (
-            existing_set.set_number == body.set_number
-            and existing_set.weight == weight
-            and existing_set.reps == body.reps
-            and abs((now - existing_set.timestamp).total_seconds()) < 30
-        ):
-            return await _load_session(session_id, db)
+    logged_set_count = len(planned_exercise.performed_sets or [])
+    if body.set_number != logged_set_count + 1 or logged_set_count >= planned_exercise.target_sets:
+        raise HTTPException(status_code=422, detail="Sets must be logged consecutively and cannot exceed the target")
 
     performed_set = PerformedSet(
         planned_exercise_id=planned_id,
@@ -278,12 +291,9 @@ async def log_set(
     )
     db.add(performed_set)
 
-    if workout.status == "planned":
-        workout.status = "in_progress"
-        if not workout.started_at:
-            workout.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    _start_session(workout)
 
-    logged_set_count = len(planned_exercise.performed_sets or []) + 1
+    logged_set_count += 1
     if logged_set_count >= planned_exercise.target_sets:
         planned_exercise.status = "completed"
     elif planned_exercise.status == "pending":
@@ -368,9 +378,9 @@ async def delete_session(
     """Delete a session (e.g. discard a plan preview the athlete rejected)."""
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
+    if workout.status != "planned" or any(planned.performed_sets for planned in workout.planned_exercises or []):
+        raise HTTPException(status_code=422, detail="Only unstarted plan previews can be deleted")
     for planned_exercise in workout.planned_exercises or []:
-        for performed_set in planned_exercise.performed_sets or []:
-            await db.delete(performed_set)
         await db.delete(planned_exercise)
     await db.delete(workout)
     await db.commit()
@@ -379,7 +389,7 @@ async def delete_session(
 
 @router.get("", response_model=list[SessionSummary])
 async def list_sessions(
-    limit: int = 10,
+    limit: int = Query(10, ge=1, le=50),
     on_date: Optional[date] = None,
     db: AsyncSession = Depends(get_db_session),
     user_id: Optional[int] = Depends(current_user_id),

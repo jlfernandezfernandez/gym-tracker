@@ -8,7 +8,6 @@ const STATUS_ES: Record<string, string> = {
   in_progress: 'En curso',
   completed: 'Hecho',
   skipped: 'Saltado',
-  changed: 'Cambiado',
 };
 
 type TaxonomyTerm = { es: string; bodyMap: string[] };
@@ -87,7 +86,7 @@ export function currentExercise(plan: any, currentState: any) {
   const currentPlannedId = currentState?.current_planned_exercise_id;
   return (
     plan?.exercises?.find((exercise: any) => String(exercise.planned_id) === String(currentPlannedId)) ||
-    plan?.exercises?.find((exercise: any) => ['pending', 'in_progress', 'changed'].includes(exercise.status)) ||
+    plan?.exercises?.find((exercise: any) => ['pending', 'in_progress'].includes(exercise.status)) ||
     plan?.exercises?.[0]
   );
 }

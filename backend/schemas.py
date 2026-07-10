@@ -25,7 +25,7 @@ class PerformedSetCreate(BaseModel):
 
 
 class PlannedExerciseUpdate(BaseModel):
-    status: Optional[Literal["pending", "in_progress", "completed", "skipped", "changed"]] = None
+    status: Optional[Literal["pending", "in_progress", "completed", "skipped"]] = None
     new_exercise_id: Optional[int] = None
     notes: Optional[str] = None
 
@@ -62,6 +62,19 @@ class AthleteProfileIn(BaseModel):
     disliked_exercises: str = ""
     notes: str = ""
     onboarding_complete: bool = False
+
+
+class AthleteProfilePatch(BaseModel):
+    name: Optional[str] = None
+    age: Optional[int] = Field(default=None, ge=0, le=120)
+    height_cm: Optional[float] = Field(default=None, gt=0, le=300)
+    weight_kg: Optional[float] = Field(default=None, gt=0, le=500)
+    goal: Optional[str] = None
+    experience_level: Optional[str] = None
+    preferred_exercises: Optional[str] = None
+    disliked_exercises: Optional[str] = None
+    notes: Optional[str] = None
+    onboarding_complete: Optional[bool] = None
 
 
 class AthleteProfileOut(AthleteProfileIn):
