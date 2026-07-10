@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Optional
+from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -7,25 +7,25 @@ from pydantic import BaseModel, Field
 # ── Session ──
 
 class PlannedExerciseCreate(BaseModel):
-    exercise_id: int
-    order: int = 0
-    target_sets: int = 3
-    target_reps: int = 10
-    suggested_weight: float = 0.0
+    exercise_id: int = Field(gt=0)
+    order: int = Field(default=0, ge=0)
+    target_sets: int = Field(default=3, ge=1)
+    target_reps: int = Field(default=10, ge=1)
+    suggested_weight: float = Field(default=0.0, ge=0)
     notes: str = ""
 
 
 class PerformedSetCreate(BaseModel):
-    set_number: int
-    weight: float = 0.0
-    reps: int = 0
+    set_number: int = Field(ge=1)
+    weight: float = Field(default=0.0, ge=0)
+    reps: int = Field(ge=1)
     rpe: Optional[float] = None
     sensation: str = ""
     notes: str = ""
 
 
 class PlannedExerciseUpdate(BaseModel):
-    status: Optional[str] = None
+    status: Optional[Literal["pending", "in_progress", "completed", "skipped", "changed"]] = None
     new_exercise_id: Optional[int] = None
     notes: Optional[str] = None
 
@@ -45,8 +45,8 @@ class CoachPlanRequest(BaseModel):
     goal: str = ""
     energy: int = Field(default=5, ge=1, le=10)
     discomfort: str = ""
-    time_available: int = 45
-    exercises: list[PlannedExerciseCreate] = []
+    time_available: int = Field(default=45, ge=1, le=1440)
+    exercises: list[PlannedExerciseCreate] = Field(default_factory=list)
 
 
 # ── Athlete profile / onboarding ──
@@ -135,7 +135,7 @@ class PlannedExerciseOut(BaseModel):
     notes: str
     status: str
     exercise: Optional[ExerciseOut] = None
-    performed_sets: list[PerformedSetOut] = []
+    performed_sets: list[PerformedSetOut] = Field(default_factory=list)
 
 
 class SessionOut(BaseModel):
@@ -151,7 +151,13 @@ class SessionOut(BaseModel):
     feedback: str
     coach_summary: str
     share_token: str
-    planned_exercises: list[PlannedExerciseOut] = []
+    planned_exercises: list[PlannedExerciseOut] = Field(default_factory=list)
+
+
+class ExerciseFacets(BaseModel):
+    muscle_groups: list[str]
+    body_parts: list[str]
+    equipment: list[str]
 
 
 class SessionSummary(BaseModel):

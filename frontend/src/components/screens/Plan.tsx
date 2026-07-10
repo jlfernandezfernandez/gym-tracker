@@ -3,10 +3,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
 import {
-  STATUS_ES,
   cleanTitle,
   completedSetCount,
   currentExercise,
+  formatMuscle,
+  formatStatus,
   mediaUrl,
   sessionMuscles,
   showToast,
@@ -35,36 +36,26 @@ export function Plan() {
   const targetSetsTotal = exercises.reduce((total: number, exercise: any) => total + (exercise.sets || 0), 0);
   const progressPct = targetSetsTotal ? Math.round((completedSetsTotal / targetSetsTotal) * 100) : 0;
   const muscles = sessionMuscles(exercises);
-  const heroMedia = mediaUrl(
-    exercises.find((exercise: any) => exercise.gif_url || exercise.image_url)?.gif_url ||
-      exercises.find((exercise: any) => exercise.image_url)?.image_url,
-  );
-  const currentPlannedId = currentQuery.data?.current_planned_exercise_id;
+  // A finished session has no "current" exercise — the backend falls back to the last one.
+  const currentPlannedId = plan.status === 'completed' ? null : currentQuery.data?.current_planned_exercise_id;
   const openExercise = (plannedId: number) => app.push({ name: 'exercise', plannedId });
 
   return (
     <>
       <TopBar
         title={cleanTitle(plan.title) || 'Plan del coach'}
-        subtitle={app.readOnly ? 'Plan compartido contigo' : 'Creado por el coach. Aquí se ejecuta y registra.'}
+        subtitle={app.readOnly ? 'Sesión compartida contigo' : 'Tu ruta para hoy'}
         onBack={app.readOnly ? undefined : app.pop}
+        action={!app.readOnly && plan.share_token ? <ShareButton title={cleanTitle(plan.title)} token={plan.share_token} /> : undefined}
       />
       <div class="session-hero card">
-        {heroMedia && (
-          <div class="session-hero-media">
-            <img src={heroMedia} loading="eager" />
-          </div>
-        )}
         <div class="session-hero-content">
           <div class="meta">
-            <span class="pill active">{STATUS_ES[plan.status] || plan.status}</span>
+            <span class="pill active">{formatStatus(plan.status)}</span>
             <span class="pill">{plan.duration_estimated || 0} min</span>
           </div>
           <h1>{cleanTitle(plan.title)}</h1>
           <p>{plan.goal || plan.coach_summary || 'Plan generado por el coach'}</p>
-          <div class="progress">
-            <div style={{ width: `${progressPct}%` }} />
-          </div>
           <div class="grid stats mt-2.5">
             <div class="stat">
               <b>{exercises.length}</b>
@@ -84,19 +75,10 @@ export function Plan() {
         </div>
       </div>
 
-      {muscles.length > 0 && (
-        <div class="card">
-          <h2>Mapa muscular de hoy</h2>
-          <BodyMap muscles={muscles} />
-          <div class="meta muscle-cloud">
-            {muscles.slice(0, 10).map((muscle) => (
-              <span class="pill" key={muscle}>
-                {muscle}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+      <div class="section-heading">
+        <p class="eyebrow">Ruta del entreno</p>
+        <h2>{exercises.length} ejercicios</h2>
+      </div>
 
       {exercises.map((exercise: any) => (
         <ExerciseCard
@@ -107,24 +89,29 @@ export function Plan() {
         />
       ))}
 
+      {muscles.length > 0 && (
+        <div class="card">
+          <h2>Mapa muscular de hoy</h2>
+          <BodyMap muscles={muscles} />
+        </div>
+      )}
+
       {plan.status === 'completed' && <CompletedSummary plan={plan} exercises={exercises} />}
 
       {!app.readOnly && plan.status !== 'completed' && (
         <div class="row mt-3">
           <button class="btn" onClick={() => openExercise(currentExercise(plan, currentQuery.data)?.planned_id)}>
-            ▶ Ejercicio actual
+            Continuar
           </button>
           <FinishButton sessionId={plan.id} energy={plan.energy} discomfort={plan.discomfort} />
         </div>
       )}
-      {!app.readOnly && plan.share_token && <ShareButton title={cleanTitle(plan.title)} token={plan.share_token} />}
     </>
   );
 }
 
 function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurrent: boolean; onOpen: () => void }) {
-  const mediaSrc = mediaUrl(exercise.gif_url || exercise.image_url);
-  const progressPct = exercise.sets ? Math.min(100, Math.round((completedSetCount(exercise) / exercise.sets) * 100)) : 0;
+  const mediaSrc = mediaUrl(exercise.image_url || exercise.gif_url);
   return (
     <div class={`card tap exercise-card ${isCurrent ? 'current' : ''}`} onClick={onOpen}>
       <div class="exercise-media">{mediaSrc ? <img src={mediaSrc} loading="lazy" /> : '🏋️'}</div>
@@ -136,19 +123,14 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
           </span>
         </div>
         <p>
-          {exercise.target || exercise.muscle_group || ''}
+          {formatMuscle(exercise.target || exercise.muscle_group || '')}
           {exercise.equipment ? ` · ${exercise.equipment}` : ''}
         </p>
-        <div class="progress mini">
-          <div style={{ width: `${progressPct}%` }} />
-        </div>
         <div class="meta">
           <span class="pill active">
             {exercise.sets}×{exercise.reps}
           </span>
-          <span class="pill">{exercise.weight ? `${exercise.weight}kg` : 'peso corporal'}</span>
-          <span class={`pill st-${exercise.status}`}>{STATUS_ES[exercise.status] || exercise.status}</span>
-          {isCurrent && <span class="pill active">actual</span>}
+          <span class={`pill st-${exercise.status}`}>{formatStatus(exercise.status)}</span>
         </div>
       </div>
     </div>
@@ -198,8 +180,8 @@ function ShareButton({ title, token }: { title: string; token: string }) {
     }
   };
   return (
-    <button class="btn ghost mt-2.5" onClick={share}>
-      🔗 Compartir con un compañero
+    <button class="top-action" onClick={share}>
+      Compartir
     </button>
   );
 }

@@ -1,6 +1,7 @@
 /** Record detail: per-session history and progression chart for one exercise. */
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
+import { chartUsesWeight } from '../../lib/chart';
 import { formatDate } from '../../lib/helpers';
 import { useApp } from '../App';
 import { Empty, Loading, ProgressChart, TopBar } from '../ui';
@@ -13,11 +14,13 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
   });
   const points = progressQuery.data || [];
   const maxWeight = points.length ? Math.max(...points.map((point: any) => point.top_weight || 0)) : 0;
+  const maxReps = points.length ? Math.max(...points.map((point: any) => point.top_reps || 0)) : 0;
+  const usesWeight = chartUsesWeight(points);
   const latestPoint = points[points.length - 1];
 
   return (
     <>
-      <TopBar title={title} subtitle="Histórico por sesión" onBack={app.pop} />
+      <TopBar title={title} subtitle="Progresión por sesión" onBack={app.pop} />
       {progressQuery.isLoading ? (
         <Loading />
       ) : progressQuery.isError ? (
@@ -29,7 +32,7 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
           <div class="card">
             <div class="grid stats">
               <div class="stat">
-                <b>{maxWeight ? `${maxWeight}kg` : '—'}</b>
+                <b>{usesWeight ? `${maxWeight}kg` : `${maxReps} reps`}</b>
                 <span>máximo</span>
               </div>
               <div class="stat">
@@ -37,7 +40,7 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
                 <span>sesiones</span>
               </div>
               <div class="stat">
-                <b>{latestPoint.top_weight}kg</b>
+                <b>{usesWeight ? `${latestPoint.top_weight}kg` : `${latestPoint.top_reps} reps`}</b>
                 <span>última</span>
               </div>
             </div>
@@ -45,7 +48,7 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
           {points.length >= 2 && (
             <div class="card">
               <h3>Progresión</h3>
-              <p class="text-xs">Peso máximo por sesión</p>
+              <p class="text-xs">{usesWeight ? 'Peso máximo por sesión' : 'Repeticiones máximas por sesión'}</p>
               <ProgressChart points={points} />
             </div>
           )}
@@ -56,7 +59,7 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
                 <div class="set-row" key={point.date}>
                   <span class="n">{formatDate(point.date)}</span>
                   <span class="v">
-                    {point.top_weight}kg máx · {point.sets} series · {Math.round(point.volume)}kg vol
+                    {usesWeight ? `${point.top_weight}kg máx · ${point.sets} series · ${Math.round(point.volume)}kg vol` : `${point.top_reps} reps máx · ${point.sets} series`}
                   </span>
                 </div>
               ))}

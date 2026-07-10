@@ -111,13 +111,14 @@ function Router() {
   }
 
   const activeView = viewStack[viewStack.length - 1];
+  const view = activeView as any;
   const screens: Record<string, any> = {
     landing: <Landing />,
     plan: <Plan />,
-    exercise: <Exercise plannedId={activeView.plannedId} />,
+    exercise: <Exercise plannedId={view.plannedId} />,
     history: <History />,
     records: <Records />,
-    recordDetail: <RecordDetail exerciseId={activeView.exerciseId} title={activeView.title} />,
+    recordDetail: <RecordDetail exerciseId={view.exerciseId} title={view.title} />,
     profile: <Profile />,
     editProfile: <EditProfile />,
   };

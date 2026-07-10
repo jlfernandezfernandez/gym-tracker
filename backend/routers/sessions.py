@@ -17,8 +17,6 @@ from schemas import (
     SessionFinish,
 )
 
-PLANNED_EXERCISE_STATUSES = {"pending", "in_progress", "completed", "skipped", "changed"}
-
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 
@@ -174,8 +172,6 @@ async def update_planned_exercise(
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
 
     if body.status is not None:
-        if body.status not in PLANNED_EXERCISE_STATUSES:
-            raise HTTPException(status_code=422, detail=f"Invalid status. Use one of: {sorted(PLANNED_EXERCISE_STATUSES)}")
         planned_exercise.status = body.status
     if body.new_exercise_id is not None:
         if not await db.get(Exercise, body.new_exercise_id):

@@ -11,7 +11,7 @@ export function Records() {
 
   return (
     <>
-      <TopBar title="Mis marcas" subtitle="Peso máximo por ejercicio" onBack={app.pop} />
+      <TopBar title="Marcas" subtitle="Tus mejores cargas por ejercicio" onBack={app.pop} />
       {recordsQuery.isLoading ? (
         <Loading />
       ) : recordsQuery.isError ? (
@@ -23,7 +23,8 @@ export function Records() {
           Registra series y aparecerán aquí.
         </Empty>
       ) : (
-        recordsQuery.data.map((record: any) => (
+        <div class="records-grid">
+        {recordsQuery.data.map((record: any) => (
           <div
             class="card tap exercise-card"
             key={record.exercise_id}
@@ -35,7 +36,7 @@ export function Records() {
             <div class="exercise-card-body">
               <div class="exercise-title-row">
                 <h3>{record.name}</h3>
-                <span class="pill active">{record.max_weight ? `${record.max_weight}kg` : 'corporal'}</span>
+                <span class="pill active">{record.max_weight ? `${record.max_weight}kg` : `${record.max_reps} reps`}</span>
               </div>
               <p>
                 {record.muscle_group || ''}
@@ -49,7 +50,8 @@ export function Records() {
               </div>
             </div>
           </div>
-        ))
+        ))}
+        </div>
       )}
     </>
   );

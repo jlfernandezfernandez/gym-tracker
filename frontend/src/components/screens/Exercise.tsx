@@ -2,19 +2,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
-import { completedSetCount, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
+import { chartUsesWeight } from '../../lib/chart';
+import { cleanTitle, completedSetCount, formatMuscle, formatWeight, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
 import { haptic } from '../../lib/telegram';
 import { useApp, useSession } from '../App';
-import { BodyMap, BusyButton, Empty, Loading, ProgressChart, TopBar } from '../ui';
+import { BodyMap, BusyButton, ConfirmSheet, Empty, Loading, ProgressChart, TopBar } from '../ui';
 
-function SetRow({ set, sessionId, plannedId }: { set: any; sessionId: number; plannedId: number }) {
+function SetRow({ set, sessionId, plannedId, exerciseId }: { set: any; sessionId: number; plannedId: number; exerciseId: number }) {
   const queryClient = useQueryClient();
   const del = useMutation({
     mutationFn: () => apiFetch('DELETE', `/sessions/${sessionId}/exercises/${plannedId}/sets/${set.id}`),
     onSuccess: (updated: any) => {
       queryClient.setQueryData(['session', sessionId], updated);
       queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['progress', set.exercise_id] });
+      queryClient.invalidateQueries({ queryKey: ['progress', exerciseId] });
       queryClient.invalidateQueries({ queryKey: ['active'] });
       queryClient.invalidateQueries({ queryKey: ['records'] });
       haptic('ok');
@@ -29,7 +30,7 @@ function SetRow({ set, sessionId, plannedId }: { set: any; sessionId: number; pl
     <div class="set-row" key={set.id}>
       <span class="n">Serie {set.set_number}</span>
       <span class="v">
-        {set.reps} reps · {set.weight}kg
+        {set.reps} reps · {formatWeight(set.weight)}
         <button class="set-del" disabled={del.isPending} onClick={() => del.mutate()} aria-label="Borrar serie">
           ✕
         </button>
@@ -61,66 +62,40 @@ export function Exercise({ plannedId }: { plannedId: number }) {
 
   return (
     <>
-      <TopBar
-        title={exercise.name || 'Ejercicio'}
-        subtitle={`${exercise.target || exercise.muscle_group || ''}${exercise.equipment ? ' · ' + exercise.equipment : ''}`}
-        onBack={app.pop}
-      />
-      <div class="exercise-hero">
+      <TopBar title={cleanTitle(plan.title)} onBack={app.pop} />
+      <div class="workout-progress" aria-label={`Serie ${Math.min(loggedSetCount + 1, exercise.sets)} de ${exercise.sets}`}>
+        {Array.from({ length: exercise.sets || 0 }, (_, setIndex) => (
+          <span key={setIndex} class={setIndex < loggedSetCount ? 'done' : setIndex === loggedSetCount ? 'active' : ''} />
+        ))}
+      </div>
+      <div class="exercise-focus card">
         <div class="big-media">{mediaSrc ? <img src={mediaSrc} loading="eager" /> : '🏋️'}</div>
-        <div class="card">
-          <div class="exercise-title-row">
-            <h2>{exercise.name || 'Ejercicio'}</h2>
-            <span class="pill active">
-              {loggedSetCount}/{exercise.sets}
-            </span>
-          </div>
-          <div class="set-dots">
-            {Array.from({ length: exercise.sets || 0 }, (_, setIndex) => (
-              <span key={setIndex} class={setIndex < loggedSetCount ? 'done' : setIndex === loggedSetCount ? 'next' : ''}>
-                {setIndex + 1}
-              </span>
-            ))}
-          </div>
-          <div class="meta">
-            <span class="pill active">
-              {exercise.sets}×{exercise.reps}
-            </span>
-            <span class="pill">{exercise.weight ? `${exercise.weight}kg sugerido` : 'peso corporal'}</span>
-            {exercise.equipment && <span class="pill">{exercise.equipment}</span>}
-          </div>
+        <div class="exercise-focus-content">
+          <p class="eyebrow">Serie {Math.min(loggedSetCount + 1, exercise.sets)} de {exercise.sets}</p>
+          <h1>{exercise.name || 'Ejercicio'}</h1>
+          <p>{formatMuscle(exercise.target || exercise.muscle_group || '')}</p>
         </div>
       </div>
-
-      <Progression exerciseId={exercise.exercise_id} />
-
-      {muscles.length > 0 && (
-        <div class="card compact-map">
-          <h2>Músculos</h2>
-          <BodyMap muscles={muscles} />
-        </div>
+      {/* Primary action first: log the set right under the exercise, history below. */}
+      {/* key={loggedSetCount}: remount per set so inputs re-prefill from the last logged set. */}
+      {!app.readOnly && exercise.status !== 'completed' && (
+        <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} />
       )}
-
-      <details class="card details-card">
-        <summary>Técnica y notas</summary>
-        <p class="instr open">{instructions}</p>
-        {exercise.notes && <p class="mt-2">{exercise.notes}</p>}
-      </details>
-
       {loggedSetCount > 0 && (
         <div class="card">
           <h3>Series registradas</h3>
           <div class="sets mt-2">
             {(exercise.performed_sets || []).map((performedSet: any) => (
-              <SetRow key={performedSet.id} set={performedSet} sessionId={plan.id} plannedId={exercise.planned_id} />
+              <SetRow
+                key={performedSet.id}
+                set={performedSet}
+                sessionId={plan.id}
+                plannedId={exercise.planned_id}
+                exerciseId={exercise.exercise_id}
+              />
             ))}
           </div>
         </div>
-      )}
-
-      {/* key={loggedSetCount}: remount per set so inputs re-prefill from the last logged set. */}
-      {!app.readOnly && exercise.status !== 'completed' && (
-        <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} />
       )}
       {!app.readOnly && exercise.status === 'completed' && (
         <div class="card done-card">
@@ -129,6 +104,18 @@ export function Exercise({ plannedId }: { plannedId: number }) {
           <button class="btn ghost mt-2.5" onClick={app.pop}>
             Volver al plan
           </button>
+        </div>
+      )}
+      <details class="card details-card">
+        <summary>Técnica</summary>
+        <p class="instr open">{instructions}</p>
+        {exercise.notes && <p class="mt-2">{exercise.notes}</p>}
+      </details>
+      <Progression exerciseId={exercise.exercise_id} />
+      {muscles.length > 0 && (
+        <div class="card">
+          <h3>Músculos trabajados</h3>
+          <BodyMap muscles={muscles} />
         </div>
       )}
     </>
@@ -141,10 +128,11 @@ function Progression({ exerciseId }: { exerciseId: number }) {
     queryFn: () => apiFetch('GET', `/exercises/${exerciseId}/progress?limit=12`),
   });
   if (!progressQuery.data || progressQuery.data.length < 2) return null;
+  const usesWeight = chartUsesWeight(progressQuery.data);
   return (
     <div class="card">
       <h3>Progresión</h3>
-      <p class="text-xs">Peso máximo por sesión</p>
+      <p class="text-xs">{usesWeight ? 'Peso máximo por sesión' : 'Repeticiones máximas por sesión'}</p>
       <ProgressChart points={progressQuery.data} />
     </div>
   );
@@ -161,11 +149,14 @@ function LogSetForm({
 }) {
   const app = useApp();
   const queryClient = useQueryClient();
-  // Prefill with the athlete's last logged set (they usually repeat or nudge it), else the coach suggestion.
-  const lastSet = exercise.performed_sets?.[loggedSetCount - 1];
-  const [weight, setWeight] = useState(String(lastSet?.weight ?? exercise.weight ?? 0));
-  const [reps, setReps] = useState(String(lastSet?.reps ?? exercise.reps ?? 10));
-  const [note, setNote] = useState('');
+  // Prefill: repeat what the athlete just lifted (ramping sets), else the coach prescription.
+  const previousSet = exercise.performed_sets?.at(-1);
+  // Bodyweight exercise: weight is fixed (0 by convention), the field is not editable.
+  const isBodyweight = !(exercise.weight || previousSet?.weight);
+  const [weight, setWeight] = useState(String(previousSet?.weight ?? exercise.weight ?? 0));
+  const [reps, setReps] = useState(String(exercise.reps ?? 10));
+  const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
+  const isLastSet = loggedSetCount + 1 >= (exercise.sets || 1);
 
   const refreshAfterMutation = (updatedSession: any) => {
     queryClient.setQueryData(['session', sessionId], updatedSession);
@@ -181,13 +172,15 @@ function LogSetForm({
         set_number: loggedSetCount + 1,
         weight: parseFloat(weight || '0'),
         reps: parseInt(reps || '0'),
-        sensation: note.toLowerCase().includes('molest') ? 'molestia' : 'ok',
-        notes: note,
+        sensation: 'ok',
+        notes: '',
       }),
     onSuccess: (updatedSession) => {
       refreshAfterMutation(updatedSession);
       haptic('ok');
-      showToast('Serie guardada', 'ok');
+      // Last step of the flow: logging the final set also completes the exercise.
+      if (isLastSet) completeExercise.mutate();
+      else showToast('Serie guardada', 'ok');
     },
     onError: (error: any) => {
       haptic('bad');
@@ -217,44 +210,45 @@ function LogSetForm({
     logSet.mutate();
   };
 
+  const isBusy = logSet.isPending || completeExercise.isPending;
+
   return (
-    <>
-      <div class="card">
-        <h2>Registrar serie {loggedSetCount + 1}</h2>
-        <div class="row mt-2.5">
-          <label>
-            <p>Peso (kg)</p>
-            <input
-              type="number"
-              inputmode="decimal"
-              step="0.5"
-              value={weight}
-              onInput={(event: any) => setWeight(event.target.value)}
-            />
-          </label>
-          <label>
-            <p>Reps</p>
-            <input type="number" inputmode="numeric" value={reps} onInput={(event: any) => setReps(event.target.value)} />
-          </label>
+    <div class="card set-card">
+      <div class="row steppers">
+        <div class="stepper">
+          <p>Peso</p>
+          <div>
+            {isBodyweight ? (
+              <div class="stepper-fixed">Corporal</div>
+            ) : (
+              <input type="number" inputmode="decimal" step="0.5" value={weight} onInput={(event: any) => setWeight(event.target.value)} />
+            )}
+          </div>
         </div>
-        <textarea
-          class="mt-2.5"
-          placeholder="Nota: fácil, duro, molestia..."
-          value={note}
-          onInput={(event: any) => setNote(event.target.value)}
-        />
-        <BusyButton busy={logSet.isPending} busyLabel="Guardando..." class="btn mt-2.5" onClick={saveSet}>
-          ✓ Guardar serie
-        </BusyButton>
+        <div class="stepper">
+          <p>Reps</p>
+          <div>
+            <input type="number" inputmode="numeric" value={reps} onInput={(event: any) => setReps(event.target.value)} />
+          </div>
+        </div>
       </div>
-      <BusyButton
-        busy={completeExercise.isPending}
-        busyLabel="Completando..."
-        class="btn secondary mt-2.5"
-        onClick={() => completeExercise.mutate()}
-      >
-        ✓ Completar
+      <BusyButton busy={isBusy} busyLabel="Guardando..." class="btn set-save" onClick={saveSet}>
+        {isLastSet ? 'Completar ejercicio' : 'Completar serie'}
       </BusyButton>
-    </>
+      {!isLastSet && (
+        <button class="btn ghost mt-2" disabled={isBusy} onClick={() => setConfirmFinishOpen(true)}>
+          Terminar ejercicio
+        </button>
+      )}
+      <ConfirmSheet
+        open={confirmFinishOpen}
+        title="Terminar ejercicio"
+        message={`Te quedan ${exercise.sets - loggedSetCount} series por hacer. ¿Terminar igualmente?`}
+        confirmLabel="Terminar"
+        busy={completeExercise.isPending}
+        onConfirm={() => completeExercise.mutate()}
+        onCancel={() => setConfirmFinishOpen(false)}
+      />
+    </div>
   );
 }

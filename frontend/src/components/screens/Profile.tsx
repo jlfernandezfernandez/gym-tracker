@@ -52,15 +52,13 @@ export function Profile() {
         ['Limitaciones', profile.limitations],
         ['Equipamiento', profile.available_equipment],
         ['No disponible', profile.unavailable_equipment],
-        ['Le gustan', profile.preferred_exercises],
-        ['No le gustan', profile.disliked_exercises],
         ['Notas', profile.notes],
       ]
     : [];
 
   return (
     <>
-      <TopBar title="Tu perfil" subtitle="Lo que el coach sabe de ti" onBack={app.pop} />
+      <TopBar title="Perfil" subtitle="El contexto que utiliza tu coach" onBack={app.pop} />
       {profileQuery.isLoading ? (
         <Loading />
       ) : profileQuery.isError || !profile ? (
@@ -68,18 +66,19 @@ export function Profile() {
       ) : (
         <>
           <div class="card">
+            <p class="eyebrow">Atleta</p>
             <h1>{profile.name || 'Atleta'}</h1>
-            <p>{profile.onboarding_complete ? 'Perfil deportivo activo' : 'Onboarding pendiente — habla con el coach'}</p>
+            <p>{profile.goal || (profile.onboarding_complete ? 'Perfil deportivo activo' : 'Completa el perfil con tu coach')}</p>
           </div>
 
           {!app.readOnly && (
             <button class="btn ghost mt-2.5" onClick={() => app.push({ name: 'editProfile' })}>
-              ✎ Editar perfil
+              Editar perfil
             </button>
           )}
 
           <div class="card">
-            <h2>Datos fijos</h2>
+            <h2>Entrenamiento y cuerpo</h2>
             <div class="profile-grid mt-2.5">
               {fixedFacts
                 .filter(([, value]) => value)
@@ -91,7 +90,7 @@ export function Profile() {
 
           {coachContext.some(([, value]) => value) && (
             <div class="card">
-              <h2>Contexto del coach</h2>
+              <h2>Restricciones y preferencias</h2>
               <div class="sets mt-2.5">
                 {coachContext
                   .filter(([, value]) => value)

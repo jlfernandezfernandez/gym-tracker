@@ -12,7 +12,7 @@ import os
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Any
+from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
@@ -34,8 +34,8 @@ Operating rules:
    blocks and save with patch_athlete_profile (finish with {"onboarding_complete": true}).
 2. Never invent weight, height, injuries, machines or history. Read the profile, check
    list_sessions / exercise_progress / list_measurements, or ask.
-3. Pick exercises yourself: list_exercises / list_muscle_groups, then send them in
-   create_plan exercises_json. The API rejects empty plans.
+3. Pick exercises yourself: call list_exercise_facets for valid filters, use list_exercises,
+   then send returned exercise ids in create_plan exercises_json. Never invent catalog ids.
 4. Preview before training: create_plan leaves the session as 'planned'; send session_web_url.
    Not convincing? delete_session and create another.
 5. During the workout update state, don't just chat: "did 12 reps" → log_set; pain →
@@ -119,13 +119,31 @@ def patch_athlete_profile(updates_json: str, telegram_user_id: int | None = None
 
 
 @mcp.tool()
-def list_exercises(search: str = "", muscle_group: str = "", limit: int = 10) -> list[dict[str, Any]]:
-    """Search the exercise catalog by name and/or muscle group."""
-    params: dict[str, Any] = {"limit": max(1, min(int(limit), 50))}
+def list_exercises(
+    search: str = "",
+    muscle_group: str = "",
+    body_part: str = "",
+    equipment: str = "",
+    limit: int = 10,
+    offset: int = 0,
+) -> list[dict[str, Any]]:
+    """Search exercises by name and exact catalog facets.
+
+    Call list_exercise_facets first instead of guessing muscle_group, body_part,
+    or equipment. Use offset to inspect more than the first page.
+    """
+    params: dict[str, Any] = {
+        "limit": max(1, min(int(limit), 50)),
+        "offset": max(0, int(offset)),
+    }
     if search:
         params["search"] = search
     if muscle_group:
         params["muscle_group"] = muscle_group
+    if body_part:
+        params["body_part"] = body_part
+    if equipment:
+        params["equipment"] = equipment
     qs = urllib.parse.urlencode(params)
     return _request("GET", f"/exercises?{qs}")
 
@@ -137,14 +155,14 @@ def get_exercise(exercise_id: int) -> dict[str, Any]:
 
 
 @mcp.tool()
-def list_muscle_groups() -> list[str]:
-    """List available exercise muscle groups."""
-    return _request("GET", "/exercises/muscle-groups")
+def list_exercise_facets() -> dict[str, list[str]]:
+    """List valid muscle_group, body_part, and equipment values for catalog search."""
+    return _request("GET", "/exercises/facets")
 
 
 @mcp.tool()
 def exercise_progress(exercise_id: int, limit: int = 20, telegram_user_id: int | None = None) -> list[dict[str, Any]]:
-    """Progression of one exercise across sessions: date, top weight, volume, sets. Use it to talk progress and choose next weights."""
+    """Progression by session: top_weight, top_reps, volume, and sets. Bodyweight exercises use top_reps."""
     qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 100))})
     return _request("GET", f"/exercises/{int(exercise_id)}/progress?{qs}", user_id=telegram_user_id)
 
@@ -232,8 +250,8 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
 
 
 @mcp.tool()
-def log_set(session_id: int, planned_exercise_id: int, set_number: int, weight: float = 0.0, reps: int = 0, rpe: float | None = None, sensation: str = "", notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Log one performed set for a planned exercise."""
+def log_set(session_id: int, planned_exercise_id: int, set_number: int, reps: int, weight: float = 0.0, rpe: float | None = None, sensation: str = "", notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Log one performed set. reps must be positive; weight is zero for bodyweight."""
     payload: dict[str, Any] = {
         "set_number": int(set_number),
         "weight": float(weight),
@@ -253,7 +271,7 @@ def delete_set(session_id: int, planned_exercise_id: int, set_id: int, telegram_
 
 
 @mcp.tool()
-def update_planned_exercise(session_id: int, planned_exercise_id: int, status: str = "completed", new_exercise_id: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped", "changed"] = "completed", new_exercise_id: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
     """Mark an exercise completed/skipped/changed; optionally replace it with another catalog exercise."""
     payload: dict[str, Any] = {"status": status, "notes": notes}
     if new_exercise_id is not None:
@@ -329,13 +347,13 @@ def record_body_measurement(
 
 
 @mcp.tool()
-def session_web_url(session_id: int, planned_exercise_id: int | None = None) -> str:
+def session_web_url(session_id: int, planned_exercise_id: int | None = None, telegram_user_id: int | None = None) -> str:
     """Return a Mini App URL for a session or a specific exercise screen.
 
     User-facing links must not expose sequential session ids. Resolve the
     session through the API using the coach key, then build a share-token URL.
     """
-    session = _request("GET", f"/sessions/{int(session_id)}")
+    session = _request("GET", f"/sessions/{int(session_id)}", user_id=telegram_user_id)
     token = urllib.parse.quote(str(session["share_token"]), safe="")
     url = f"{APP_BASE}/session/share/{token}"
     if planned_exercise_id is not None:

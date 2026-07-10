@@ -11,7 +11,7 @@ export function History() {
 
   return (
     <>
-      <TopBar title="Historial" subtitle="Últimas sesiones" onBack={app.pop} />
+      <TopBar title="Historial" subtitle="Tu entrenamiento, en orden" onBack={app.pop} />
       {sessionsQuery.isLoading ? (
         <Loading />
       ) : sessionsQuery.isError ? (
@@ -23,14 +23,15 @@ export function History() {
           Empieza a entrenar con el coach.
         </Empty>
       ) : (
-        sessionsQuery.data.map((session: any) => (
-          <div class="card tap" key={session.id} onClick={() => app.openSession(session.id)}>
-            <h3>{cleanTitle(session.title)}</h3>
-            <p>
-              {formatDate(session.session_date)} · {session.exercise_count || 0} ejercicios · {session.total_sets || 0} series
-            </p>
-          </div>
-        ))
+        <div class="history-list">
+          {sessionsQuery.data.map((session: any) => (
+            <button class="history-row" key={session.id} onClick={() => app.openSession(session.id)}>
+              <span class="history-date">{formatDate(session.session_date)}</span>
+              <span class="history-main"><b>{cleanTitle(session.title)}</b><small>{session.exercise_count || 0} ejercicios · {session.total_sets || 0} series{session.duration_actual ? ` · ${session.duration_actual} min` : ''}</small></span>
+              <span class="history-chevron">›</span>
+            </button>
+          ))}
+        </div>
       )}
     </>
   );

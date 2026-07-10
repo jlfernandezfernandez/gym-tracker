@@ -3,8 +3,8 @@ export const tg = (window as any).Telegram?.WebApp;
 
 if (tg) {
   tg.expand();
-  tg.setHeaderColor?.('#f6f7f9');
-  tg.setBackgroundColor?.('#f6f7f9');
+  tg.setHeaderColor?.('#f5f5f7');
+  tg.setBackgroundColor?.('#f5f5f7');
 }
 
 export const inTelegram = () => !!(tg?.initData && tg.initData.length > 10);

@@ -1,12 +1,27 @@
 /** Session data helpers and small UI utilities. */
+import taxonomy from './exercise-taxonomy.json';
 
-export const STATUS_ES: Record<string, string> = {
-  pending: 'pendiente',
-  in_progress: 'en curso',
-  completed: 'hecho',
-  skipped: 'saltado',
-  changed: 'cambiado',
+const STATUS_ES: Record<string, string> = {
+  planned: 'Planificada',
+  active: 'Activa',
+  pending: 'Pendiente',
+  in_progress: 'En curso',
+  completed: 'Hecho',
+  skipped: 'Saltado',
+  changed: 'Cambiado',
 };
+
+type TaxonomyTerm = { es: string; bodyMap: string[] };
+export const EXERCISE_TAXONOMY = taxonomy as Record<string, TaxonomyTerm>;
+
+export const formatStatus = (status: string) => STATUS_ES[status] || status;
+
+export const formatMuscle = (muscle: string) => {
+  const value = String(muscle || '').trim();
+  return EXERCISE_TAXONOMY[value.toLowerCase()]?.es || (value ? value[0].toUpperCase() + value.slice(1) : '');
+};
+
+export const formatWeight = (kg: number) => (kg ? `${kg} kg` : 'Peso corporal');
 
 export const formatDate = (isoDate: string) =>
   new Date(isoDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -64,7 +79,6 @@ export function sessionMuscles(exercises: any[]) {
 }
 
 export const completedSetCount = (exercise: any) => exercise.performed_sets?.length || 0;
-
 export function currentExercise(plan: any, currentState: any) {
   const currentPlannedId = currentState?.current_planned_exercise_id;
   return (
@@ -77,6 +91,8 @@ export function currentExercise(plan: any, currentState: any) {
 export function showToast(message: string, type?: string) {
   const toastElement = document.createElement('div');
   toastElement.className = 'toast' + (type ? ' ' + type : '');
+  toastElement.setAttribute('role', type === 'err' ? 'alert' : 'status');
+  toastElement.setAttribute('aria-live', type === 'err' ? 'assertive' : 'polite');
   toastElement.textContent = message;
   document.body.appendChild(toastElement);
   setTimeout(() => toastElement.remove(), 2800);

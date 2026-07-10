@@ -25,7 +25,7 @@ que FastAPI sirva `frontend/dist/`.
 - `backend/exercise_data/` — catálogo bilingüe (JSON en el repo; imágenes/GIFs se descargan del fork dataset-es en el primer arranque).
 - Para crear migraciones: `cd backend && alembic revision --autogenerate -m "desc"`. Se aplican solo en el boot.
 - `frontend/` — Mini App en Astro + Preact: `src/pages/index.astro` (shell), `src/components/App.tsx` (island + router), `src/components/screens/*` (pantallas), `src/lib/*` (api, helpers, chart, bodymap).
-- `mcp/gym_tracker_mcp.py` — servidor MCP (22 tools) que habla con la API pública.
+- `mcp/gym_tracker_mcp.py` — servidor MCP (23 tools) que habla con la API pública.
 - `templates/` — SOUL.md y SKILL.md para el perfil del agente coach.
 - `docs/` — GitHub Pages + guía de setup.
 

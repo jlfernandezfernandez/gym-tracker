@@ -44,7 +44,8 @@ Important tools:
 
 - `get_athlete_profile`: read the athlete's fitness profile, injuries, goals, gym equipment, onboarding status.
 - `patch_athlete_profile`: save profile facts as JSON — onboarding result (`onboarding_complete: true`), missing machines, injuries, preferences.
-- `create_plan`: create a workout plan after onboarding/check-in. Pick exercises yourself with `list_exercises` and pass them in `exercises_json` — the API rejects empty plans.
+- `list_exercise_facets`: discover valid catalog filters before choosing exercises.
+- `create_plan`: create a workout plan after onboarding/check-in. Pick exercises returned by `list_exercises` and pass their IDs in `exercises_json` — the API rejects empty plans.
 - `get_active_session`: read latest non-completed session plus current exercise/set.
 - `get_current_state`: read derived current planned exercise and next set for a session.
 - `get_session`: read one workout session; `list_sessions` for the history (filter by date for "today").

@@ -1,4 +1,4 @@
-/** Shared UI primitives: loading, empty state, topbar, bodymap and chart wrappers. */
+/** Shared UI primitives: loading, empty state, topbar, confirm sheet, bodymap and chart wrappers. */
 import { useEffect, useRef } from 'preact/hooks';
 import { renderBodyMap } from '../lib/bodymap';
 import { renderProgressChart, type ProgressPoint } from '../lib/chart';
@@ -21,7 +21,17 @@ export function Empty({ icon, children }: { icon: string; children: any }) {
   );
 }
 
-export function TopBar({ title, subtitle, onBack }: { title: string; subtitle?: string; onBack?: () => void }) {
+export function TopBar({
+  title,
+  subtitle,
+  onBack,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  onBack?: () => void;
+  action?: any;
+}) {
   return (
     <div class="topbar">
       {onBack && (
@@ -33,6 +43,7 @@ export function TopBar({ title, subtitle, onBack }: { title: string; subtitle?: 
         <h2>{title}</h2>
         {subtitle && <p>{subtitle}</p>}
       </div>
+      {action}
     </div>
   );
 }
@@ -50,18 +61,8 @@ export function BusyButton({
   onClick: () => void;
   children: any;
 }) {
-  // Synchronous double-click guard: `busy` (React state) only updates on the
-  // next render, so two clicks in the same tick would both fire without it.
-  const lastClickAtRef = useRef(0);
-  const handleClick = () => {
-    const now = Date.now();
-    if (busy || now - lastClickAtRef.current < 350) return;
-    lastClickAtRef.current = now;
-    onClick();
-  };
-
   return (
-    <button class={cssClass} disabled={busy} onClick={handleClick}>
+    <button class={cssClass} disabled={busy} onClick={onClick}>
       {busy ? (
         <>
           <span class="btn-spinner" />
@@ -71,6 +72,44 @@ export function BusyButton({
         children
       )}
     </button>
+  );
+}
+
+/** Native <dialog> confirmation — window.confirm() is unreliable in the Telegram webview. */
+export function ConfirmSheet({
+  open,
+  title,
+  message,
+  confirmLabel,
+  busy = false,
+  onConfirm,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  message: string;
+  confirmLabel: string;
+  busy?: boolean;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    open ? dialogRef.current?.showModal() : dialogRef.current?.close();
+  }, [open]);
+  return (
+    <dialog ref={dialogRef} class="sheet" onClose={onCancel}>
+      <h2>{title}</h2>
+      <p>{message}</p>
+      <div class="row mt-3">
+        <button class="btn ghost" onClick={onCancel}>
+          Cancelar
+        </button>
+        <BusyButton busy={busy} busyLabel="..." onClick={onConfirm}>
+          {confirmLabel}
+        </BusyButton>
+      </div>
+    </dialog>
   );
 }
 

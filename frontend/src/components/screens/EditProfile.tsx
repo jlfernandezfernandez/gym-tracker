@@ -15,8 +15,6 @@ const FIELDS = [
   { key: 'usual_session_minutes', label: 'Min/sesión', type: 'number', placeholder: '45' },
   { key: 'gym_name', label: 'Gimnasio', type: 'text', placeholder: 'Mi gym' },
   { key: 'injuries', label: 'Lesiones / patologías', type: 'text', placeholder: 'Resumen breve' },
-  { key: 'preferred_exercises', label: 'Ejercicios que te gustan', type: 'text', placeholder: 'Press, sentadilla...' },
-  { key: 'disliked_exercises', label: 'Ejercicios que no te gustan', type: 'text', placeholder: 'No me va el...' },
 ] as const;
 
 export function EditProfile() {
@@ -60,13 +58,13 @@ export function EditProfile() {
 
   return (
     <>
-      <TopBar title="Editar perfil" subtitle="Lo que guardas aquí ve el coach" onBack={app.pop} />
+      <TopBar title="Editar perfil" subtitle="Estos cambios informan al coach" onBack={app.pop} />
       {profileQuery.isLoading ? (
         <Loading />
       ) : profileQuery.isError || !profileQuery.data ? (
         <Empty icon="⚠️">No pude cargar el perfil.</Empty>
       ) : (
-        <div class="card">
+        <div class="card profile-form">
           {FIELDS.map((field, index) => (
             <label key={field.key} class={index === 0 ? '' : 'mt-2.5'}>
               <p class="text-xs">{field.label}</p>
