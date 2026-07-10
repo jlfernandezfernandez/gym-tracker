@@ -39,7 +39,7 @@ export function Records() {
       ) : (
         groupByMuscle(recordsQuery.data).map(([muscleGroup, records]) => (
           <section key={muscleGroup}>
-            <p class="eyebrow records-group">{formatMuscle(muscleGroup)}</p>
+            <p class="eyebrow list-group">{formatMuscle(muscleGroup)}</p>
             {records.map((record: any) => (
               <button
                 class="card tap exercise-card"

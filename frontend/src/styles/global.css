@@ -632,9 +632,10 @@
   .history-main small { font-size: .72rem; color: var(--color-hint); margin-top: 3px; }
   .history-chevron { font-size: 1.4rem; color: var(--color-divider); }
 
-  /* ── Records: muscle group headings ── */
-  .records-group { margin: 20px 3px 2px; }
-  .records-group:first-of-type { margin-top: 10px; }
+  /* ── Grouped list headings (records by muscle, history by week) ── */
+  .list-group { margin: 20px 3px 2px; }
+  section:first-of-type .list-group { margin-top: 10px; }
+  .list-group + .history-list { margin-top: 8px; }
 
   /* ── Section heading ── */
   .section-heading { padding: 22px 3px 3px; }
@@ -644,6 +645,9 @@
   .bodymap { display: flex; justify-content: center; gap: 12px; margin-top: 10px; padding: 6px 0; }
   .bodymap-figure { display: flex; flex-direction: column; align-items: center; gap: 4px; }
   .bodymap-figure > div { width: 125px; }
+  /* The posterior artwork fills more of its 100×200 viewBox than the anterior;
+     shrink it slightly so both figures read the same size. */
+  .bodymap-figure > div[data-side="posterior"] { width: 120px; }
   .bodymap-figure span {
     font-size: .58rem;
     color: var(--color-hint);

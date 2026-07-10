@@ -2,6 +2,35 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
 import { cleanTitle, formatDate } from '../../lib/helpers';
+
+/** Monday of the week containing the given date. */
+function weekStart(isoDate: string): Date {
+  const date = new Date(isoDate + 'T00:00:00');
+  date.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  return date;
+}
+
+function weekLabel(start: Date): string {
+  const currentWeekStart = weekStart(new Date().toISOString().slice(0, 10));
+  const daysApart = Math.round((currentWeekStart.getTime() - start.getTime()) / 86400000);
+  if (daysApart === 0) return 'Esta semana';
+  if (daysApart === 7) return 'Semana pasada';
+  const end = new Date(start);
+  end.setDate(end.getDate() + 6);
+  const shortDay = (day: Date) => day.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  return `${shortDay(start)} – ${shortDay(end)}`;
+}
+
+/** Groups sessions (already newest-first) into weeks, preserving order. */
+function groupByWeek(sessions: any[]): [string, any[]][] {
+  const weeks = new Map<string, any[]>();
+  for (const session of sessions) {
+    const label = weekLabel(weekStart(session.session_date));
+    if (!weeks.has(label)) weeks.set(label, []);
+    weeks.get(label)!.push(session);
+  }
+  return [...weeks.entries()];
+}
 import { useApp } from '../App';
 import { Empty, Loading, TopBar } from '../ui';
 
@@ -23,15 +52,20 @@ export function History() {
           Empieza a entrenar con el coach.
         </Empty>
       ) : (
-        <div class="history-list">
-          {sessionsQuery.data.map((session: any) => (
-            <button class="history-row" key={session.id} onClick={() => app.openSession(session.id)}>
-              <span class="history-date">{formatDate(session.session_date)}</span>
-              <span class="history-main"><b>{cleanTitle(session.title)}</b><small>{session.exercise_count || 0} ejercicios · {session.total_sets || 0} series{session.duration_actual ? ` · ${session.duration_actual} min` : ''}</small></span>
-              <span class="history-chevron">›</span>
-            </button>
-          ))}
-        </div>
+        groupByWeek(sessionsQuery.data).map(([label, sessions]) => (
+          <section key={label}>
+            <p class="eyebrow list-group">{label}</p>
+            <div class="history-list">
+              {sessions.map((session: any) => (
+                <button class="history-row" key={session.id} onClick={() => app.openSession(session.id)}>
+                  <span class="history-date">{formatDate(session.session_date)}</span>
+                  <span class="history-main"><b>{cleanTitle(session.title)}</b><small>{session.exercise_count || 0} ejercicios · {session.total_sets || 0} series{session.duration_actual ? ` · ${session.duration_actual} min` : ''}</small></span>
+                  <span class="history-chevron">›</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        ))
       )}
     </>
   );
