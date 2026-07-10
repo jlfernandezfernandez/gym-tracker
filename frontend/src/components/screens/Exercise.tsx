@@ -177,8 +177,7 @@ function LogSetForm({
   // The backend gives bodyweight exercises their fixed sentinel value.
   const isBodyweight = exercise.weight_mode === 'bodyweight';
   const [weight, setWeight] = useState(String(previousSet?.weight ?? exercise.weight ?? 0));
-  const [reps, setReps] = useState(String(exercise.reps ?? 10));
-  const [adjusting, setAdjusting] = useState(false);
+  const [reps, setReps] = useState(String(previousSet?.reps ?? exercise.reps ?? 10));
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
   const isLastSet = loggedSetCount + 1 >= (exercise.sets || 1);
 
@@ -239,33 +238,27 @@ function LogSetForm({
 
   return (
     <div class="card set-card">
-      {adjusting && (
-        <div class="row steppers">
-          <div class="stepper">
-            <label for="set-weight">{isBodyweight ? 'Peso corporal' : 'Peso'}</label>
-            <div>
-              {isBodyweight ? (
-                <div class="stepper-fixed">Peso corporal</div>
-              ) : (
-                <input id="set-weight" type="number" inputmode="decimal" step="0.5" value={weight} onInput={(event: any) => setWeight(event.target.value)} />
-              )}
-            </div>
-          </div>
-          <div class="stepper">
-            <label for="set-reps">Reps</label>
-            <div>
-              <input id="set-reps" type="number" inputmode="numeric" value={reps} onInput={(event: any) => setReps(event.target.value)} />
-            </div>
+      <div class="row steppers">
+        <div class="stepper">
+          <label for="set-weight">{isBodyweight ? 'Peso corporal' : 'Peso (kg)'}</label>
+          <div>
+            {isBodyweight ? (
+              <div class="stepper-fixed">Peso corporal</div>
+            ) : (
+              <input id="set-weight" type="number" inputmode="decimal" step="0.5" value={weight} onInput={(event: any) => setWeight(event.target.value)} />
+            )}
           </div>
         </div>
-      )}
-      <p class="text-xs">Confirma o ajusta el valor antes de registrar.</p>
+        <div class="stepper">
+          <label for="set-reps">Reps</label>
+          <div>
+            <input id="set-reps" type="number" inputmode="numeric" value={reps} onInput={(event: any) => setReps(event.target.value)} />
+          </div>
+        </div>
+      </div>
       <BusyButton busy={isBusy} busyLabel="Guardando..." class="btn set-save" onClick={saveSet}>
         Registrar {setSummary}
       </BusyButton>
-      <button class="btn ghost mt-2" disabled={isBusy} onClick={() => setAdjusting((open) => !open)}>
-        {adjusting ? 'Ocultar ajuste' : 'Ajustar'}
-      </button>
       {!isLastSet && (
         <button class="btn ghost mt-2" disabled={isBusy} onClick={() => setConfirmFinishOpen(true)}>
           Terminar ejercicio
