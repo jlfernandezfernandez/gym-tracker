@@ -8,7 +8,7 @@ import { haptic } from '../../lib/telegram';
 import { useApp, useSession } from '../App';
 import { BodyMap, BusyButton, ConfirmSheet, Empty, Loading, ProgressChart, TopBar } from '../ui';
 
-function SetRow({ set, sessionId, plannedId, exerciseId }: { set: any; sessionId: number; plannedId: number; exerciseId: number }) {
+function SetRow({ set, sessionId, plannedId, exerciseId, readOnly }: { set: any; sessionId: number; plannedId: number; exerciseId: number; readOnly?: boolean }) {
   const queryClient = useQueryClient();
   const del = useMutation({
     mutationFn: () => apiFetch('DELETE', `/sessions/${sessionId}/exercises/${plannedId}/sets/${set.id}`),
@@ -31,9 +31,11 @@ function SetRow({ set, sessionId, plannedId, exerciseId }: { set: any; sessionId
       <span class="n">Serie {set.set_number}</span>
       <span class="v">
         {set.reps} reps · {formatWeight(set.weight, set.weight_mode)}
-        <button class="set-del" disabled={del.isPending} onClick={() => del.mutate()} aria-label="Borrar serie">
-          ✕
-        </button>
+        {!readOnly && (
+          <button class="set-del" disabled={del.isPending} onClick={() => del.mutate()} aria-label="Borrar serie">
+            ✕
+          </button>
+        )}
       </span>
     </div>
   );
@@ -96,6 +98,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
                 sessionId={plan.id}
                 plannedId={exercise.planned_id}
                 exerciseId={exercise.exercise_id}
+                readOnly={app.readOnly}
               />
             ))}
           </div>
