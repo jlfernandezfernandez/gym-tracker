@@ -13,7 +13,6 @@ import { History } from './screens/History';
 import { Records } from './screens/Records';
 import { RecordDetail } from './screens/RecordDetail';
 import { Profile } from './screens/Profile';
-import { EditProfile } from './screens/EditProfile';
 
 type View =
   | { name: 'landing' }
@@ -22,8 +21,7 @@ type View =
   | { name: 'history' }
   | { name: 'records' }
   | { name: 'recordDetail'; exerciseId: number; title: string }
-  | { name: 'profile' }
-  | { name: 'editProfile' };
+  | { name: 'profile' };
 
 interface AppContextValue {
   push: (view: View) => void;
@@ -120,7 +118,6 @@ function Router() {
     records: <Records />,
     recordDetail: <RecordDetail exerciseId={view.exerciseId} title={view.title} />,
     profile: <Profile />,
-    editProfile: <EditProfile />,
   };
   return <AppContext.Provider value={appContext}>{screens[activeView.name]}</AppContext.Provider>;
 }

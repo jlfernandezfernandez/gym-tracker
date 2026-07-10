@@ -76,6 +76,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
           <p>{formatMuscle(exercise.target || exercise.muscle_group || '')}</p>
         </div>
       </div>
+      <PersonalBest exerciseId={exercise.exercise_id} />
       {/* Primary action first: log the set right under the exercise, history below. */}
       {/* key={loggedSetCount}: remount per set so inputs re-prefill from the last logged set. */}
       {!app.readOnly && exercise.status !== 'completed' && (
@@ -119,6 +120,36 @@ export function Exercise({ plannedId }: { plannedId: number }) {
         </div>
       )}
     </>
+  );
+}
+
+function PersonalBest({ exerciseId }: { exerciseId: number }) {
+  const progressQuery = useQuery({
+    queryKey: ['progress', exerciseId],
+    queryFn: () => apiFetch('GET', `/exercises/${exerciseId}/progress?limit=50`),
+  });
+  const points = progressQuery.data;
+  if (!points || points.length === 0) return null;
+
+  const usesWeight = chartUsesWeight(points);
+  const best = usesWeight
+    ? Math.max(...points.map((p: any) => p.top_weight || 0))
+    : Math.max(...points.map((p: any) => p.top_reps || 0));
+  const last = points[points.length - 1];
+  const lastValue = usesWeight ? last.top_weight : last.top_reps || 0;
+
+  return (
+    <div class="card best-card">
+      <div class="best-stat">
+        <span class="eyebrow">🏆 Mejor</span>
+        <b>{usesWeight ? `${best} kg` : `${best} reps`}</b>
+      </div>
+      <div class="best-divider" />
+      <div class="best-stat">
+        <span class="eyebrow">⏱ Última</span>
+        <b>{usesWeight ? `${lastValue} kg` : `${lastValue} reps`}</b>
+      </div>
+    </div>
   );
 }
 

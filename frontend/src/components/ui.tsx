@@ -1,7 +1,7 @@
 /** Shared UI primitives: loading, empty state, topbar, confirm sheet, bodymap and chart wrappers. */
 import { useEffect, useRef } from 'preact/hooks';
 import { renderBodyMap } from '../lib/bodymap';
-import { renderProgressChart, type ProgressPoint } from '../lib/chart';
+import { renderProgressChart, renderMeasurementChart, type ProgressPoint, type MeasurementPoint } from '../lib/chart';
 
 export function Loading({ message = 'Cargando...' }: { message?: string }) {
   return (
@@ -128,6 +128,20 @@ export function ProgressChart({ points }: { points: ProgressPoint[] }) {
     const chart = renderProgressChart(canvasRef.current, points);
     return () => chart.destroy();
   }, [points]);
+  return (
+    <div class="chart-wrap">
+      <canvas ref={canvasRef} />
+    </div>
+  );
+}
+
+export function MeasurementChart({ points, unit }: { points: MeasurementPoint[]; unit: string }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const chart = renderMeasurementChart(canvasRef.current, points, unit);
+    return () => chart.destroy();
+  }, [points, unit]);
   return (
     <div class="chart-wrap">
       <canvas ref={canvasRef} />

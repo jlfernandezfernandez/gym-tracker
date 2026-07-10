@@ -364,6 +364,23 @@
 
   /* ── Exercise focus ── */
   .exercise-focus { padding: 0; overflow: hidden; }
+
+  /* ── Personal best card (during exercise) ── */
+  .best-card {
+    display: flex;
+    align-items: center;
+    padding: 14px 18px;
+    margin-top: 8px;
+  }
+  .best-stat { flex: 1; text-align: center; }
+  .best-stat .eyebrow { display: block; margin-bottom: 4px; }
+  .best-stat b { font-size: 1.2rem; font-weight: 720; letter-spacing: -.02em; }
+  .best-divider {
+    width: 1px;
+    height: 36px;
+    background: var(--color-edge);
+    margin: 0 12px;
+  }
   .big-media { height: 235px; position: relative; }
   .big-media img { padding: 16px; }
   .exercise-focus-content { padding: 18px; }
@@ -516,22 +533,73 @@
   .landing-next .stat { background: var(--color-surface); }
 
   /* ── Profile / measurements ── */
-  .profile-grid {
+  .profile-fields {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-  .profile-tile {
-    padding: 13px;
+    gap: 0;
+    overflow: hidden;
     border-radius: var(--radius-control);
     background: var(--color-surface-2);
   }
-  .profile-tile b { display: block; font-size: 1rem; }
-  .profile-tile span {
-    font-size: .66rem;
+  .profile-field-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--color-edge);
+    min-height: 48px;
+  }
+  .profile-field-row:last-child { border-bottom: 0; }
+  .profile-field-label {
+    font-size: .85rem;
+    font-weight: 680;
+    color: var(--color-ink);
+    white-space: nowrap;
+  }
+  .profile-value-btn {
+    border: 0;
+    background: transparent;
     color: var(--color-hint);
-    text-transform: uppercase;
-    letter-spacing: .05em;
+    font-size: .85rem;
+    font-weight: 580;
+    cursor: pointer;
+    text-align: right;
+    min-height: 36px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    transition: background .12s;
+  }
+  .profile-value-btn:active { background: var(--color-hover); }
+  .profile-value-select {
+    border: 0;
+    background: transparent;
+    color: var(--color-hint);
+    font-size: .85rem;
+    font-weight: 580;
+    cursor: pointer;
+    text-align: right;
+    min-height: 36px;
+    outline: none;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 18px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23aeaeb2' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right center;
+  }
+  .profile-value-input {
+    border: 1px solid var(--color-accent);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-size: .85rem;
+    font-weight: 580;
+    text-align: right;
+    min-height: 36px;
+    width: 80px;
+    padding: 4px 8px;
+    box-shadow: 0 0 0 3px var(--color-accent-soft);
+    outline: none;
   }
   .measure-list { display: grid; gap: 7px; }
   .measure-row {
@@ -539,6 +607,19 @@
     border-radius: var(--radius-control);
     background: var(--color-surface-2);
   }
+  .measure-charts { display: grid; gap: 12px; }
+  .measure-chart-card {
+    border-radius: var(--radius-control);
+    background: var(--color-surface-2);
+    padding: 14px 15px;
+  }
+  .measure-chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .measure-chart-header h3 { font-size: .9rem; }
 
   /* ── Landing hero / session / home-nav ── */
   .landing-hero h1 { margin-top: 5px; }
