@@ -51,6 +51,7 @@ Comprueba el arranque:
 
 ```bash
 curl http://localhost:8000/health
+curl http://localhost:8001/health
 docker compose ps
 ```
 

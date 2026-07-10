@@ -15,6 +15,8 @@ import urllib.request
 from typing import Any
 
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,12 @@ Persistence split: physical/trainable facts → app profile. Your own agent memo
 stable human preferences. Never duplicate workout logs outside the app."""
 
 mcp = FastMCP("gym-tracker", instructions=COACH_GUIDE)
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(_: Request) -> JSONResponse:
+    """Liveness endpoint for Docker, Coolify, and reverse proxies."""
+    return JSONResponse({"status": "ok", "service": "gym-tracker-mcp"})
 
 
 def _request(method: str, path: str, payload: dict[str, Any] | None = None, user_id: int | None = None) -> Any:

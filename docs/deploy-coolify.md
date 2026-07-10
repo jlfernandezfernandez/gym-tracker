@@ -84,7 +84,14 @@ El MCP usa Streamable HTTP:
 /mcp
 ```
 
-Healthcheck de Coolify para el MCP es opcional. Verifica la conexión desde el cliente MCP después del despliegue.
+Healthcheck de Coolify:
+
+```text
+GET /health
+```
+
+Debe devolver HTTP 200. El endpoint `/mcp` no sirve como healthcheck porque
+un `GET` directo sin negociación MCP puede responder `406` correctamente.
 
 ## 2. Conectar la red interna
 
@@ -181,6 +188,7 @@ Debe responder HTTP 200.
 Comprueba también:
 
 - la Mini App carga desde el dominio configurado;
+- `GET /health` del MCP responde HTTP 200;
 - el MCP descubre sus herramientas;
 - el MCP puede ejecutar `health`;
 - la API puede leer y escribir PostgreSQL;
