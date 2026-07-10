@@ -90,17 +90,48 @@ const features = [
 		<p class="mx-auto mt-3 max-w-xl text-center text-hint">
 			Cualquier agente compatible con MCP se convierte en tu coach. Gym Tracker persiste todo lo demás.
 		</p>
-		<pre class="mx-auto mt-8 max-w-md overflow-x-auto rounded-card border border-edge bg-surface p-6 text-sm leading-relaxed text-ink shadow-card">
-Agente (Hermes, Claude, Codex, ...)
-              │ MCP
-              ▼
-        gym-tracker-mcp
-              │ API
-              ▼
-     gym-tracker + Postgres + MinIO
-              │
-              ▼
-       Mini App de Telegram</pre>
+		<div class="stagger mx-auto mt-10 flex max-w-sm flex-col items-center">
+			<div class="flow-node w-full rounded-card border border-edge bg-surface p-5 text-center shadow-card">
+				<p class="text-xs font-bold tracking-[.1em] text-hint uppercase">Tu agente</p>
+				<div class="mt-3 flex flex-wrap justify-center gap-2">
+					<span class="rounded-pill border border-edge px-3 py-1 text-xs font-semibold text-ink">Hermes</span>
+					<span class="rounded-pill border border-edge px-3 py-1 text-xs font-semibold text-ink">Claude</span>
+					<span class="rounded-pill border border-edge px-3 py-1 text-xs font-semibold text-ink">Codex</span>
+					<span class="rounded-pill border border-edge px-3 py-1 text-xs text-hint">cualquiera con MCP</span>
+				</div>
+			</div>
+
+			<div class="flow-link" aria-hidden="true">
+				<i></i><span>MCP</span>
+			</div>
+
+			<div class="flow-node w-full rounded-card border border-edge bg-surface p-5 text-center shadow-card">
+				<p class="font-semibold text-ink">gym-tracker-mcp</p>
+				<p class="mt-1 text-xs text-hint">herramientas de coach por Streamable HTTP</p>
+			</div>
+
+			<div class="flow-link" aria-hidden="true">
+				<i></i><span>API</span>
+			</div>
+
+			<div class="flow-node w-full rounded-card border border-edge bg-surface p-5 text-center shadow-card">
+				<p class="font-semibold text-ink">gym-tracker</p>
+				<div class="mt-3 flex flex-wrap justify-center gap-2">
+					<span class="rounded-pill bg-canvas px-3 py-1 text-xs font-semibold text-hint">FastAPI</span>
+					<span class="rounded-pill bg-canvas px-3 py-1 text-xs font-semibold text-hint">PostgreSQL</span>
+					<span class="rounded-pill bg-canvas px-3 py-1 text-xs font-semibold text-hint">MinIO</span>
+				</div>
+			</div>
+
+			<div class="flow-link" aria-hidden="true">
+				<i></i>
+			</div>
+
+			<div class="flow-node w-full rounded-card border border-accent/40 bg-accent/10 p-5 text-center">
+				<p class="font-semibold text-accent">📱 Mini App de Telegram</p>
+				<p class="mt-1 text-xs text-hint">tu progreso, donde ya hablas con tu coach</p>
+			</div>
+		</div>
 	</section>
 
 	<!-- FEATURES -->
@@ -196,6 +227,43 @@ docker compose up -d</code></pre>
 	.reveal.in .stagger > *:nth-child(4) { transition-delay: 180ms; }
 	.reveal.in .stagger > *:nth-child(5) { transition-delay: 240ms; }
 	.reveal.in .stagger > *:nth-child(6) { transition-delay: 300ms; }
+
+	/* ── Architecture flow ── */
+	.flow-link {
+		position: relative;
+		display: grid;
+		place-items: center;
+		height: 44px;
+	}
+	.flow-link i {
+		position: absolute;
+		inset: 0 auto 0 50%;
+		width: 2px;
+		transform: translateX(-50%);
+		background: linear-gradient(
+			to bottom,
+			var(--color-edge) 0 45%,
+			var(--color-accent) 50%,
+			var(--color-edge) 55% 100%
+		);
+		background-size: 100% 300%;
+		animation: flow 2.4s linear infinite;
+	}
+	.flow-link span {
+		position: relative;
+		border-radius: var(--radius-pill);
+		border: 1px solid var(--color-edge);
+		background: var(--color-canvas);
+		padding: 2px 10px;
+		font-size: 0.66rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		color: var(--color-accent);
+	}
+	@keyframes flow {
+		from { background-position: 0 100%; }
+		to { background-position: 0 -200%; }
+	}
 
 	/* ── Chat simulator ── */
 	.phone :global(.msg) {
@@ -343,6 +411,10 @@ docker compose up -d</code></pre>
 		}
 		.phone :global(.typing i) {
 			animation: none;
+		}
+		.flow-link i {
+			animation: none;
+			background: var(--color-edge);
 		}
 	}
 </style>
