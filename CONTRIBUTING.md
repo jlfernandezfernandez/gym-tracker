@@ -7,9 +7,11 @@
 ```bash
 git clone https://github.com/jlfernandezfernandez/gym-tracker.git
 cd gym-tracker
-cp .env.example .env      # TELEGRAM_BOT_TOKEN vacío = auth desactivada (modo dev)
-docker compose up -d      # app en http://localhost:8000 (el catálogo bilingüe se carga solo; las imágenes/GIFs se bajan del fork dataset-es al primer boot)
+cp .env.example .env
+docker compose up -d --build  # app:8000 + MCP:8001 + Postgres + MinIO
 ```
+
+La guía de despliegue en Coolify está en [`docs/deploy-coolify.md`](docs/deploy-coolify.md). La guía de conexión de agentes está en [`docs/agent-setup.md`](docs/agent-setup.md).
 
 Sin Docker: levanta un Postgres, `pip install -r backend/requirements.txt` y
 `cd backend && uvicorn main:app --reload`. Frontend: `cd frontend && npm install`

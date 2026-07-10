@@ -1,7 +1,7 @@
 # =============================================================================
 # gym-tracker — Docker Compose (desarrollo local)
 # =============================================================================
-# Replica la topología de producción: PostgreSQL 18 + MinIO + app.
+# Replica la topología de producción: PostgreSQL 18 + MinIO + app + MCP.
 # Los datos sobreviven a `docker compose down` gracias a los volúmenes.
 # Para empezar de cero: `docker compose down -v`.
 # =============================================================================
@@ -54,7 +54,7 @@ services:
       - "${APP_PORT:-8000}:8000"
     environment:
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@postgres:5432/${POSTGRES_DB:-gym_tracker}
-      CORS_ORIGINS: ${CORS_ORIGINS:-*}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       COACH_API_KEY: ${COACH_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
@@ -69,6 +69,27 @@ services:
       minio:
         condition: service_healthy
 
+  # Agente-agnostic MCP endpoint. Hermes, Claude, Codex, etc. can connect to
+  # http://localhost:8001/mcp from the host without being part of this stack.
+  mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: gym-tracker-mcp
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${MCP_PORT:-8001}:8001"
+    environment:
+      MCP_PORT: 8001
+      GYM_TRACKER_API_BASE: http://app:8000/api
+      GYM_TRACKER_APP_BASE: ${PUBLIC_APP_URL:-http://localhost:8000}
+      GYM_TRACKER_COACH_KEY: ${COACH_API_KEY:-}
+    depends_on:
+      app:
+        condition: service_healthy
+
 volumes:
   postgres_data:
+    name: gym-tracker-postgres-data
   minio_data:
+    name: gym-tracker-minio-data

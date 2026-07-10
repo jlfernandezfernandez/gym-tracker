@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Wrapper to run the gym-tracker MCP server with SSE transport (e.g. on Coolify)."""
+"""Run the gym-tracker MCP server with Streamable HTTP transport."""
 import os
 import sys
 

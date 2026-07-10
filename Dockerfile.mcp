@@ -1,4 +1,5 @@
-# MCP server as a standalone service (SSE transport), e.g. for Coolify.
+# MCP server as a standalone Streamable HTTP service, e.g. for local Compose
+# or a reverse-proxied deployment.
 # Set GYM_TRACKER_API_BASE / GYM_TRACKER_APP_BASE / GYM_TRACKER_COACH_KEY
 # in the deployment environment.
 FROM python:3.13-slim

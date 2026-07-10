@@ -267,23 +267,22 @@ footer a:hover{color:var(--text)}
   <div class="section" id="setup">
     <p class="eyebrow">Setup</p>
     <h2>Montar tu propio coach</h2>
-    <p class="lead">Docker Compose en local o Coolify con dominio. Un contenedor, un Postgres — el Dockerfile compila la Mini App y carga el catálogo solo.</p>
+    <p class="lead">Docker Compose en local o recursos independientes en Coolify. La aplicación es agnóstica al agente y el dominio es opcional.</p>
 
-    <h3 class="sub">1 — Levanta la app</h3>
+    <h3 class="sub">1 — Levanta el stack</h3>
     <pre><b>git clone</b> https://github.com/jlfernandezfernandez/gym-tracker.git
 <b>cd</b> gym-tracker
-<b>cp</b> .env.example .env      # TELEGRAM_BOT_TOKEN de @BotFather
-<b>docker compose up -d</b>     # app en localhost:8000, catálogo se carga solo</pre>
+<b>cp</b> .env.example .env
+<b>docker compose up -d</b>     # app:8000 + MCP:8001 + Postgres + MinIO</pre>
 
-    <h3 class="sub">2 — Conecta tu agente (ej. Hermes)</h3>
-    <pre><b>hermes profile create</b> gym-coach
-<b>hermes -p gym-coach mcp add</b> gym_tracker \
-  --stdio mcp/gym_tracker_mcp.py \
-  --env GYM_TRACKER_API_BASE=https://gym.tu-dominio.com/api
+    <h3 class="sub">2 — Conecta tu agente</h3>
+    <pre>Endpoint MCP para Hermes, Claude, Codex u otro agente:
+<b>http://localhost:8001/mcp</b>
 
-<b>hermes -p gym-coach config set</b> telegram.bot_token "TOKEN"
-<b>hermes -p gym-coach gateway start</b></pre>
-    <p style="margin-top:14px;color:var(--hint);font-size:14.5px">Guía completa paso a paso en <a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/docs/coach-setup.md" style="text-decoration:underline">docs/coach-setup.md</a>.</p>
+URL pública opcional para la Mini App:
+<b>PUBLIC_APP_URL=https://gym.tu-dominio.com</b>
+<b>CORS_ORIGINS=https://gym.tu-dominio.com</b></pre>
+    <p style="margin-top:14px;color:var(--hint);font-size:14.5px">Guías: <a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/docs/agent-setup.md" style="text-decoration:underline">conectar un agente</a> · <a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/docs/deploy-coolify.md" style="text-decoration:underline">desplegar en Coolify</a>.</p>
   </div>
 
   <div class="section">
@@ -292,14 +291,14 @@ footer a:hover{color:var(--text)}
     <div class="features">
       <div class="feature"><h3>FastAPI + SQLModel</h3><p>Backend async sobre Postgres. Auth HMAC de Telegram initData, scoping por usuario.</p></div>
       <div class="feature"><h3>Mini App en Astro</h3><p>Estática, TypeScript vanilla. Chart.js para progresión y body map anatómico como única isla React.</p></div>
-      <div class="feature"><h3>FastMCP</h3><p>23 herramientas por stdio. Instructions + docstrings = documentación que el agente lee al conectarse.</p></div>
+      <div class="feature"><h3>FastMCP</h3><p>Herramientas por Streamable HTTP. Instructions + docstrings = documentación que el agente lee al conectarse.</p></div>
       <div class="feature"><h3>Docker</h3><p>API + Mini App en un contenedor. Compose local o Coolify en producción.</p></div>
     </div>
   </div>
 
   <footer>
     <div class="frow">
-      <span>MIT License · Hecho por un agente Hermes, pensado para agentes.</span>
+      <span>MIT License · Pensado para agentes compatibles con MCP.</span>
       <span>
         <a href="https://github.com/jlfernandezfernandez/gym-tracker">GitHub</a> ·
         <a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/CONTRIBUTING.md">Contribuir</a> ·
