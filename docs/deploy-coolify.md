@@ -136,7 +136,8 @@ Si no usas dominio propio, sustituye `CORS_ORIGINS` por el origen real de la Min
 
 ## 4. Variables del MCP
 
-Configura estas variables como runtime variables en `gym-tracker-mcp`:
+Configura estas variables como runtime variables en `gym-tracker-mcp` y desactiva
+`Available at build time`. Los secretos no deben aparecer como `ARG` en el build:
 
 ```env
 GYM_TRACKER_API_BASE=http://<app-host>:8000/api
