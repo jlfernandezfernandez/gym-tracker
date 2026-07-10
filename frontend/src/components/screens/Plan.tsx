@@ -87,7 +87,6 @@ export function Plan() {
           exercise={exercise}
           isCurrent={String(exercise.planned_id) === String(currentPlannedId)}
           onOpen={() => openExercise(exercise.planned_id)}
-          sessionId={plan.id}
         />
       ))}
 
@@ -112,63 +111,30 @@ export function Plan() {
   );
 }
 
-function ExerciseCard({ exercise, isCurrent, onOpen, sessionId }: { exercise: any; isCurrent: boolean; onOpen: () => void; sessionId: number }) {
-  const queryClient = useQueryClient();
+function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurrent: boolean; onOpen: () => void }) {
   const mediaSrc = mediaUrl(exercise.image_url || exercise.gif_url);
-  const canAdjust = !exercise.performed_sets?.length && exercise.status !== 'completed';
-  const adjustSets = useMutation({
-    mutationFn: (delta: number) =>
-      apiFetch('PUT', `/sessions/${sessionId}/exercises/${exercise.planned_id}`, {
-        target_sets: Math.max(1, (exercise.sets || 0) + delta),
-      }),
-    onSuccess: (updated: any) => {
-      queryClient.setQueryData(['session', sessionId], updated);
-      haptic('light');
-    },
-    onError: (error: any) => {
-      haptic('bad');
-      showToast(error.message, 'err');
-    },
-  });
   return (
-    <div class={`card exercise-card ${isCurrent ? 'current' : ''}`}>
-      <button class="card-tap-area" onClick={onOpen} aria-label={`Abrir ${exercise.name || 'ejercicio'}`} />
-      <div class="exercise-card-row">
-        <div class="exercise-media">{mediaSrc ? <img src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}</div>
-        <div class="exercise-card-body">
-          <div class="exercise-title-row">
-            <h3>{exercise.name || 'Ejercicio'}</h3>
-            <span class="pill">{completedSetCount(exercise)}/{exercise.sets}</span>
-          </div>
-          <p>
-            {formatMuscle(exercise.target || exercise.muscle_group || '')}
-            {exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}
-          </p>
-          <div class="meta">
-            <div class="set-count-control">
-              <span class="pill active">{exercise.sets}×{exercise.reps}</span>
-              {canAdjust && (
-                <>
-                  <button
-                    class="set-stepper-btn"
-                    disabled={adjustSets.isPending || (exercise.sets || 0) <= 1}
-                    onClick={(e: any) => { e.stopPropagation(); adjustSets.mutate(-1); }}
-                    aria-label="Quitar serie"
-                  >−</button>
-                  <button
-                    class="set-stepper-btn"
-                    disabled={adjustSets.isPending || (exercise.sets || 0) >= 20}
-                    onClick={(e: any) => { e.stopPropagation(); adjustSets.mutate(1); }}
-                    aria-label="Añadir serie"
-                  >+</button>
-                </>
-              )}
-            </div>
-            <span class={`pill st-${exercise.status}`}>{formatStatus(exercise.status)}</span>
-          </div>
+    <button class={`card tap exercise-card ${isCurrent ? 'current' : ''}`} onClick={onOpen}>
+      <div class="exercise-media">{mediaSrc ? <img src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}</div>
+      <div class="exercise-card-body">
+        <div class="exercise-title-row">
+          <h3>{exercise.name || 'Ejercicio'}</h3>
+          <span class="pill">
+            {completedSetCount(exercise)}/{exercise.sets}
+          </span>
+        </div>
+        <p>
+          {formatMuscle(exercise.target || exercise.muscle_group || '')}
+          {exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}
+        </p>
+        <div class="meta">
+          <span class="pill active">
+            {exercise.sets}×{exercise.reps}
+          </span>
+          <span class={`pill st-${exercise.status}`}>{formatStatus(exercise.status)}</span>
         </div>
       </div>
-    </div>
+    </button>
   );
 }
 

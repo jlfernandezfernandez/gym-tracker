@@ -76,6 +76,9 @@ export function Exercise({ plannedId }: { plannedId: number }) {
           <p>{formatMuscle(exercise.target || exercise.muscle_group || '')}</p>
         </div>
       </div>
+      {!app.readOnly && exercise.status !== 'completed' && loggedSetCount === 0 && (
+        <SetCountControl sessionId={plan.id} plannedId={exercise.planned_id} currentSets={exercise.sets || 0} />
+      )}
       <ExerciseProgress exerciseId={exercise.exercise_id} />
       {/* Primary action first: log the set right under the exercise, history below. */}
       {/* key={loggedSetCount}: remount per set so inputs re-prefill from the last logged set. */}
@@ -158,6 +161,41 @@ function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
         </div>
       )}
     </>
+  );
+}
+
+function SetCountControl({ sessionId, plannedId, currentSets }: { sessionId: number; plannedId: number; currentSets: number }) {
+  const queryClient = useQueryClient();
+  const [sets, setSets] = useState(currentSets);
+  const adjust = useMutation({
+    mutationFn: (target: number) =>
+      apiFetch('PUT', `/sessions/${sessionId}/exercises/${plannedId}`, { target_sets: target }),
+    onSuccess: (updated: any) => {
+      queryClient.setQueryData(['session', sessionId], updated);
+      queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
+      haptic('light');
+    },
+    onError: (error: any) => {
+      setSets(currentSets);
+      haptic('bad');
+      showToast(error.message, 'err');
+    },
+  });
+  const step = (delta: number) => {
+    const next = Math.max(1, Math.min(20, sets + delta));
+    if (next === sets) return;
+    setSets(next);
+    adjust.mutate(next);
+  };
+  return (
+    <div class="card set-count-card">
+      <span class="eyebrow">Series</span>
+      <div class="set-count-row">
+        <button class="set-count-btn" disabled={adjust.isPending || sets <= 1} onClick={() => step(-1)} aria-label="Quitar serie">−</button>
+        <span class="set-count-value">{sets}</span>
+        <button class="set-count-btn" disabled={adjust.isPending || sets >= 20} onClick={() => step(1)} aria-label="Añadir serie">+</button>
+      </div>
+    </div>
   );
 }
 
