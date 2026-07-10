@@ -1,12 +1,12 @@
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import case, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session as get_db_session
 from telegram_auth import current_user_id
-from models import Exercise, PerformedSet, PlannedExercise, WorkoutSession
+from models import BODYWEIGHT_WEIGHT, Exercise, PerformedSet, PlannedExercise, WorkoutSession
 from schemas import ExerciseFacets, ExerciseOut
 
 router = APIRouter(prefix="/api/exercises", tags=["exercises"])
@@ -58,7 +58,7 @@ async def personal_records(
     db: AsyncSession = Depends(get_db_session),
     user_id: Optional[int] = Depends(current_user_id),
 ):
-    """Personal records: every exercise the athlete has performed, with max weight and last date."""
+    """Personal records with a backend-owned weight mode."""
     statement = (
         select(
             Exercise.id,
@@ -86,8 +86,9 @@ async def personal_records(
             "muscle_group": muscle_group,
             "equipment": equipment,
             "image_url": image_url,
-            "max_weight": float(max_weight or 0),
+            "max_weight": float(max_weight or 0) if equipment != "body weight" else BODYWEIGHT_WEIGHT,
             "max_reps": int(max_reps or 0),
+            "weight_mode": "bodyweight" if equipment == "body weight" else "weighted" if max_weight and max_weight > 0 else "unloaded",
             "last_date": last_date.isoformat(),
             "sessions": session_count,
         }
@@ -102,14 +103,17 @@ async def exercise_progress(
     db: AsyncSession = Depends(get_db_session),
     user_id: Optional[int] = Depends(current_user_id),
 ):
-    """Per-session progression for one exercise: top weight, volume and sets."""
+    """Per-session progression with server-computed weight semantics."""
+    exercise = await db.get(Exercise, exercise_id)
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
     statement = (
         select(
             WorkoutSession.id,
             WorkoutSession.session_date,
             func.max(PerformedSet.weight),
             func.max(PerformedSet.reps),
-            func.sum(PerformedSet.weight * PerformedSet.reps),
+            func.sum(case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)),
             func.count(PerformedSet.id),
         )
         .join(PlannedExercise, PerformedSet.planned_exercise_id == PlannedExercise.id)
@@ -128,9 +132,10 @@ async def exercise_progress(
         {
             "session_id": session_id,
             "date": session_date.isoformat(),
-            "top_weight": float(top_weight or 0),
+            "top_weight": float(top_weight or 0) if not exercise.is_bodyweight else BODYWEIGHT_WEIGHT,
             "top_reps": int(top_reps or 0),
-            "volume": float(volume or 0),
+            "volume": float(volume or 0) if not exercise.is_bodyweight else 0,
+            "weight_mode": "bodyweight" if exercise.is_bodyweight else "weighted" if top_weight and top_weight > 0 else "unloaded",
             "sets": set_count,
         }
         for session_id, session_date, top_weight, top_reps, volume, set_count in reversed(rows)

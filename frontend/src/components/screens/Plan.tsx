@@ -6,6 +6,7 @@ import {
   cleanTitle,
   completedSetCount,
   currentExercise,
+  formatEquipment,
   formatMuscle,
   formatStatus,
   mediaUrl,
@@ -124,7 +125,7 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
         </div>
         <p>
           {formatMuscle(exercise.target || exercise.muscle_group || '')}
-          {exercise.equipment ? ` · ${exercise.equipment}` : ''}
+          {exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}
         </p>
         <div class="meta">
           <span class="pill active">
@@ -138,11 +139,6 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
 }
 
 function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) {
-  const totalVolume = exercises.reduce(
-    (total, exercise) =>
-      total + (exercise.performed_sets || []).reduce((sum: number, set: any) => sum + set.weight * set.reps, 0),
-    0,
-  );
   const totalPerformedSets = exercises.reduce((total, exercise) => total + (exercise.performed_sets || []).length, 0);
   return (
     <div class="card">
@@ -154,7 +150,7 @@ function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) 
           <span>series</span>
         </div>
         <div class="stat">
-          <b>{Math.round(totalVolume)}</b>
+          <b>{Math.round(plan.total_volume)}</b>
           <span>kg volumen</span>
         </div>
         <div class="stat">

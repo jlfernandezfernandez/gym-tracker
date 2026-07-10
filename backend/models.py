@@ -4,6 +4,12 @@ from uuid import uuid4
 
 from sqlmodel import Field, SQLModel, Relationship
 
+BODYWEIGHT_WEIGHT = -1.0
+
+
+def weight_mode(weight: float) -> str:
+    return "bodyweight" if weight == BODYWEIGHT_WEIGHT else "weighted" if weight > 0 else "unloaded"
+
 
 class Exercise(SQLModel, table=True):
     __tablename__ = "exercises"
@@ -24,6 +30,10 @@ class Exercise(SQLModel, table=True):
     gif_url: str = Field(default="")
 
     planned_exercises: list["PlannedExercise"] = Relationship(back_populates="exercise")
+
+    @property
+    def is_bodyweight(self) -> bool:
+        return self.equipment == "body weight"
 
 
 class WorkoutSession(SQLModel, table=True):
@@ -46,6 +56,14 @@ class WorkoutSession(SQLModel, table=True):
 
     planned_exercises: list["PlannedExercise"] = Relationship(back_populates="session")
 
+    @property
+    def total_volume(self) -> float:
+        return sum(
+            max(performed_set.weight, 0) * performed_set.reps
+            for planned_exercise in self.planned_exercises or []
+            for performed_set in planned_exercise.performed_sets or []
+        )
+
 
 class PlannedExercise(SQLModel, table=True):
     __tablename__ = "planned_exercises"
@@ -64,6 +82,10 @@ class PlannedExercise(SQLModel, table=True):
     exercise: "Exercise" = Relationship(back_populates="planned_exercises")
     performed_sets: list["PerformedSet"] = Relationship(back_populates="planned_exercise")
 
+    @property
+    def weight_mode(self) -> str:
+        return weight_mode(self.suggested_weight)
+
 
 class PerformedSet(SQLModel, table=True):
     __tablename__ = "performed_sets"
@@ -79,6 +101,10 @@ class PerformedSet(SQLModel, table=True):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
 
     planned_exercise: "PlannedExercise" = Relationship(back_populates="performed_sets")
+
+    @property
+    def weight_mode(self) -> str:
+        return weight_mode(self.weight)
 
 
 class AthleteMeasurement(SQLModel, table=True):
@@ -108,15 +134,8 @@ class AthleteProfile(SQLModel, table=True):
     weight_kg: Optional[float] = Field(default=None)
     goal: str = Field(default="")
     experience_level: str = Field(default="")
-    training_days_per_week: Optional[int] = Field(default=None)
-    usual_session_minutes: Optional[int] = Field(default=None)
-    injuries: str = Field(default="")
-    limitations: str = Field(default="")
     preferred_exercises: str = Field(default="")
     disliked_exercises: str = Field(default="")
-    gym_name: str = Field(default="")
-    available_equipment: str = Field(default="")
-    unavailable_equipment: str = Field(default="")
     notes: str = Field(default="")
     onboarding_complete: bool = Field(default=False)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))

@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from database import get_session
 from telegram_auth import current_user_id
-from models import WorkoutSession, PlannedExercise
+from models import BODYWEIGHT_WEIGHT, Exercise, WorkoutSession, PlannedExercise
 from schemas import CoachPlanRequest, SessionOut
 from routers.sessions import _load_session
 
@@ -44,13 +44,20 @@ async def coach_plan(
     await db.flush()
 
     for exercise_spec in body.exercises:
+        exercise = await db.get(Exercise, exercise_spec.exercise_id)
+        if not exercise:
+            raise HTTPException(status_code=422, detail=f"Exercise {exercise_spec.exercise_id} not found")
+        if exercise.is_bodyweight:
+            suggested_weight = BODYWEIGHT_WEIGHT
+        elif exercise_spec.suggested_weight == BODYWEIGHT_WEIGHT:
+            raise HTTPException(status_code=422, detail="-1 weight is reserved for bodyweight exercises")
         db.add(PlannedExercise(
             session_id=workout.id,
             exercise_id=exercise_spec.exercise_id,
             order=exercise_spec.order,
             target_sets=exercise_spec.target_sets,
             target_reps=exercise_spec.target_reps,
-            suggested_weight=exercise_spec.suggested_weight,
+            suggested_weight=suggested_weight if exercise.is_bodyweight else exercise_spec.suggested_weight,
             notes=exercise_spec.notes,
         ))
 

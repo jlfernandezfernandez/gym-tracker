@@ -6,6 +6,7 @@ import Chart from 'chart.js/auto';
 export interface ProgressPoint {
   date: string;
   top_weight: number;
+  weight_mode: 'bodyweight' | 'unloaded' | 'weighted';
   top_reps?: number;
   volume: number;
   sets: number;
@@ -25,7 +26,7 @@ const COLORS = {
 const GRID_COLOR = 'rgba(17,24,39,.08)';
 
 /** Bodyweight exercises have no logged weight; the chart (and its labels) fall back to reps. */
-export const chartUsesWeight = (points: ProgressPoint[]) => points.some((point) => point.top_weight > 0);
+export const chartUsesWeight = (points: ProgressPoint[]) => points.some((point) => point.weight_mode === 'weighted');
 
 export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressPoint[]): Chart {
   const accentColor = COLORS.accent();

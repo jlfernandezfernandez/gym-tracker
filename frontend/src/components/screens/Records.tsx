@@ -1,7 +1,7 @@
 /** Personal records: max weight per exercise. */
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
-import { formatDate, mediaUrl } from '../../lib/helpers';
+import { formatDate, formatEquipment, formatMuscle, mediaUrl } from '../../lib/helpers';
 import { useApp } from '../App';
 import { Empty, Loading, TopBar } from '../ui';
 
@@ -11,7 +11,7 @@ export function Records() {
 
   return (
     <>
-      <TopBar title="Marcas" subtitle="Tus mejores cargas por ejercicio" onBack={app.pop} />
+      <TopBar title="Marcas" subtitle="Tu mejor resultado por ejercicio" onBack={app.pop} />
       {recordsQuery.isLoading ? (
         <Loading />
       ) : recordsQuery.isError ? (
@@ -36,11 +36,11 @@ export function Records() {
             <div class="exercise-card-body">
               <div class="exercise-title-row">
                 <h3>{record.name}</h3>
-                <span class="pill active">{record.max_weight ? `${record.max_weight}kg` : `${record.max_reps} reps`}</span>
+                <span class="pill active">{record.weight_mode === 'weighted' ? `${record.max_weight} kg` : `${record.max_reps} reps`}</span>
               </div>
               <p>
-                {record.muscle_group || ''}
-                {record.equipment ? ` · ${record.equipment}` : ''}
+                {formatMuscle(record.muscle_group || '')}
+                {record.equipment ? ` · ${formatEquipment(record.equipment)}` : ''}
               </p>
               <div class="meta">
                 <span class="pill">{formatDate(record.last_date)}</span>

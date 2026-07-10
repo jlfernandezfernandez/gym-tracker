@@ -32,7 +32,7 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
           <div class="card">
             <div class="grid stats">
               <div class="stat">
-                <b>{usesWeight ? `${maxWeight}kg` : `${maxReps} reps`}</b>
+                <b>{usesWeight ? `${maxWeight} kg` : `${maxReps} reps`}</b>
                 <span>máximo</span>
               </div>
               <div class="stat">
@@ -40,7 +40,7 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
                 <span>sesiones</span>
               </div>
               <div class="stat">
-                <b>{usesWeight ? `${latestPoint.top_weight}kg` : `${latestPoint.top_reps} reps`}</b>
+                <b>{usesWeight ? `${latestPoint.top_weight} kg` : `${latestPoint.top_reps} reps`}</b>
                 <span>última</span>
               </div>
             </div>

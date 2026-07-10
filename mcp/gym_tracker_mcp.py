@@ -30,16 +30,16 @@ product and the Mini App (deep links) is the visual surface.
 
 Operating rules:
 1. Onboarding first: get_athlete_profile. If onboarding_complete is false, don't plan yet —
-   ask like a real trainer (goal, experience, days/time, injuries, equipment, likes) in short
+   ask like a real trainer (goal, experience, days/time and preferences) in short
    blocks and save with patch_athlete_profile (finish with {"onboarding_complete": true}).
-2. Never invent weight, height, injuries, machines or history. Read the profile, check
+2. Never invent weight, height, preferences or history. Read the profile, check
    list_sessions / exercise_progress / list_measurements, or ask.
 3. Pick exercises yourself: call list_exercise_facets for valid filters, use list_exercises,
    then send returned exercise ids in create_plan exercises_json. Never invent catalog ids.
 4. Preview before training: create_plan leaves the session as 'planned'; send session_web_url.
    Not convincing? delete_session and create another.
 5. During the workout update state, don't just chat: "did 12 reps" → log_set; pain →
-   alternative + patch_athlete_profile; machine busy → update_planned_exercise with
+   alternative + session feedback; machine busy → update_planned_exercise with
    new_exercise_id. Current position: get_active_session / get_current_state.
 6. When done: finish_session with feedback (let the backend measure duration from
    started_at — do not send duration_actual unless the athlete states it). Use it
@@ -95,7 +95,7 @@ def health() -> dict[str, Any]:
 
 @mcp.tool()
 def get_athlete_profile(telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Read the athlete's profile: goals, body metrics, injuries, gym equipment, preferences, and onboarding status.
+    """Read the athlete's profile: goals, body metrics, preferences and onboarding status.
 
     Always call this before creating a plan. If onboarding_complete is false,
     start the onboarding conversation first.
@@ -109,8 +109,8 @@ def patch_athlete_profile(updates_json: str, telegram_user_id: int | None = None
     """Update athlete profile fields from a JSON object string.
 
     Use after onboarding (include "onboarding_complete": true) and for any
-    incremental facts learned in chat (injuries, equipment, preferences...).
-    Example: {"goal": "hipertrofia", "injuries": "hombro izquierdo", "onboarding_complete": true}
+    incremental facts learned in chat.
+    Example: {"goal": "hipertrofia", "onboarding_complete": true}
     """
     updates = json.loads(updates_json or "{}")
     if not isinstance(updates, dict):
@@ -251,7 +251,7 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
 
 @mcp.tool()
 def log_set(session_id: int, planned_exercise_id: int, set_number: int, reps: int, weight: float = 0.0, rpe: float | None = None, sensation: str = "", notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Log one performed set. reps must be positive; weight is zero for bodyweight."""
+    """Log one performed set. The backend assigns -1 to bodyweight exercises."""
     payload: dict[str, Any] = {
         "set_number": int(set_number),
         "weight": float(weight),

@@ -15,30 +15,19 @@ const MEASURES = [
 
 const GOALS = ['Fuerza', 'Hipertrofia', 'Resistencia', 'Pérdida de grasa', 'Salud', 'Rendimiento deportivo'];
 const EXPERIENCE = ['Principiante', 'Intermedio', 'Avanzado'];
-const TRAINING_DAYS = ['2', '3', '4', '5', '6'];
 
 const SELECT_FIELDS = [
   { key: 'goal', label: 'Objetivo', options: GOALS },
   { key: 'experience_level', label: 'Experiencia', options: EXPERIENCE },
-  { key: 'training_days_per_week', label: 'Días/semana', options: TRAINING_DAYS },
 ] as const;
 
 const NUMERIC_FIELDS = [
-  { key: 'weight_kg', label: 'Peso (kg)', placeholder: '72', suffix: ' kg' },
-  { key: 'age', label: 'Edad', placeholder: '30', suffix: ' años' },
-  { key: 'height_cm', label: 'Altura (cm)', placeholder: '178', suffix: ' cm' },
-  { key: 'usual_session_minutes', label: 'Min/sesión', placeholder: '45', suffix: ' min' },
+  { key: 'weight_kg', label: 'Peso (kg)', suffix: ' kg', placeholder: '72', inputMode: 'decimal' },
+  { key: 'age', label: 'Edad', suffix: ' años', placeholder: '30', inputMode: 'numeric' },
+  { key: 'height_cm', label: 'Altura (cm)', suffix: ' cm', placeholder: '178', inputMode: 'numeric' },
 ] as const;
 
-const TEXT_FIELDS = [
-  { key: 'gym_name', label: 'Gimnasio', placeholder: 'Mi gym' },
-  { key: 'injuries', label: 'Lesiones / patologías', placeholder: 'Ninguna' },
-  { key: 'limitations', label: 'Limitaciones', placeholder: 'Ninguna' },
-  { key: 'available_equipment', label: 'Equipamiento disponible', placeholder: 'Mancuernas, barras, máquinas...' },
-  { key: 'unavailable_equipment', label: 'No disponible', placeholder: '—' },
-] as const;
-
-const ALL_FIELDS = [...SELECT_FIELDS, ...NUMERIC_FIELDS, ...TEXT_FIELDS];
+const ALL_FIELDS = [...SELECT_FIELDS, ...NUMERIC_FIELDS];
 
 function InlineSelect({ value, options, onSave }: { value: string; options: readonly string[]; onSave: (v: string) => void }) {
   return (
@@ -50,7 +39,7 @@ function InlineSelect({ value, options, onSave }: { value: string; options: read
   );
 }
 
-function InlineNumber({ value, placeholder, suffix, onSave }: { value: string; placeholder: string; suffix: string; onSave: (v: string) => void }) {
+function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value: string; placeholder: string; suffix: string; inputMode: 'decimal' | 'numeric'; onSave: (v: string) => void }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   if (editing) {
@@ -58,7 +47,7 @@ function InlineNumber({ value, placeholder, suffix, onSave }: { value: string; p
       <input
         class="profile-value-input"
         type="number"
-        inputmode="decimal"
+        inputmode={inputMode}
         autofocus
         value={draft}
         placeholder={placeholder}
@@ -78,10 +67,6 @@ function InlineNumber({ value, placeholder, suffix, onSave }: { value: string; p
       {value ? `${value}${suffix}` : '—'}
     </button>
   );
-}
-
-function InlineText({ value, placeholder, onSave }: { value: string; placeholder: string; onSave: (v: string) => void }) {
-  return <InlineNumber value={value} placeholder={placeholder} suffix="" onSave={onSave} />;
 }
 
 export function Profile() {
@@ -106,7 +91,7 @@ export function Profile() {
   });
 
   const saveField = (key: string, value: string) => {
-    const numFields = ['weight_kg', 'age', 'height_cm', 'usual_session_minutes', 'training_days_per_week'];
+    const numFields = ['weight_kg', 'age', 'height_cm'];
     const payload: Record<string, unknown> = { [key]: numFields.includes(key) ? Number(value) : value };
     patch.mutate(payload);
   };
@@ -123,7 +108,7 @@ export function Profile() {
       <div class="card">
         <p class="eyebrow">Atleta</p>
         <h1>{profile.name || 'Atleta'}</h1>
-        <p>{profile.goal || (profile.onboarding_complete ? 'Perfil deportivo activo' : 'Completa el perfil con tu coach')}</p>
+        <p>{profile.onboarding_complete ? 'Perfil deportivo activo' : 'Completa el perfil con tu coach'}</p>
       </div>
 
       {/* Training & body */}
@@ -137,11 +122,7 @@ export function Profile() {
                 <span class="profile-field-label">{field.label}</span>
                 {'options' in field ? (
                   <InlineSelect value={raw} options={field.options} onSave={(v) => saveField(field.key, v)} />
-                ) : 'suffix' in field ? (
-                  <InlineNumber value={raw} placeholder={field.placeholder} suffix={field.suffix} onSave={(v) => saveField(field.key, v)} />
-                ) : (
-                  <InlineText value={raw} placeholder={field.placeholder} onSave={(v) => saveField(field.key, v)} />
-                )}
+                ) : <InlineNumber value={raw} placeholder={field.placeholder} suffix={field.suffix} inputMode={field.inputMode} onSave={(v) => saveField(field.key, v)} />}
               </div>
             );
           })}

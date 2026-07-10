@@ -30,7 +30,7 @@ function SetRow({ set, sessionId, plannedId, exerciseId }: { set: any; sessionId
     <div class="set-row" key={set.id}>
       <span class="n">Serie {set.set_number}</span>
       <span class="v">
-        {set.reps} reps · {formatWeight(set.weight)}
+        {set.reps} reps · {formatWeight(set.weight, set.weight_mode)}
         <button class="set-del" disabled={del.isPending} onClick={() => del.mutate()} aria-label="Borrar serie">
           ✕
         </button>
@@ -182,8 +182,8 @@ function LogSetForm({
   const queryClient = useQueryClient();
   // Prefill: repeat what the athlete just lifted (ramping sets), else the coach prescription.
   const previousSet = exercise.performed_sets?.at(-1);
-  // Bodyweight exercise: weight is fixed (0 by convention), the field is not editable.
-  const isBodyweight = !(exercise.weight || previousSet?.weight);
+  // The backend gives bodyweight exercises their fixed sentinel value.
+  const isBodyweight = exercise.weight_mode === 'bodyweight';
   const [weight, setWeight] = useState(String(previousSet?.weight ?? exercise.weight ?? 0));
   const [reps, setReps] = useState(String(exercise.reps ?? 10));
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
@@ -247,10 +247,10 @@ function LogSetForm({
     <div class="card set-card">
       <div class="row steppers">
         <div class="stepper">
-          <p>Peso</p>
+          <p>{isBodyweight ? 'Peso corporal' : 'Peso'}</p>
           <div>
             {isBodyweight ? (
-              <div class="stepper-fixed">Corporal</div>
+              <div class="stepper-fixed">Peso corporal</div>
             ) : (
               <input type="number" inputmode="decimal" step="0.5" value={weight} onInput={(event: any) => setWeight(event.target.value)} />
             )}

@@ -4,6 +4,7 @@ import { apiFetch } from "../../lib/api";
 import {
   cleanTitle,
   currentExercise,
+  formatWeight,
   mediaUrl,
   normalizeSession,
 } from "../../lib/helpers";
@@ -113,8 +114,8 @@ export function Landing() {
                 </div>
                 <div class="grid stats kpis">
                   <div class="stat">
-                    <b>{nextWeight ? nextWeight : "Corporal"}</b>
-                    <span>{nextWeight ? "kg" : "peso"}</span>
+                    <b>{formatWeight(nextWeight, activeExercise?.weight_mode)}</b>
+                    <span>{activeExercise?.weight_mode === "weighted" ? "carga" : ""}</span>
                   </div>
                   <div class="stat">
                     <b>{activeExercise?.reps || "-"}</b>

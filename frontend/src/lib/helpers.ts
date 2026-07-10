@@ -21,7 +21,10 @@ export const formatMuscle = (muscle: string) => {
   return EXERCISE_TAXONOMY[value.toLowerCase()]?.es || (value ? value[0].toUpperCase() + value.slice(1) : '');
 };
 
-export const formatWeight = (kg: number) => (kg ? `${kg} kg` : 'Peso corporal');
+export const formatWeight = (weight: number, mode: string) =>
+  mode === 'bodyweight' ? 'Peso corporal' : mode === 'unloaded' ? 'Sin carga' : `${weight} kg`;
+
+export const formatEquipment = (equipment: string) => (equipment === 'body weight' ? 'Peso corporal' : equipment);
 
 export const formatDate = (isoDate: string) =>
   new Date(isoDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -43,6 +46,7 @@ export function normalizeSession(session: any) {
       sets: plannedExercise.target_sets || 3,
       reps: plannedExercise.target_reps || 10,
       weight: plannedExercise.suggested_weight || 0,
+      weight_mode: plannedExercise.weight_mode,
       notes: plannedExercise.notes || '',
       status: plannedExercise.status || 'pending',
       performed_sets: plannedExercise.performed_sets || [],

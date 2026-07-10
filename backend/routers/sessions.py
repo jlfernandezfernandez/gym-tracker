@@ -8,7 +8,7 @@ from typing import Optional
 
 from database import get_session as get_db_session
 from telegram_auth import current_user_id
-from models import Exercise, WorkoutSession, PlannedExercise, PerformedSet
+from models import BODYWEIGHT_WEIGHT, Exercise, WorkoutSession, PlannedExercise, PerformedSet
 from schemas import (
     SessionOut,
     SessionSummary,
@@ -87,6 +87,7 @@ def _current_state(workout: WorkoutSession) -> dict:
         "target_sets": current.target_sets,
         "target_reps": current.target_reps,
         "suggested_weight": current.suggested_weight,
+        "weight_mode": current.weight_mode,
         "exercise_order": current.order,
         "exercise_count": len(planned),
         "completed_exercises": completed_exercises,
@@ -145,6 +146,7 @@ async def complete_planned_exercise(
     )
     if not planned_exercise:
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
+
     planned_exercise.status = "completed"
     if workout.status == "planned":
         workout.status = "in_progress"
@@ -246,13 +248,20 @@ async def log_set(
     if not planned_exercise:
         raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
 
+    if planned_exercise.exercise.is_bodyweight:
+        weight = BODYWEIGHT_WEIGHT
+    elif body.weight == BODYWEIGHT_WEIGHT:
+        raise HTTPException(status_code=422, detail="-1 weight is reserved for bodyweight exercises")
+    else:
+        weight = body.weight
+
     # Idempotency guard: rapid duplicate submits (double-tap, retry) of the same
     # set land as identical rows within seconds. Return current state instead.
     now = datetime.now(timezone.utc).replace(tzinfo=None)
     for existing_set in planned_exercise.performed_sets or []:
         if (
             existing_set.set_number == body.set_number
-            and existing_set.weight == body.weight
+            and existing_set.weight == weight
             and existing_set.reps == body.reps
             and abs((now - existing_set.timestamp).total_seconds()) < 30
         ):
@@ -261,7 +270,7 @@ async def log_set(
     performed_set = PerformedSet(
         planned_exercise_id=planned_id,
         set_number=body.set_number,
-        weight=body.weight,
+        weight=weight,
         reps=body.reps,
         rpe=body.rpe,
         sensation=body.sensation,
