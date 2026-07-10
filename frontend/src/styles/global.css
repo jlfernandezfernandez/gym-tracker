@@ -254,7 +254,6 @@
     border-radius: inherit;
     transition: width .35s cubic-bezier(.2, .8, .2, 1);
   }
-  .progress.mini { height: 4px; margin: 9px 0; }
 
   .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
   .pill {
@@ -387,15 +386,6 @@
     font-size: 1.4rem; font-weight: 720; letter-spacing: -.03em;
     min-width: 32px; text-align: center;
   }
-  .text-action {
-    border: 0;
-    background: transparent;
-    color: var(--color-accent);
-    min-height: 44px;
-    padding: 8px 0;
-    font-weight: 680;
-  }
-  .previous-set { text-align: center; font-size: .75rem; margin-top: 12px; }
   .set-save { margin-top: 20px; }
   .details-card summary {
     cursor: pointer;
@@ -418,7 +408,6 @@
   .details-card[open] summary::after { transform: rotate(-90deg); }
   .details-card[open] summary { margin-bottom: 10px; }
   .instr { white-space: pre-line; }
-  .compact-map .bodymap-figure > div { width: 105px; }
 
   /* ── Sets ── */
   .sets { display: grid; gap: 7px; }
@@ -567,12 +556,6 @@
     box-shadow: 0 0 0 3px var(--color-accent-soft);
     outline: none;
   }
-  .measure-list { display: grid; gap: 7px; }
-  .measure-row {
-    padding: 13px;
-    border-radius: var(--radius-control);
-    background: var(--color-surface-2);
-  }
   .measure-charts { display: grid; gap: 12px; }
   .measure-chart-card {
     border-radius: var(--radius-control);
@@ -653,16 +636,9 @@
   .records-group { margin: 20px 3px 2px; }
   .records-group:first-of-type { margin-top: 10px; }
 
-  /* ── Section heading / profile form ── */
+  /* ── Section heading ── */
   .section-heading { padding: 22px 3px 3px; }
   .section-heading h2 { margin-top: 4px; }
-  .profile-form label + label { margin-top: 13px; }
-  .profile-form input { text-align: left; }
-  .profile-form .btn {
-    position: sticky;
-    bottom: calc(10px + env(safe-area-inset-bottom));
-    box-shadow: var(--shadow-sticky);
-  }
 
   /* ── Body map / chart ── */
   .bodymap { display: flex; justify-content: center; gap: 12px; margin-top: 10px; padding: 6px 0; }
@@ -725,13 +701,6 @@
     margin: auto auto 10px;
   }
   dialog.sheet::backdrop { background: rgba(0, 0, 0, .32); }
-  .sheet-handle {
-    width: 36px;
-    height: 5px;
-    border-radius: 9px;
-    background: var(--color-sheet-handle);
-    margin: -8px auto 16px;
-  }
   .sheet h2 { margin-bottom: 4px; }
 }
 
@@ -753,7 +722,7 @@
 /* Hover (only hover-capable devices) */
 @media (hover: hover) {
   .card.tap:hover, .history-row:hover, .home-nav button:hover { background: var(--color-hover); }
-  .text-action:hover, .btn.ghost:hover { background: var(--color-accent-bg); }
+  .btn.ghost:hover { background: var(--color-accent-bg); }
 }
 
 /* Desktop: consistent column, inner layouts go two-column */
@@ -766,7 +735,6 @@
     flex-direction: column;
     justify-content: center;
   }
-  .profile-grid { grid-template-columns: repeat(4, 1fr); }
   dialog.sheet { margin: auto; }
 }
 
