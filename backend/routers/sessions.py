@@ -15,6 +15,7 @@ from schemas import (
     PerformedSetCreate,
     PlannedExerciseUpdate,
     SessionFinish,
+    SessionUpdate,
 )
 
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
@@ -257,6 +258,24 @@ async def get_session(
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
     return workout
+
+
+@router.patch("/{session_id}", response_model=SessionOut)
+async def update_session(
+    session_id: int,
+    body: SessionUpdate,
+    db: AsyncSession = Depends(get_db_session),
+    user_id: Optional[int] = Depends(current_user_id),
+):
+    """Update session metadata: move it to another date or rename it."""
+    workout = await _load_session(session_id, db)
+    _check_owner(workout, user_id)
+    if body.session_date is not None:
+        workout.session_date = body.session_date
+    if body.title is not None:
+        workout.title = body.title
+    await db.commit()
+    return await _load_session(session_id, db)
 
 
 @router.post("/{session_id}/exercises/{planned_id}/sets", response_model=SessionOut)

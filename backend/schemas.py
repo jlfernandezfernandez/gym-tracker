@@ -31,6 +31,11 @@ class PlannedExerciseUpdate(BaseModel):
     notes: Optional[str] = None
 
 
+class SessionUpdate(BaseModel):
+    session_date: Optional[date] = None
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+
+
 class SessionFinish(BaseModel):
     # None = let the backend compute from started_at (issue #8).
     duration_actual: Optional[int] = None

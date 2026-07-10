@@ -211,6 +211,24 @@ def complete_exercise(session_id: int, planned_exercise_id: int, telegram_user_i
 
 
 @mcp.tool()
+def update_session(session_id: int, session_date: str = "", title: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Update session metadata: move it to another date and/or rename it.
+
+    session_date: ISO date (YYYY-MM-DD), e.g. when the athlete says the workout
+    actually happened yesterday. title: workout name only, never embed the date.
+    Pass only the fields you want to change.
+    """
+    updates: dict[str, Any] = {}
+    if session_date:
+        updates["session_date"] = session_date
+    if title:
+        updates["title"] = title
+    if not updates:
+        raise RuntimeError("Nothing to update: pass session_date and/or title")
+    return _request("PATCH", f"/sessions/{int(session_id)}", updates, user_id=telegram_user_id)
+
+
+@mcp.tool()
 def delete_session(session_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
     """Delete a workout session. Use to discard a plan preview the athlete rejected before creating a new one."""
     return _request("DELETE", f"/sessions/{int(session_id)}", user_id=telegram_user_id)
