@@ -108,13 +108,6 @@
     padding: calc(12px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom));
   }
 
-  /* ── Spacing utilities ── */
-  .mt-2 { margin-top: 8px; }
-  .mt-2\.5 { margin-top: 10px; }
-  .mt-3 { margin-top: 12px; }
-  .mt-3\.5 { margin-top: 14px; }
-  .text-xs { font-size: .72rem; color: var(--color-hint); }
-
   /* ── Hero / eyebrow ── */
   .hero { padding: 26px 2px 17px; }
   .hero p { margin-top: 7px; font-size: .95rem; }
@@ -301,6 +294,8 @@
     box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .05);
     position: relative;
   }
+  .big-media { height: 235px; }
+  .big-media img { padding: 16px; }
   .big-media img, .session-hero-media img, .exercise-media img {
     position: absolute;
     inset: 0;
@@ -328,8 +323,6 @@
     background: var(--color-edge);
     margin: 0 12px;
   }
-  .big-media { height: 235px; position: relative; }
-  .big-media img { padding: 16px; }
   .exercise-focus-content { padding: 18px; }
   .exercise-title-row {
     display: flex;

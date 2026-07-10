@@ -39,7 +39,7 @@ export function TopBar({
           ←
         </button>
       )}
-      <div class="min-w-0 flex-1">
+      <div>
         <h2>{title}</h2>
         {subtitle && <p>{subtitle}</p>}
       </div>
