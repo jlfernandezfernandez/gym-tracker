@@ -103,6 +103,7 @@ class AthleteMeasurementIn(BaseModel):
     muscle_kg: Optional[float] = None
     fat_kg: Optional[float] = None
     body_fat_pct: Optional[float] = None
+    visceral_fat: Optional[float] = None
     notes: str = ""
 
 

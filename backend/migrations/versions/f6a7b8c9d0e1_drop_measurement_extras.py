@@ -1,4 +1,4 @@
-"""drop unused measurement columns (score, visceral_fat)
+"""drop unused measurement column (score)
 
 Revision ID: f6a7b8c9d0e1
 Revises: e5f6a7b8c9d0
@@ -14,9 +14,7 @@ depends_on = None
 
 def upgrade() -> None:
     op.drop_column("athlete_measurements", "score")
-    op.drop_column("athlete_measurements", "visceral_fat")
 
 
 def downgrade() -> None:
-    op.add_column("athlete_measurements", sa.Column("visceral_fat", sa.Float(), nullable=True))
     op.add_column("athlete_measurements", sa.Column("score", sa.Float(), nullable=True))

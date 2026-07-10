@@ -117,7 +117,7 @@ En Coolify, configura persistent storage en PostgreSQL (`/var/lib/postgresql`) y
 
 ## Agentes y MCP
 
-El MCP expone las operaciones del producto: perfil, mediciones, catálogo, sesiones, series y enlaces de la Mini App. El agente decide cómo conversar y cuándo usar cada herramienta.
+El MCP expone las operaciones del producto: perfil, mediciones, catálogo, sesiones (crear, actualizar fecha/título/notas, finalizar, borrar), series y enlaces de la Mini App. El agente decide cómo conversar y cuándo usar cada herramienta.
 
 Guía: [`docs/agent-setup.md`](docs/agent-setup.md).
 
@@ -143,7 +143,7 @@ Dockerfile             imagen de la API + Mini App
 Dockerfile.mcp        imagen del servidor MCP
 Dockerfile.minio      imagen/configuración de MinIO
 docker-compose.yml    stack local completo
-docs/                 guías de despliegue y conexión
+docs/                 guías de despliegue, conexión y design system (DESIGN.md)
 templates/            templates opcionales para agentes
 ```
 

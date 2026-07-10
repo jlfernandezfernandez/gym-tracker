@@ -10,6 +10,7 @@ const MEASURES = [
   { key: 'muscle_kg', label: 'Músculo', unit: ' kg' },
   { key: 'fat_kg', label: 'Grasa', unit: ' kg' },
   { key: 'body_fat_pct', label: '% grasa', unit: '%' },
+  { key: 'visceral_fat', label: 'Grasa visceral', unit: '' },
 ] as const;
 
 const GOALS = ['Fuerza', 'Hipertrofia', 'Resistencia', 'Pérdida de grasa', 'Salud', 'Rendimiento deportivo'];

@@ -339,6 +339,7 @@ def record_body_measurement(
     muscle_kg: float | None = None,
     fat_kg: float | None = None,
     body_fat_pct: float | None = None,
+    visceral_fat: float | None = None,
     notes: str = "",
 ) -> dict[str, Any]:
     """Record a generic dated body measurement.
@@ -359,6 +360,7 @@ def record_body_measurement(
         "muscle_kg": muscle_kg,
         "fat_kg": fat_kg,
         "body_fat_pct": body_fat_pct,
+        "visceral_fat": visceral_fat,
     }.items():
         if value is not None:
             body[key] = float(value)
