@@ -478,7 +478,7 @@
   .details-card[open] summary::after { transform: rotate(-90deg); }
   .details-card[open] summary { margin-bottom: 10px; }
   .instr { white-space: pre-line; }
-  .compact-map .bodymap > div { width: 105px; }
+  .compact-map .bodymap-figure > div { width: 105px; }
 
   /* ── Sets ── */
   .sets { display: grid; gap: 7px; }
@@ -721,14 +721,15 @@
   }
 
   /* ── Body map / chart ── */
-  .bodymap { display: flex; justify-content: center; gap: 7px; margin-top: 10px; padding: 6px 0; }
-  .bodymap > div { width: 125px; }
-  .bodymap-labels { display: flex; justify-content: center; gap: 62px; margin-top: 3px; }
-  .bodymap-labels span {
+  .bodymap { display: flex; justify-content: center; gap: 12px; margin-top: 10px; padding: 6px 0; }
+  .bodymap-figure { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .bodymap-figure > div { width: 125px; }
+  .bodymap-figure span {
     font-size: .58rem;
     color: var(--color-hint);
     text-transform: uppercase;
-    letter-spacing: .06em;
+    letter-spacing: .08em;
+    font-weight: 700;
   }
   .chart-wrap { position: relative; height: 165px; margin-top: 10px; }
 

@@ -19,8 +19,10 @@ export function renderBodyMap(container: HTMLElement, muscleGroups: string[]): v
   // Realistic skin tone on a light card, with the app accent for worked muscles.
   const options = { data, bodyColor: '#e3b58c', highlightedColors: ['#5856d6'] };
   container.innerHTML =
-    '<div class="bodymap"><div data-side="anterior"></div><div data-side="posterior"></div></div>' +
-    '<div class="bodymap-labels"><span>Frente</span><span>Espalda</span></div>';
+    '<div class="bodymap">' +
+    '<div class="bodymap-figure"><div data-side="anterior"></div><span>Frente</span></div>' +
+    '<div class="bodymap-figure"><div data-side="posterior"></div><span>Espalda</span></div>' +
+    '</div>';
   for (const side of ['anterior', 'posterior'] as const) {
     createBodyHighlighter({
       ...options,
