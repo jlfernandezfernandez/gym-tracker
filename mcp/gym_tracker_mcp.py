@@ -211,20 +211,18 @@ def complete_exercise(session_id: int, planned_exercise_id: int, telegram_user_i
 
 
 @mcp.tool()
-def update_session(session_id: int, session_date: str = "", title: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Update session metadata: move it to another date and/or rename it.
+def update_session(updates: dict[str, Any], session_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Update session metadata with a native MCP object, never a JSON-encoded string.
 
-    session_date: ISO date (YYYY-MM-DD), e.g. when the athlete says the workout
-    actually happened yesterday. title: workout name only, never embed the date.
-    Pass only the fields you want to change.
+    Accepted keys (pass only what changes):
+      session_date: ISO date (YYYY-MM-DD), e.g. when the athlete says the workout
+        actually happened yesterday.
+      title: workout name only, never embed the date.
+      goal, feedback, coach_summary, discomfort: free text.
+      energy: 1-10. duration_actual: minutes.
     """
-    updates: dict[str, Any] = {}
-    if session_date:
-        updates["session_date"] = session_date
-    if title:
-        updates["title"] = title
     if not updates:
-        raise RuntimeError("Nothing to update: pass session_date and/or title")
+        raise RuntimeError("Nothing to update: pass at least one field in updates")
     return _request("PATCH", f"/sessions/{int(session_id)}", updates, user_id=telegram_user_id)
 
 

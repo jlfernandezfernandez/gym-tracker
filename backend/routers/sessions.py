@@ -267,13 +267,11 @@ async def update_session(
     db: AsyncSession = Depends(get_db_session),
     user_id: Optional[int] = Depends(current_user_id),
 ):
-    """Update session metadata: move it to another date or rename it."""
+    """Update session metadata: date, title, goal, feedback, summary, discomfort, energy or duration."""
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
-    if body.session_date is not None:
-        workout.session_date = body.session_date
-    if body.title is not None:
-        workout.title = body.title
+    for field, value in body.model_dump(exclude_none=True).items():
+        setattr(workout, field, value)
     await db.commit()
     return await _load_session(session_id, db)
 

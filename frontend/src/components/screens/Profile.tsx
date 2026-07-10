@@ -10,7 +10,6 @@ const MEASURES = [
   { key: 'muscle_kg', label: 'Músculo', unit: ' kg' },
   { key: 'fat_kg', label: 'Grasa', unit: ' kg' },
   { key: 'body_fat_pct', label: '% grasa', unit: '%' },
-  { key: 'score', label: 'Score', unit: '' },
 ] as const;
 
 const GOALS = ['Fuerza', 'Hipertrofia', 'Resistencia', 'Pérdida de grasa', 'Salud', 'Rendimiento deportivo'];
@@ -46,11 +45,13 @@ function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value
     return (
       <input
         class="profile-value-input"
-        type="number"
+        type="text"
         inputmode={inputMode}
+        enterkeyhint="done"
         autofocus
         value={draft}
         placeholder={placeholder}
+        onFocus={(e: any) => e.target.select()}
         onInput={(e: any) => setDraft(e.target.value)}
         onBlur={() => {
           setEditing(false);

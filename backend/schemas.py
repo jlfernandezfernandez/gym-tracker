@@ -34,6 +34,12 @@ class PlannedExerciseUpdate(BaseModel):
 class SessionUpdate(BaseModel):
     session_date: Optional[date] = None
     title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    goal: Optional[str] = None
+    feedback: Optional[str] = None
+    coach_summary: Optional[str] = None
+    discomfort: Optional[str] = None
+    energy: Optional[int] = Field(default=None, ge=1, le=10)
+    duration_actual: Optional[int] = Field(default=None, ge=0)
 
 
 class SessionFinish(BaseModel):

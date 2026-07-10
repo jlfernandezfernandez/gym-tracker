@@ -285,14 +285,14 @@ function LogSetForm({
             {isBodyweight ? (
               <div class="stepper-fixed">Peso corporal</div>
             ) : (
-              <input id="set-weight" type="number" inputmode="decimal" step="0.5" value={weight} onInput={(event: any) => setWeight(event.target.value)} />
+              <input id="set-weight" type="text" inputmode="decimal" enterkeyhint="done" value={weight} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setWeight(event.target.value)} />
             )}
           </div>
         </div>
         <div class="stepper">
           <label for="set-reps">Reps</label>
           <div>
-            <input id="set-reps" type="number" inputmode="numeric" value={reps} onInput={(event: any) => setReps(event.target.value)} />
+            <input id="set-reps" type="text" inputmode="numeric" enterkeyhint="done" value={reps} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setReps(event.target.value)} />
           </div>
         </div>
       </div>
