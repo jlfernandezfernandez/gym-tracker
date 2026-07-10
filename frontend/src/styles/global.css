@@ -6,8 +6,8 @@
   --accent:#5856d6;--ok:#248a3d;--warn:#b35c00;--err:#d70015;--border:rgba(60,60,67,.14);
   --r:22px;--r-sm:14px;font:100%/1.45 ui-sans-serif,-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",sans-serif;
 }
-html{background:var(--bg);scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;overflow-x:hidden;font-feature-settings:"tnum";text-rendering:optimizeLegibility}
+html{background:var(--bg);scroll-behavior:smooth;touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{background:var(--bg);color:var(--text);min-height:100vh;min-height:100dvh;-webkit-font-smoothing:antialiased;overflow-x:hidden;overscroll-behavior:none;font-feature-settings:"tnum";text-rendering:optimizeLegibility}
 button,input,textarea{font:inherit}button{-webkit-tap-highlight-color:transparent;touch-action:manipulation}
 .app{max-width:540px;margin:auto;padding:calc(12px + env(safe-area-inset-top)) 16px calc(48px + env(safe-area-inset-bottom))}
 h1{font-size:clamp(1.75rem,8vw,2.25rem);line-height:1.04;letter-spacing:-.045em;font-weight:780}
