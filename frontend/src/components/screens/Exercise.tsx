@@ -275,7 +275,6 @@ function LogSetForm({
   };
 
   const isBusy = logSet.isPending || completeExercise.isPending;
-  const setSummary = isBodyweight ? `peso corporal × ${reps || 0}` : `${weight || 0} kg × ${reps || 0}`;
 
   return (
     <div class="card set-card">
@@ -298,7 +297,7 @@ function LogSetForm({
         </div>
       </div>
       <BusyButton busy={isBusy} busyLabel="Guardando..." class="btn set-save" onClick={saveSet}>
-        Registrar {setSummary}
+        {isLastSet ? 'Registrar' : 'Continuar'}
       </BusyButton>
       {!isLastSet && (
         <button class="btn ghost mt-2" disabled={isBusy} onClick={() => setConfirmFinishOpen(true)}>
