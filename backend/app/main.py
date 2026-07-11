@@ -25,12 +25,17 @@ def create_app() -> FastAPI:
     app.include_router(health_router, prefix="/api")
     app.include_router(api_router)
 
-    static_dir = next((path for path in ("static", "../frontend/dist") if os.path.isdir(path)), None)
+    static_dir = next(
+        (path for path in ("static", "../frontend/dist") if os.path.isdir(path)), None
+    )
     if static_dir:
 
         @app.get("/", include_in_schema=False)
         @app.get("/session/share/{share_token}", include_in_schema=False)
-        @app.get("/session/share/{share_token}/exercise/{planned_exercise_id}", include_in_schema=False)
+        @app.get(
+            "/session/share/{share_token}/exercise/{planned_exercise_id}",
+            include_in_schema=False,
+        )
         async def frontend_shell() -> FileResponse:
             return FileResponse(os.path.join(static_dir, "index.html"))
 
