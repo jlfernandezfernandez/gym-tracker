@@ -97,12 +97,13 @@ Antes de desplegar o escalar la App, ejecuta una vez el trabajo de release con
 la misma imagen y variables de la App:
 
 ```text
-python operations.py
+python -m scripts.bootstrap
 ```
 
-Aplica migraciones y sincroniza el catálogo. Para descargar medios pendientes
-de forma explícita, usa `python operations.py --media`; nunca se hace desde
-cada réplica web.
+Aplica migraciones, descarga el catálogo remoto en memoria, actualiza
+PostgreSQL y sube a S3 los medios que todavía no existan. No guarda archivos
+locales ni se ejecuta desde cada réplica web. Si cualquier paso falla, el
+trabajo debe terminar con error y la nueva versión no debe arrancar.
 
 ## 2. Conectar la red interna
 
@@ -129,6 +130,7 @@ Los hostnames concretos dependen de la instalación de Coolify.
 Configura estas variables como runtime variables en la aplicación `app`:
 
 ```env
+ENVIRONMENT=production
 DATABASE_URL=postgresql+asyncpg://...
 TELEGRAM_BOT_TOKEN=...
 COACH_API_KEY=...
@@ -140,10 +142,14 @@ S3_ACCESS_KEY=...
 S3_SECRET_KEY=...
 S3_BUCKET=gym-tracker-media
 S3_REGION=us-east-1
+EXERCISE_DATASET_REPOSITORY=jlfernandezfernandez/exercises-dataset-es
 LOG_LEVEL=INFO
 ```
 
-Si no usas dominio propio, sustituye `CORS_ORIGINS` por el origen real de la Mini App.
+`ENVIRONMENT=production` hace obligatorias estas integraciones y rechaza
+`CORS_ORIGINS=*`. Si no usas dominio propio, sustituye `CORS_ORIGINS` por el
+origen real de la Mini App. `EXERCISE_DATASET_REPOSITORY` usa el formato
+`owner/repo`; el bootstrap consume la rama `main`.
 
 ## 4. Variables del MCP
 
@@ -242,8 +248,9 @@ Un redeploy normal no debe eliminar los persistent storage. Borrar el recurso o 
 El repositorio es la fuente de código. Tras un push:
 
 1. Revisa las variables y persistent storage.
-2. Redeploya `app` y `mcp` si cambió cualquiera de los dos.
-3. Comprueba `/health` y la conexión MCP.
-4. Verifica una lectura real de PostgreSQL y un objeto de MinIO.
+2. Ejecuta `python -m scripts.bootstrap` con la nueva imagen.
+3. Redeploya `app` y `mcp` si cambió cualquiera de los dos.
+4. Comprueba `/health`, `/ready` y la conexión MCP.
+5. Verifica una lectura real de PostgreSQL y un objeto de MinIO.
 
 No guardes secretos en Git ni dentro de las imágenes Docker.

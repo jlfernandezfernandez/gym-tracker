@@ -53,7 +53,7 @@ services:
     ports:
       - "${APP_PORT:-8000}:8000"
     environment:
-      ENVIRONMENT: development
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@postgres:5432/${POSTGRES_DB:-gym_tracker}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
@@ -79,13 +79,17 @@ services:
     command: ["python", "-m", "scripts.bootstrap"]
     restart: "no"
     environment:
-      ENVIRONMENT: development
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@postgres:5432/${POSTGRES_DB:-gym_tracker}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      COACH_API_KEY: ${COACH_API_KEY:-}
       S3_ENDPOINT: http://minio:9000
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-gym-tracker-access-key}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-gym-tracker-secret-key-change-me}
       S3_BUCKET: ${S3_BUCKET:-gym-tracker-media}
       S3_REGION: ${S3_REGION:-us-east-1}
+      EXERCISE_DATASET_REPOSITORY: ${EXERCISE_DATASET_REPOSITORY:-jlfernandezfernandez/exercises-dataset-es}
     depends_on:
       postgres:
         condition: service_healthy

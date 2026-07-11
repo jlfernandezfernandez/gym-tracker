@@ -34,7 +34,8 @@ Requisitos: Docker Engine y Docker Compose v2.
 git clone https://github.com/jlfernandezfernandez/gym-tracker.git
 cd gym-tracker
 cp .env.example .env
-# Edita .env y establece TELEGRAM_BOT_TOKEN y COACH_API_KEY si procede
+# Desarrollo local: ENVIRONMENT=development permite dejar auth vacía.
+# Para probar auth, establece TELEGRAM_BOT_TOKEN y COACH_API_KEY.
 docker compose up -d
 ```
 
@@ -75,6 +76,30 @@ MCP desde Dockerfile.mcp
 La Mini App puede funcionar con la URL que proporcione Coolify o con un dominio propio. El dominio es opcional.
 
 Guía completa: [`docs/deploy-coolify.md`](docs/deploy-coolify.md).
+
+En cualquier despliegue real configura `ENVIRONMENT=production`. La aplicación
+fallará al arrancar si faltan PostgreSQL, S3, Telegram, la clave del coach o un
+origen CORS explícito; producción no admite `CORS_ORIGINS=*`.
+
+## Configuración
+
+`.env.example` contiene la referencia completa:
+
+| Variable | Uso |
+|---|---|
+| `ENVIRONMENT` | `development` local o `production` en despliegues reales |
+| `DATABASE_URL` | conexión PostgreSQL asíncrona |
+| `TELEGRAM_BOT_TOKEN` | valida Telegram InitData |
+| `COACH_API_KEY` | autentica las llamadas del MCP |
+| `CORS_ORIGINS` | orígenes permitidos, separados por comas |
+| `S3_ENDPOINT` | endpoint MinIO/S3 |
+| `S3_ACCESS_KEY`, `S3_SECRET_KEY` | credenciales de object storage |
+| `S3_BUCKET`, `S3_REGION` | bucket y región |
+| `EXERCISE_DATASET_REPOSITORY` | repositorio `owner/repo`; se consume su rama `main` |
+
+Docker Compose usa `development` únicamente como valor predeterminado local.
+Para producción, define `ENVIRONMENT=production` y sustituye todas las
+credenciales de ejemplo.
 
 ## Dominios y proxy inverso
 
@@ -130,12 +155,37 @@ docker compose up -d --build
 curl http://localhost:8000/health
 ```
 
-La API aplica las migraciones de Alembic al arrancar y carga el catálogo de ejercicios de forma idempotente. Las imágenes y GIFs del dataset se descargan en segundo plano y se almacenan en MinIO.
+`app-init` ejecuta una vez `python -m scripts.bootstrap` antes de arrancar la
+API. El bootstrap aplica Alembic, descarga en memoria el catálogo remoto,
+actualiza PostgreSQL y sube a S3 únicamente las imágenes y GIFs ausentes. No
+guarda catálogo ni medios en disco y cualquier fallo aborta el arranque.
+
+Sin Docker:
+
+```bash
+cd backend
+uv sync --locked
+uv run python -m scripts.bootstrap
+uv run uvicorn app.main:app --reload
+```
+
+Comprobaciones del backend:
+
+```bash
+uv run ruff format --check .
+uv run ruff check .
+uv run pyright
+uv run pytest
+```
 
 ## Estructura
 
 ```text
-backend/              API FastAPI, modelos, migraciones y seed
+backend/app/          API, modelos, rutas, servicios y acceso S3
+backend/alembic/      migraciones de PostgreSQL
+backend/scripts/      bootstrap de migraciones + seed remoto
+backend/tests/        tests de backend
+backend/pyproject.toml + uv.lock  dependencias y herramientas bloqueadas
 frontend/             Mini App Astro + Preact
 landing/              landing page estática (Astro + Tailwind)
 mcp/                  herramientas MCP agnósticas al agente

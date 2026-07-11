@@ -11,13 +11,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.13"}
-      - name: Install deps
-        run: pip install -r backend/requirements.txt mcp
-      - name: Syntax + imports
+      - uses: astral-sh/setup-uv@v6
+        with: {enable-cache: true}
+      - name: Install locked backend
+        working-directory: backend
+        run: uv sync --locked
+      - name: Backend checks
+        working-directory: backend
         run: |
-          python -m compileall -q backend mcp
-          cd backend && python -c "import main, telegram_auth, schemas, models"
-          python -m unittest test_session_integrity.py
+          uv run ruff format --check .
+          uv run ruff check .
+          uv run pyright
+          uv run pytest -q
+          ENVIRONMENT=development DATABASE_URL=postgresql+asyncpg://x:x@localhost/x uv run alembic heads
+      - name: Compile MCP
+        run: python -m compileall -q mcp run_mcp.py
       - name: Frontend build
         run: cd frontend && npm ci && npm run build
       - name: Docker builds

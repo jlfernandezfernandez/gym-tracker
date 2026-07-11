@@ -58,7 +58,10 @@ Configura `TELEGRAM_BOT_TOKEN` en la aplicación y el gateway del agente según 
 
 ## Multiusuario
 
-El agente debe pasar siempre el `telegram_user_id` en las operaciones de perfil y sesión. Así la API mantiene los datos aislados por atleta.
+El agente debe pasar siempre el `telegram_user_id` en las operaciones de perfil
+y sesión. El MCP lo traduce a `X-Telegram-User-Id` junto con
+`GYM_TRACKER_COACH_KEY`; la API rechaza llamadas del coach sin usuario. Así los
+datos permanecen aislados por atleta.
 
 No guardes series, sesiones ni datos corporales en la memoria del agente: Gym Tracker es la fuente de verdad.
 

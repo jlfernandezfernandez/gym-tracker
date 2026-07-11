@@ -9,18 +9,15 @@ RUN npm ci
 COPY frontend/ ./
 RUN npm run build
 
-# Stage 1: Build / install dependencies
+# Stage 1: Build the locked Python environment
 FROM python:3.13-slim AS builder
 
 WORKDIR /app
 
-# Install build deps (only needed during build)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /bin/uv
 
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
 
 # Stage 2: Runtime image
 FROM python:3.13-slim
@@ -32,11 +29,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy only installed packages from builder
-COPY --from=builder /root/.local /root/.local
-
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+# Copy the exact environment resolved by uv.lock.
+COPY --from=builder /app/.venv /app/.venv
+ENV PATH=/app/.venv/bin:$PATH
 
 # Copy application code + built Mini App
 COPY backend/ /app/

@@ -13,17 +13,18 @@ docker compose up -d --build  # app:8000 + MCP:8001 + Postgres + MinIO
 
 La guía de despliegue en Coolify está en [`docs/deploy-coolify.md`](docs/deploy-coolify.md). La guía de conexión de agentes está en [`docs/agent-setup.md`](docs/agent-setup.md).
 
-Sin Docker: levanta un Postgres, `pip install -r backend/requirements.txt` y
-`cd backend && uvicorn main:app --reload`. Frontend: `cd frontend && npm install`
+Sin Docker: levanta PostgreSQL y MinIO, ejecuta `cd backend && uv sync --locked`,
+`uv run python -m scripts.bootstrap` y `uv run uvicorn app.main:app --reload`.
+Frontend: `cd frontend && npm install`
 y `npm run dev` (dev server de Astro con proxy a la API) o `npm run build` para
 que FastAPI sirva `frontend/dist/`.
 
 ## Estructura
 
-- `backend/` — FastAPI + SQLModel. Routers en `backend/routers/`.
-- `backend/` — FastAPI + SQLModel + Alembic ( migraciones en `backend/migrations/`). Routers en `backend/routers/`.
-- `backend/exercise_data/` — catálogo bilingüe (JSON en el repo; imágenes/GIFs se descargan del fork dataset-es en el primer arranque).
-- Para crear migraciones: `cd backend && alembic revision --autogenerate -m "desc"`. Se aplican solo en el boot.
+- `backend/app/` — FastAPI + SQLModel; rutas HTTP en `app/api/routes/` y lógica en `app/services/`.
+- `backend/alembic/` — migraciones de PostgreSQL.
+- `backend/scripts/bootstrap.py` — migraciones y seed remoto hacia PostgreSQL + S3.
+- Para crear migraciones: `cd backend && uv run alembic revision --autogenerate -m "desc"`.
 - `frontend/` — Mini App en Astro + Preact: `src/pages/index.astro` (shell), `src/components/App.tsx` (island + router), `src/components/screens/*` (pantallas), `src/lib/*` (api, helpers, chart, bodymap).
 - `mcp/gym_tracker_mcp.py` — servidor MCP (23 tools) que habla con la API pública.
 - `templates/` — SOUL.md y SKILL.md para el perfil del agente coach.
