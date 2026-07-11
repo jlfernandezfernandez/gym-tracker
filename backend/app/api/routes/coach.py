@@ -4,20 +4,27 @@ The coach agent creates plans via MCP `create_plan`, which calls this endpoint.
 No LLM call here — the agent IS the LLM. The agent picks exercises from the
 catalog (`list_exercises`) and must send them in the body.
 """
-from datetime import datetime, time, timezone
-from typing import Optional
+
+from datetime import UTC, datetime, time
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.database import get_session
-from app.auth import current_user_id
-from app.models import AthleteMeasurement, BODYWEIGHT_WEIGHT, Exercise, PerformedSet, WorkoutSession, PlannedExercise
-from app.schemas.sessions import CoachImportRequest, CoachPlanRequest, SessionOut, SessionSummary
-from app.api.routes.sessions import _current_state, _load_session
 from app.api.routes.profile import _get_or_create_profile
+from app.api.routes.sessions import _current_state, _load_session
+from app.auth import current_user_id
+from app.database import get_session
+from app.models import (
+    BODYWEIGHT_WEIGHT,
+    AthleteMeasurement,
+    Exercise,
+    PerformedSet,
+    PlannedExercise,
+    WorkoutSession,
+)
+from app.schemas.sessions import CoachImportRequest, CoachPlanRequest, SessionOut, SessionSummary
 
 router = APIRouter(prefix="/coach", tags=["coach"])
 
@@ -26,38 +33,88 @@ router = APIRouter(prefix="/coach", tags=["coach"])
 async def training_snapshot(
     limit: int = 5,
     db: AsyncSession = Depends(get_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Compact context for a coach turn; avoids a fan-out of MCP reads."""
     limit = max(1, min(limit, 10))
     profile = await _get_or_create_profile(db, user_id)
-    sessions = (await db.execute(
-        select(WorkoutSession)
-        .where(WorkoutSession.telegram_user_id == user_id)
-        .options(selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.performed_sets), selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.exercise))
-        .order_by(WorkoutSession.session_date.desc(), WorkoutSession.id.desc()).limit(limit)
-    )).scalars().all()
-    active = (await db.execute(
-        select(WorkoutSession)
-        .where(WorkoutSession.telegram_user_id == user_id, WorkoutSession.status.in_(("planned", "in_progress")))
-        .options(selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.performed_sets), selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.exercise))
-        .order_by(case((WorkoutSession.status == "in_progress", 0), else_=1), WorkoutSession.session_date.desc(), WorkoutSession.id.desc())
-        .limit(1)
-    )).scalar_one_or_none()
-    measurements = (await db.execute(
-        select(AthleteMeasurement).where(AthleteMeasurement.telegram_user_id == user_id)
-        .order_by(AthleteMeasurement.measured_at.desc()).limit(3)
-    )).scalars().all()
+    sessions = (
+        (
+            await db.execute(
+                select(WorkoutSession)
+                .where(WorkoutSession.telegram_user_id == user_id)
+                .options(
+                    selectinload(WorkoutSession.planned_exercises).selectinload(
+                        PlannedExercise.performed_sets
+                    ),
+                    selectinload(WorkoutSession.planned_exercises).selectinload(
+                        PlannedExercise.exercise
+                    ),
+                )
+                .order_by(WorkoutSession.session_date.desc(), WorkoutSession.id.desc())
+                .limit(limit)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    active = (
+        await db.execute(
+            select(WorkoutSession)
+            .where(
+                WorkoutSession.telegram_user_id == user_id,
+                WorkoutSession.status.in_(("planned", "in_progress")),
+            )
+            .options(
+                selectinload(WorkoutSession.planned_exercises).selectinload(
+                    PlannedExercise.performed_sets
+                ),
+                selectinload(WorkoutSession.planned_exercises).selectinload(
+                    PlannedExercise.exercise
+                ),
+            )
+            .order_by(
+                case((WorkoutSession.status == "in_progress", 0), else_=1),
+                WorkoutSession.session_date.desc(),
+                WorkoutSession.id.desc(),
+            )
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    measurements = (
+        (
+            await db.execute(
+                select(AthleteMeasurement)
+                .where(AthleteMeasurement.telegram_user_id == user_id)
+                .order_by(AthleteMeasurement.measured_at.desc())
+                .limit(3)
+            )
+        )
+        .scalars()
+        .all()
+    )
     return {
         "profile": profile,
-        "active_session": {"session": SessionOut.model_validate(active, from_attributes=True), "current": _current_state(active)} if active else None,
+        "active_session": {
+            "session": SessionOut.model_validate(active, from_attributes=True),
+            "current": _current_state(active),
+        }
+        if active
+        else None,
         "recent_sessions": [
             SessionSummary(
-                id=session.id, session_date=session.session_date, title=session.title, status=session.status,
-                energy=session.energy, duration_actual=session.duration_actual,
+                id=session.id,
+                session_date=session.session_date,
+                title=session.title,
+                status=session.status,
+                energy=session.energy,
+                duration_actual=session.duration_actual,
                 exercise_count=len(session.planned_exercises or []),
-                total_sets=sum(len(item.performed_sets or []) for item in session.planned_exercises or []),
-            ).model_dump(mode="json") | {
+                total_sets=sum(
+                    len(item.performed_sets or []) for item in session.planned_exercises or []
+                ),
+            ).model_dump(mode="json")
+            | {
                 "exercises": [
                     {
                         "exercise_id": item.exercise_id,
@@ -66,7 +123,11 @@ async def training_snapshot(
                         "target_sets": item.target_sets,
                         "target_reps": item.target_reps,
                         "performed_sets": [
-                            {"weight": performed.weight, "reps": performed.reps, "rpe": performed.rpe}
+                            {
+                                "weight": performed.weight,
+                                "reps": performed.reps,
+                                "rpe": performed.rpe,
+                            }
                             for performed in item.performed_sets or []
                         ],
                     }
@@ -83,7 +144,7 @@ async def training_snapshot(
 async def coach_plan(
     body: CoachPlanRequest,
     db: AsyncSession = Depends(get_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Create a workout plan from the coach agent's exercise selection."""
 
@@ -107,20 +168,28 @@ async def coach_plan(
     for exercise_spec in body.exercises:
         exercise = await db.get(Exercise, exercise_spec.exercise_id)
         if not exercise:
-            raise HTTPException(status_code=422, detail=f"Exercise {exercise_spec.exercise_id} not found")
+            raise HTTPException(
+                status_code=422, detail=f"Exercise {exercise_spec.exercise_id} not found"
+            )
         if exercise.is_bodyweight:
             suggested_weight = BODYWEIGHT_WEIGHT
         elif exercise_spec.suggested_weight == BODYWEIGHT_WEIGHT:
-            raise HTTPException(status_code=422, detail="-1 weight is reserved for bodyweight exercises")
-        db.add(PlannedExercise(
-            session_id=workout.id,
-            exercise_id=exercise_spec.exercise_id,
-            order=exercise_spec.order,
-            target_sets=exercise_spec.target_sets,
-            target_reps=exercise_spec.target_reps,
-            suggested_weight=suggested_weight if exercise.is_bodyweight else exercise_spec.suggested_weight,
-            notes=exercise_spec.notes,
-        ))
+            raise HTTPException(
+                status_code=422, detail="-1 weight is reserved for bodyweight exercises"
+            )
+        db.add(
+            PlannedExercise(
+                session_id=workout.id,
+                exercise_id=exercise_spec.exercise_id,
+                order=exercise_spec.order,
+                target_sets=exercise_spec.target_sets,
+                target_reps=exercise_spec.target_reps,
+                suggested_weight=suggested_weight
+                if exercise.is_bodyweight
+                else exercise_spec.suggested_weight,
+                notes=exercise_spec.notes,
+            )
+        )
 
     await db.commit()
     return await _load_session(workout.id, db)
@@ -130,7 +199,7 @@ async def coach_plan(
 async def coach_import(
     body: CoachImportRequest,
     db: AsyncSession = Depends(get_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Import one already-performed historical session in a single call.
 
@@ -149,18 +218,22 @@ async def coach_import(
     await db.flush()
 
     # ponytail: fixed midday timestamp — the source tracker rarely keeps per-set times
-    performed_at = datetime.combine(body.session_date, time(12, 0), tzinfo=timezone.utc)
+    performed_at = datetime.combine(body.session_date, time(12, 0), tzinfo=UTC)
     for exercise_spec in body.exercises:
         exercise = await db.get(Exercise, exercise_spec.exercise_id)
         if not exercise:
-            raise HTTPException(status_code=422, detail=f"Exercise {exercise_spec.exercise_id} not found")
+            raise HTTPException(
+                status_code=422, detail=f"Exercise {exercise_spec.exercise_id} not found"
+            )
         planned = PlannedExercise(
             session_id=workout.id,
             exercise_id=exercise_spec.exercise_id,
             order=exercise_spec.order,
             target_sets=len(exercise_spec.sets),
             target_reps=exercise_spec.sets[0].reps,
-            suggested_weight=BODYWEIGHT_WEIGHT if exercise.is_bodyweight else exercise_spec.sets[0].weight,
+            suggested_weight=BODYWEIGHT_WEIGHT
+            if exercise.is_bodyweight
+            else exercise_spec.sets[0].weight,
             notes=exercise_spec.notes,
             status="completed",
         )
@@ -168,16 +241,20 @@ async def coach_import(
         await db.flush()
         for set_number, set_spec in enumerate(exercise_spec.sets, start=1):
             if not exercise.is_bodyweight and set_spec.weight == BODYWEIGHT_WEIGHT:
-                raise HTTPException(status_code=422, detail="-1 weight is reserved for bodyweight exercises")
-            db.add(PerformedSet(
-                planned_exercise_id=planned.id,
-                set_number=set_number,
-                weight=BODYWEIGHT_WEIGHT if exercise.is_bodyweight else set_spec.weight,
-                reps=set_spec.reps,
-                rpe=set_spec.rpe,
-                notes=set_spec.notes,
-                timestamp=performed_at,
-            ))
+                raise HTTPException(
+                    status_code=422, detail="-1 weight is reserved for bodyweight exercises"
+                )
+            db.add(
+                PerformedSet(
+                    planned_exercise_id=planned.id,
+                    set_number=set_number,
+                    weight=BODYWEIGHT_WEIGHT if exercise.is_bodyweight else set_spec.weight,
+                    reps=set_spec.reps,
+                    rpe=set_spec.rpe,
+                    notes=set_spec.notes,
+                    timestamp=performed_at,
+                )
+            )
 
     await db.commit()
     return await _load_session(workout.id, db)

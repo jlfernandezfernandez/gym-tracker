@@ -31,8 +31,13 @@ class Settings(BaseSettings):
     def validate_production(self) -> "Settings":
         if self.environment is Environment.PRODUCTION:
             required = (
-                "database_url", "cors_origins", "telegram_bot_token", "coach_api_key",
-                "s3_endpoint", "s3_access_key", "s3_secret_key",
+                "database_url",
+                "cors_origins",
+                "telegram_bot_token",
+                "coach_api_key",
+                "s3_endpoint",
+                "s3_access_key",
+                "s3_secret_key",
             )
             missing = [name for name in required if not getattr(self, name)]
             if missing:

@@ -1,24 +1,23 @@
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import case, select, func
+from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_session as get_db_session
 from app.auth import current_user_id
+from app.database import get_session as get_db_session
 from app.models import BODYWEIGHT_WEIGHT, Exercise, PerformedSet, PlannedExercise, WorkoutSession
-from app.schemas.sessions import ExerciseOut
 from app.schemas.exercises import ExerciseFacets
+from app.schemas.sessions import ExerciseOut
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
 
 
 @router.get("", response_model=list[ExerciseOut])
 async def list_exercises(
-    muscle_group: Optional[str] = Query(None, description="Filter by muscle group"),
-    body_part: Optional[str] = Query(None, description="Filter by body part"),
-    equipment: Optional[str] = Query(None, description="Filter by equipment type"),
-    search: Optional[str] = Query(None, description="Search by name"),
+    muscle_group: str | None = Query(None, description="Filter by muscle group"),
+    body_part: str | None = Query(None, description="Filter by body part"),
+    equipment: str | None = Query(None, description="Filter by equipment type"),
+    search: str | None = Query(None, description="Search by name"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db_session),
@@ -43,6 +42,7 @@ async def list_exercises(
 @router.get("/facets", response_model=ExerciseFacets)
 async def exercise_facets(db: AsyncSession = Depends(get_db_session)):
     """Return valid catalog filters so clients and agents do not guess values."""
+
     async def distinct_values(column):
         rows = (await db.execute(select(column).distinct().order_by(column))).all()
         return [value for (value,) in rows if value]
@@ -57,14 +57,20 @@ async def exercise_facets(db: AsyncSession = Depends(get_db_session)):
 @router.get("/records")
 async def personal_records(
     db: AsyncSession = Depends(get_db_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Personal records with a backend-owned weight mode."""
     statement = (
         select(
-            Exercise.id, Exercise.name, Exercise.muscle_group, Exercise.equipment,
-            Exercise.image_url, PerformedSet.weight, PerformedSet.reps,
-            WorkoutSession.session_date, WorkoutSession.id,
+            Exercise.id,
+            Exercise.name,
+            Exercise.muscle_group,
+            Exercise.equipment,
+            Exercise.image_url,
+            PerformedSet.weight,
+            PerformedSet.reps,
+            WorkoutSession.session_date,
+            WorkoutSession.id,
         )
         .join(PlannedExercise, PerformedSet.planned_exercise_id == PlannedExercise.id)
         .join(WorkoutSession, PlannedExercise.session_id == WorkoutSession.id)
@@ -73,28 +79,55 @@ async def personal_records(
     if user_id:
         statement = statement.where(WorkoutSession.telegram_user_id == user_id)
     statement = statement.order_by(
-        Exercise.id, PerformedSet.weight.desc(), PerformedSet.reps.desc(),
-        WorkoutSession.session_date.desc(), PerformedSet.id.desc(),
+        Exercise.id,
+        PerformedSet.weight.desc(),
+        PerformedSet.reps.desc(),
+        WorkoutSession.session_date.desc(),
+        PerformedSet.id.desc(),
     )
     rows = (await db.execute(statement)).all()
     records: dict[int, dict] = {}
-    for exercise_id, name, muscle_group, equipment, image_url, weight, reps, session_date, session_id in rows:
+    for (
+        exercise_id,
+        name,
+        muscle_group,
+        equipment,
+        image_url,
+        weight,
+        reps,
+        session_date,
+        session_id,
+    ) in rows:
         record = records.get(exercise_id)
         if record is None:
             records[exercise_id] = {
-                "exercise_id": exercise_id, "name": name, "muscle_group": muscle_group,
-                "equipment": equipment, "image_url": image_url,
+                "exercise_id": exercise_id,
+                "name": name,
+                "muscle_group": muscle_group,
+                "equipment": equipment,
+                "image_url": image_url,
                 # The first row is one real best set, never a synthetic weight/reps pair.
-                "max_weight": BODYWEIGHT_WEIGHT if equipment == "body weight" else float(weight or 0),
+                "max_weight": BODYWEIGHT_WEIGHT
+                if equipment == "body weight"
+                else float(weight or 0),
                 "max_reps": int(reps or 0),
-                "weight_mode": "bodyweight" if equipment == "body weight" else "weighted" if weight and weight > 0 else "unloaded",
-                "last_date": session_date, "sessions": {session_id},
+                "weight_mode": "bodyweight"
+                if equipment == "body weight"
+                else "weighted"
+                if weight and weight > 0
+                else "unloaded",
+                "last_date": session_date,
+                "sessions": {session_id},
             }
         else:
             record["sessions"].add(session_id)
             record["last_date"] = max(record["last_date"], session_date)
     return [
-        {**record, "last_date": record["last_date"].isoformat(), "sessions": len(record["sessions"])}
+        {
+            **record,
+            "last_date": record["last_date"].isoformat(),
+            "sessions": len(record["sessions"]),
+        }
         for record in sorted(records.values(), key=lambda item: item["last_date"], reverse=True)
     ]
 
@@ -104,7 +137,7 @@ async def exercise_progress(
     exercise_id: int,
     limit: int = Query(20, ge=1, le=100),
     db: AsyncSession = Depends(get_db_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Per-session progression with server-computed weight semantics."""
     exercise = await db.get(Exercise, exercise_id)
@@ -116,7 +149,9 @@ async def exercise_progress(
             WorkoutSession.session_date,
             func.max(PerformedSet.weight),
             func.max(PerformedSet.reps),
-            func.sum(case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)),
+            func.sum(
+                case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)
+            ),
             func.count(PerformedSet.id),
         )
         .join(PlannedExercise, PerformedSet.planned_exercise_id == PlannedExercise.id)
@@ -135,10 +170,16 @@ async def exercise_progress(
         {
             "session_id": session_id,
             "date": session_date.isoformat(),
-            "top_weight": float(top_weight or 0) if not exercise.is_bodyweight else BODYWEIGHT_WEIGHT,
+            "top_weight": float(top_weight or 0)
+            if not exercise.is_bodyweight
+            else BODYWEIGHT_WEIGHT,
             "top_reps": int(top_reps or 0),
             "volume": float(volume or 0) if not exercise.is_bodyweight else 0,
-            "weight_mode": "bodyweight" if exercise.is_bodyweight else "weighted" if top_weight and top_weight > 0 else "unloaded",
+            "weight_mode": "bodyweight"
+            if exercise.is_bodyweight
+            else "weighted"
+            if top_weight and top_weight > 0
+            else "unloaded",
             "sets": set_count,
         }
         for session_id, session_date, top_weight, top_reps, volume, set_count in reversed(rows)

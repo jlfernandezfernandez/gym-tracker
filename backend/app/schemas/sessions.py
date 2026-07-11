@@ -1,5 +1,5 @@
 from datetime import date, datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -17,31 +17,31 @@ class PerformedSetCreate(BaseModel):
     set_number: int = Field(ge=1)
     weight: float = Field(default=0.0, ge=-1)
     reps: int = Field(ge=1)
-    rpe: Optional[float] = None
+    rpe: float | None = None
     sensation: str = ""
     notes: str = ""
 
 
 class PlannedExerciseUpdate(BaseModel):
-    status: Optional[Literal["pending", "in_progress", "completed", "skipped"]] = None
-    new_exercise_id: Optional[int] = None
-    target_sets: Optional[int] = Field(default=None, ge=1, le=20)
-    notes: Optional[str] = None
+    status: Literal["pending", "in_progress", "completed", "skipped"] | None = None
+    new_exercise_id: int | None = None
+    target_sets: int | None = Field(default=None, ge=1, le=20)
+    notes: str | None = None
 
 
 class SessionUpdate(BaseModel):
-    session_date: Optional[date] = None
-    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
-    goal: Optional[str] = None
-    feedback: Optional[str] = None
-    coach_summary: Optional[str] = None
-    discomfort: Optional[str] = None
-    energy: Optional[int] = Field(default=None, ge=1, le=10)
-    duration_actual: Optional[int] = Field(default=None, ge=0)
+    session_date: date | None = None
+    title: str | None = Field(default=None, min_length=1, max_length=200)
+    goal: str | None = None
+    feedback: str | None = None
+    coach_summary: str | None = None
+    discomfort: str | None = None
+    energy: int | None = Field(default=None, ge=1, le=10)
+    duration_actual: int | None = Field(default=None, ge=0)
 
 
 class SessionFinish(BaseModel):
-    duration_actual: Optional[int] = None
+    duration_actual: int | None = None
     feedback: str = ""
     energy: int = Field(default=5, ge=1, le=10)
     discomfort: str = ""
@@ -66,7 +66,7 @@ class CoachPlanRequest(BaseModel):
 class ImportSet(BaseModel):
     weight: float = Field(default=0.0, ge=-1)
     reps: int = Field(ge=1)
-    rpe: Optional[float] = Field(default=None, ge=1, le=10)
+    rpe: float | None = Field(default=None, ge=1, le=10)
     notes: str = ""
 
 
@@ -115,7 +115,7 @@ class PerformedSetOut(BaseModel):
     weight: float
     weight_mode: Literal["bodyweight", "unloaded", "weighted"]
     reps: int
-    rpe: Optional[float] = None
+    rpe: float | None = None
     sensation: str
     notes: str
     timestamp: datetime
@@ -131,7 +131,7 @@ class PlannedExerciseOut(BaseModel):
     weight_mode: Literal["bodyweight", "unloaded", "weighted"]
     notes: str
     status: str
-    exercise: Optional[ExerciseOut] = None
+    exercise: ExerciseOut | None = None
     performed_sets: list[PerformedSetOut] = Field(default_factory=list)
 
 

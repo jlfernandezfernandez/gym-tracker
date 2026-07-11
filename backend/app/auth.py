@@ -3,7 +3,6 @@ import hmac
 import json
 import time
 import urllib.parse
-from typing import Optional
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import APIKeyHeader
@@ -14,7 +13,7 @@ telegram_header = APIKeyHeader(name="X-Telegram-Init-Data", auto_error=False)
 coach_header = APIKeyHeader(name="X-Coach-Key", auto_error=False)
 
 
-def validate_auth_date(auth_date: Optional[str], now: float, ttl: int) -> int:
+def validate_auth_date(auth_date: str | None, now: float, ttl: int) -> int:
     if not auth_date or not auth_date.isdigit():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid auth_date")
     auth_date_int = int(auth_date)
@@ -45,23 +44,29 @@ def validate_init_data(init_data: str, bot_token: str, ttl: int = 86400) -> dict
         try:
             return json.loads(user_data)
         except json.JSONDecodeError:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user data")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user data"
+            )
     return {}
 
 
 async def current_user_id(
-    telegram_data: Optional[str] = Depends(telegram_header),
-    coach_key: Optional[str] = Depends(coach_header),
-) -> Optional[int]:
+    telegram_data: str | None = Depends(telegram_header),
+    coach_key: str | None = Depends(coach_header),
+) -> int | None:
     settings = get_settings()
     if settings.auth_disabled:
         return None
     if coach_key and coach_key == settings.coach_api_key:
         return None
     if not telegram_data:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authentication")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authentication"
+        )
     try:
-        user_data = validate_init_data(telegram_data, settings.telegram_bot_token, settings.auth_ttl)
+        user_data = validate_init_data(
+            telegram_data, settings.telegram_bot_token, settings.auth_ttl
+        )
         user_id = user_data.get("id")
         if not user_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing user ID")

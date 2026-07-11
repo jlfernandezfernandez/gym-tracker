@@ -5,23 +5,23 @@ Revises: f6a7b8c9d0e1
 Create Date: 2026-07-11
 
 """
-from typing import Sequence, Union
+
+from collections.abc import Sequence
 
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "g7b8c9d0e1f2"
-down_revision: Union[str, None] = "f6a7b8c9d0e1"
-branch_labels: Union[str, Sequence[str], None] = None
-depends_on: Union[str, Sequence[str], None] = None
+down_revision: str | None = "f6a7b8c9d0e1"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    duplicates = (
-        sa.text(
-            "DELETE FROM athlete_profiles WHERE id NOT IN "
-            "(SELECT MIN(id) FROM athlete_profiles WHERE telegram_user_id IS NOT NULL GROUP BY telegram_user_id)"
-        )
+    duplicates = sa.text(
+        "DELETE FROM athlete_profiles WHERE id NOT IN "
+        "(SELECT MIN(id) FROM athlete_profiles WHERE telegram_user_id IS NOT NULL GROUP BY telegram_user_id)"
     )
     op.execute(duplicates)
     op.create_index(

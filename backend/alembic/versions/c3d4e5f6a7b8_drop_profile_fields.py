@@ -3,8 +3,10 @@
 Revision ID: c3d4e5f6a7b8
 Revises: a1b2c3d4e5f6
 """
-from alembic import op
+
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "c3d4e5f6a7b8"
 down_revision = "a1b2c3d4e5f6"
@@ -38,10 +40,26 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    op.add_column("athlete_profiles", sa.Column("unavailable_equipment", sa.String(), nullable=False, server_default=""))
-    op.add_column("athlete_profiles", sa.Column("available_equipment", sa.String(), nullable=False, server_default=""))
-    op.add_column("athlete_profiles", sa.Column("gym_name", sa.String(), nullable=False, server_default=""))
-    op.add_column("athlete_profiles", sa.Column("usual_session_minutes", sa.Integer(), nullable=True))
-    op.add_column("athlete_profiles", sa.Column("training_days_per_week", sa.Integer(), nullable=True))
-    op.add_column("athlete_profiles", sa.Column("limitations", sa.String(), nullable=False, server_default=""))
-    op.add_column("athlete_profiles", sa.Column("injuries", sa.String(), nullable=False, server_default=""))
+    op.add_column(
+        "athlete_profiles",
+        sa.Column("unavailable_equipment", sa.String(), nullable=False, server_default=""),
+    )
+    op.add_column(
+        "athlete_profiles",
+        sa.Column("available_equipment", sa.String(), nullable=False, server_default=""),
+    )
+    op.add_column(
+        "athlete_profiles", sa.Column("gym_name", sa.String(), nullable=False, server_default="")
+    )
+    op.add_column(
+        "athlete_profiles", sa.Column("usual_session_minutes", sa.Integer(), nullable=True)
+    )
+    op.add_column(
+        "athlete_profiles", sa.Column("training_days_per_week", sa.Integer(), nullable=True)
+    )
+    op.add_column(
+        "athlete_profiles", sa.Column("limitations", sa.String(), nullable=False, server_default="")
+    )
+    op.add_column(
+        "athlete_profiles", sa.Column("injuries", sa.String(), nullable=False, server_default="")
+    )

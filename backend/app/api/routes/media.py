@@ -1,6 +1,6 @@
+from botocore.exceptions import ClientError
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from botocore.exceptions import ClientError
 
 from app.storage.s3 import get_storage
 

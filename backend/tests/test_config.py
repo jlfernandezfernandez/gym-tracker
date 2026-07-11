@@ -3,7 +3,6 @@ from pydantic import ValidationError
 
 from app.config import Environment, Settings
 
-
 BASE = {
     "database_url": "postgresql+asyncpg://user:pass@db/app",
     "s3_endpoint": "http://minio:9000",

@@ -1,14 +1,13 @@
 from datetime import datetime
-from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 
 
 class AthleteProfileIn(BaseModel):
     name: str = "Athlete"
-    age: Optional[int] = None
-    height_cm: Optional[float] = None
-    weight_kg: Optional[float] = None
+    age: int | None = None
+    height_cm: float | None = None
+    weight_kg: float | None = None
     goal: str = ""
     experience_level: str = ""
     preferred_exercises: str = ""
@@ -18,16 +17,16 @@ class AthleteProfileIn(BaseModel):
 
 
 class AthleteProfilePatch(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = Field(default=None, ge=0, le=120)
-    height_cm: Optional[float] = Field(default=None, gt=0, le=300)
-    weight_kg: Optional[float] = Field(default=None, gt=0, le=500)
-    goal: Optional[str] = None
-    experience_level: Optional[str] = None
-    preferred_exercises: Optional[str] = None
-    disliked_exercises: Optional[str] = None
-    notes: Optional[str] = None
-    onboarding_complete: Optional[bool] = None
+    name: str | None = None
+    age: int | None = Field(default=None, ge=0, le=120)
+    height_cm: float | None = Field(default=None, gt=0, le=300)
+    weight_kg: float | None = Field(default=None, gt=0, le=500)
+    goal: str | None = None
+    experience_level: str | None = None
+    preferred_exercises: str | None = None
+    disliked_exercises: str | None = None
+    notes: str | None = None
+    onboarding_complete: bool | None = None
 
 
 class AthleteProfileOut(AthleteProfileIn):
@@ -36,13 +35,13 @@ class AthleteProfileOut(AthleteProfileIn):
 
 
 class AthleteMeasurementIn(BaseModel):
-    measured_at: Optional[datetime] = None
+    measured_at: datetime | None = None
     source: str = "manual"
-    weight_kg: Optional[float] = Field(default=None, ge=0)
-    muscle_kg: Optional[float] = Field(default=None, ge=0)
-    fat_kg: Optional[float] = Field(default=None, ge=0)
-    body_fat_pct: Optional[float] = Field(default=None, ge=0, le=100)
-    visceral_fat: Optional[float] = Field(default=None, ge=0)
+    weight_kg: float | None = Field(default=None, ge=0)
+    muscle_kg: float | None = Field(default=None, ge=0)
+    fat_kg: float | None = Field(default=None, ge=0)
+    body_fat_pct: float | None = Field(default=None, ge=0, le=100)
+    visceral_fat: float | None = Field(default=None, ge=0)
     notes: str = ""
 
 

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -27,7 +27,9 @@ async def load_session(session_id: int, db: AsyncSession) -> WorkoutSession:
         select(WorkoutSession)
         .where(WorkoutSession.id == session_id)
         .options(
-            selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.performed_sets),
+            selectinload(WorkoutSession.planned_exercises).selectinload(
+                PlannedExercise.performed_sets
+            ),
             selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.exercise),
         )
     )
@@ -49,19 +51,25 @@ def start_session(workout: WorkoutSession) -> None:
     if workout.status == "planned":
         workout.status = "in_progress"
     if workout.status == "in_progress" and not workout.started_at:
-        workout.started_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        workout.started_at = datetime.now(UTC).replace(tzinfo=None)
 
 
 def current_state(workout: WorkoutSession) -> dict:
     planned = sorted(workout.planned_exercises or [], key=lambda pe: pe.order)
     if workout.status in {"completed", "cancelled"}:
         return {
-            "session_id": workout.id, "session_status": workout.status,
-            "current_planned_exercise_id": None, "current_set_number": None,
-            "exercise_order": None, "exercise_count": len(planned),
-            "completed_exercises": sum(1 for item in planned if item.status in {"completed", "skipped"}),
+            "session_id": workout.id,
+            "session_status": workout.status,
+            "current_planned_exercise_id": None,
+            "current_set_number": None,
+            "exercise_order": None,
+            "exercise_count": len(planned),
+            "completed_exercises": sum(
+                1 for item in planned if item.status in {"completed", "skipped"}
+            ),
             "completed_sets": sum(len(item.performed_sets or []) for item in planned),
-            "total_sets": sum(item.target_sets for item in planned), "is_complete": True,
+            "total_sets": sum(item.target_sets for item in planned),
+            "is_complete": True,
         }
     current = None
     for planned_exercise in planned:
@@ -70,27 +78,41 @@ def current_state(workout: WorkoutSession) -> dict:
             break
     if current is None and planned:
         current = planned[-1]
-    completed_exercises = sum(1 for planned_exercise in planned if planned_exercise.status in {"completed", "skipped"})
+    completed_exercises = sum(
+        1 for planned_exercise in planned if planned_exercise.status in {"completed", "skipped"}
+    )
     total_sets = sum(planned_exercise.target_sets for planned_exercise in planned)
     completed_sets = sum(len(planned_exercise.performed_sets or []) for planned_exercise in planned)
     if current is None:
         return {
-            "session_id": workout.id, "session_status": workout.status,
-            "current_planned_exercise_id": None, "current_set_number": None,
-            "exercise_order": None, "exercise_count": 0,
-            "completed_exercises": completed_exercises, "completed_sets": completed_sets,
-            "total_sets": total_sets, "is_complete": True,
+            "session_id": workout.id,
+            "session_status": workout.status,
+            "current_planned_exercise_id": None,
+            "current_set_number": None,
+            "exercise_order": None,
+            "exercise_count": 0,
+            "completed_exercises": completed_exercises,
+            "completed_sets": completed_sets,
+            "total_sets": total_sets,
+            "is_complete": True,
         }
     current_set_count = len(current.performed_sets or [])
     next_set_number = min(current_set_count + 1, current.target_sets)
     return {
-        "session_id": workout.id, "session_status": workout.status,
-        "current_planned_exercise_id": current.id, "current_exercise_id": current.exercise_id,
+        "session_id": workout.id,
+        "session_status": workout.status,
+        "current_planned_exercise_id": current.id,
+        "current_exercise_id": current.exercise_id,
         "current_exercise_name": current.exercise.name if current.exercise else "",
-        "current_set_number": next_set_number, "target_sets": current.target_sets,
-        "target_reps": current.target_reps, "suggested_weight": current.suggested_weight,
-        "weight_mode": current.weight_mode, "exercise_order": current.order,
-        "exercise_count": len(planned), "completed_exercises": completed_exercises,
-        "completed_sets": completed_sets, "total_sets": total_sets,
+        "current_set_number": next_set_number,
+        "target_sets": current.target_sets,
+        "target_reps": current.target_reps,
+        "suggested_weight": current.suggested_weight,
+        "weight_mode": current.weight_mode,
+        "exercise_order": current.order,
+        "exercise_count": len(planned),
+        "completed_exercises": completed_exercises,
+        "completed_sets": completed_sets,
+        "total_sets": total_sets,
         "is_complete": bool(planned) and completed_exercises == len(planned),
     }

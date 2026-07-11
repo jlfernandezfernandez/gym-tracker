@@ -1,12 +1,16 @@
 from app.services.exercise_catalog import media_paths, parse_exercise
 
-
 ENTRY = {
-    "id": "0001", "name": "Sit-up", "name_es": "Abdominal",
-    "target": "abs", "body_part": "waist", "equipment": "body weight",
+    "id": "0001",
+    "name": "Sit-up",
+    "name_es": "Abdominal",
+    "target": "abs",
+    "body_part": "waist",
+    "equipment": "body weight",
     "secondary_muscles": ["hip flexors"],
     "instructions": {"en": "Lift.", "es": "Sube."},
-    "image": "images/0001.jpg", "gif_url": "videos/0001.gif",
+    "image": "images/0001.jpg",
+    "gif_url": "videos/0001.gif",
 }
 
 

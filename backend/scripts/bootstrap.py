@@ -1,12 +1,11 @@
 import asyncio
 import sys
 
-from alembic import command
 from alembic.config import Config
 
+from alembic import command
 from app.config import get_settings
 from app.database import _get_async_session
-from app.models import SQLModel
 from app.services.exercise_catalog import sync_exercise_catalog
 from app.storage.s3 import get_storage
 

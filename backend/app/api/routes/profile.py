@@ -1,14 +1,18 @@
-from datetime import datetime, timezone
-from typing import Optional
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import get_session
 from app.auth import current_user_id
-from app.models import AthleteProfile, AthleteMeasurement
-from app.schemas.profile import AthleteProfilePatch, AthleteProfileOut, AthleteMeasurementIn, AthleteMeasurementOut
+from app.database import get_session
+from app.models import AthleteMeasurement, AthleteProfile
+from app.schemas.profile import (
+    AthleteMeasurementIn,
+    AthleteMeasurementOut,
+    AthleteProfileOut,
+    AthleteProfilePatch,
+)
 
 router = APIRouter(prefix="/profile", tags=["profile"])
 
@@ -37,7 +41,7 @@ async def _get_or_create_profile(db: AsyncSession, user_id: int | None = None) -
 @router.get("", response_model=AthleteProfileOut)
 async def get_profile(
     db: AsyncSession = Depends(get_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Return the athlete profile for the authenticated Telegram user."""
     return await _get_or_create_profile(db, user_id)
@@ -47,7 +51,7 @@ async def get_profile(
 async def patch_profile(
     body: AthleteProfilePatch,
     db: AsyncSession = Depends(get_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Patch selected profile fields. Intended for conversational incremental updates."""
     profile = await _get_or_create_profile(db, user_id)
@@ -55,7 +59,7 @@ async def patch_profile(
         setattr(profile, key, value)
     if user_id is not None:
         profile.telegram_user_id = user_id
-    profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    profile.updated_at = datetime.now(UTC).replace(tzinfo=None)
     await db.commit()
     await db.refresh(profile)
     return profile
@@ -65,7 +69,7 @@ async def patch_profile(
 async def list_measurements(
     limit: int = 20,
     db: AsyncSession = Depends(get_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Return historical body measurements from any source: manual, scale, scan, clinic, etc."""
     statement = select(AthleteMeasurement)
@@ -73,7 +77,9 @@ async def list_measurements(
         statement = statement.where(AthleteMeasurement.telegram_user_id == user_id)
     else:
         statement = statement.where(AthleteMeasurement.telegram_user_id == None)  # noqa: E711
-    statement = statement.order_by(AthleteMeasurement.measured_at.desc()).limit(max(1, min(limit, 100)))
+    statement = statement.order_by(AthleteMeasurement.measured_at.desc()).limit(
+        max(1, min(limit, 100))
+    )
     result = await db.execute(statement)
     return result.scalars().all()
 
@@ -82,13 +88,13 @@ async def list_measurements(
 async def add_measurement(
     body: AthleteMeasurementIn,
     db: AsyncSession = Depends(get_session),
-    user_id: Optional[int] = Depends(current_user_id),
+    user_id: int | None = Depends(current_user_id),
 ):
     """Add one historical body measurement. Also updates current profile weight when provided."""
     profile = await _get_or_create_profile(db, user_id)
     measurement = AthleteMeasurement(
         telegram_user_id=user_id,
-        measured_at=(body.measured_at or datetime.now(timezone.utc)).replace(tzinfo=None),
+        measured_at=(body.measured_at or datetime.now(UTC)).replace(tzinfo=None),
         source=body.source,
         weight_kg=body.weight_kg,
         muscle_kg=body.muscle_kg,
@@ -100,7 +106,7 @@ async def add_measurement(
     db.add(measurement)
     if body.weight_kg is not None:
         profile.weight_kg = body.weight_kg
-        profile.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        profile.updated_at = datetime.now(UTC).replace(tzinfo=None)
     await db.commit()
     await db.refresh(measurement)
     return measurement

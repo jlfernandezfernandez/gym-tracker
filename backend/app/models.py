@@ -1,10 +1,9 @@
-from datetime import date, datetime, timezone
-from typing import Optional
+from datetime import UTC, date, datetime
 from uuid import uuid4
 
 import sqlalchemy as sa
-from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import CheckConstraint, UniqueConstraint
+from sqlmodel import Field, Relationship, SQLModel
 
 BODYWEIGHT_WEIGHT = -1.0
 
@@ -41,7 +40,10 @@ class Exercise(SQLModel, table=True):
 class WorkoutSession(SQLModel, table=True):
     __tablename__ = "workout_sessions"
     __table_args__ = (
-        CheckConstraint("status IN ('planned', 'in_progress', 'completed', 'cancelled')", name="ck_session_status"),
+        CheckConstraint(
+            "status IN ('planned', 'in_progress', 'completed', 'cancelled')",
+            name="ck_session_status",
+        ),
     )
 
     id: int = Field(default=None, primary_key=True)
@@ -56,8 +58,8 @@ class WorkoutSession(SQLModel, table=True):
     feedback: str = Field(default="")
     coach_summary: str = Field(default="")
     share_token: str = Field(default_factory=lambda: uuid4().hex)
-    telegram_user_id: Optional[int] = Field(default=None, index=True)
-    started_at: Optional[datetime] = Field(default=None)
+    telegram_user_id: int | None = Field(default=None, index=True)
+    started_at: datetime | None = Field(default=None)
 
     planned_exercises: list["PlannedExercise"] = Relationship(back_populates="session")
 
@@ -76,7 +78,9 @@ class PlannedExercise(SQLModel, table=True):
         UniqueConstraint("session_id", "order", name="uq_planned_exercise_order"),
         CheckConstraint("target_sets > 0", name="ck_planned_target_sets"),
         CheckConstraint("target_reps > 0", name="ck_planned_target_reps"),
-        CheckConstraint("status IN ('pending', 'in_progress', 'completed', 'skipped')", name="ck_planned_status"),
+        CheckConstraint(
+            "status IN ('pending', 'in_progress', 'completed', 'skipped')", name="ck_planned_status"
+        ),
     )
 
     id: int = Field(default=None, primary_key=True)
@@ -109,10 +113,12 @@ class PerformedSet(SQLModel, table=True):
     set_number: int = Field(default=1)
     weight: float = Field(default=0.0)
     reps: int = Field(default=0)
-    rpe: Optional[float] = Field(default=None, ge=1.0, le=10.0)
+    rpe: float | None = Field(default=None, ge=1.0, le=10.0)
     sensation: str = Field(default="")
     notes: str = Field(default="")
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    timestamp: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )
 
     planned_exercise: "PlannedExercise" = Relationship(back_populates="performed_sets")
 
@@ -125,14 +131,16 @@ class AthleteMeasurement(SQLModel, table=True):
     __tablename__ = "athlete_measurements"
 
     id: int = Field(default=None, primary_key=True)
-    telegram_user_id: Optional[int] = Field(default=None, index=True)
-    measured_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None), index=True)
+    telegram_user_id: int | None = Field(default=None, index=True)
+    measured_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None), index=True
+    )
     source: str = Field(default="manual", index=True)
-    weight_kg: Optional[float] = Field(default=None)
-    muscle_kg: Optional[float] = Field(default=None)
-    fat_kg: Optional[float] = Field(default=None)
-    body_fat_pct: Optional[float] = Field(default=None)
-    visceral_fat: Optional[float] = Field(default=None)
+    weight_kg: float | None = Field(default=None)
+    muscle_kg: float | None = Field(default=None)
+    fat_kg: float | None = Field(default=None)
+    body_fat_pct: float | None = Field(default=None)
+    visceral_fat: float | None = Field(default=None)
     notes: str = Field(default="")
 
 
@@ -149,14 +157,16 @@ class AthleteProfile(SQLModel, table=True):
 
     id: int = Field(default=None, primary_key=True)
     name: str = Field(default="Athlete")
-    telegram_user_id: Optional[int] = Field(default=None, index=True)
-    age: Optional[int] = Field(default=None)
-    height_cm: Optional[float] = Field(default=None)
-    weight_kg: Optional[float] = Field(default=None)
+    telegram_user_id: int | None = Field(default=None, index=True)
+    age: int | None = Field(default=None)
+    height_cm: float | None = Field(default=None)
+    weight_kg: float | None = Field(default=None)
     goal: str = Field(default="")
     experience_level: str = Field(default="")
     preferred_exercises: str = Field(default="")
     disliked_exercises: str = Field(default="")
     notes: str = Field(default="")
     onboarding_complete: bool = Field(default=False)
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
+    )

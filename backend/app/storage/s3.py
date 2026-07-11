@@ -11,7 +11,8 @@ class S3Storage:
     def __init__(self, settings: Settings, client: Any | None = None) -> None:
         self.bucket = settings.s3_bucket
         self.client = client or boto3.client(
-            "s3", endpoint_url=settings.s3_endpoint,
+            "s3",
+            endpoint_url=settings.s3_endpoint,
             aws_access_key_id=settings.s3_access_key,
             aws_secret_access_key=settings.s3_secret_key,
             region_name=settings.s3_region,
@@ -27,9 +28,13 @@ class S3Storage:
         }
 
     def upload(self, key: str, content: bytes, content_type: str) -> None:
-        self.client.put_object(Bucket=self.bucket, Key=key, Body=content,
-                               ContentType=content_type,
-                               CacheControl="public, max-age=31536000, immutable")
+        self.client.put_object(
+            Bucket=self.bucket,
+            Key=key,
+            Body=content,
+            ContentType=content_type,
+            CacheControl="public, max-age=31536000, immutable",
+        )
 
     def open(self, key: str) -> dict[str, Any]:
         return self.client.get_object(Bucket=self.bucket, Key=key)
