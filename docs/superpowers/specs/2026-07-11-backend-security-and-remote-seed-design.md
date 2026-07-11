@@ -50,6 +50,14 @@ Keep related SQLModel tables together in `models.py` to avoid circular relations
 
 Use `uv` as the only dependency manager. `pyproject.toml` declares runtime and development dependencies and `uv.lock` pins resolved versions. Remove `requirements.txt`; local development, tests, Docker builds, and documentation use `uv sync` or `uv run` consistently.
 
+## Configuration
+
+Centralize environment parsing in `app/config.py` with a typed Pydantic settings model. Runtime code reads configuration through this model rather than calling `os.getenv` across modules.
+
+Production fails fast when database, S3, Telegram, coach-key, or CORS configuration is missing or invalid. Authentication-disabled and local-service defaults are available only when `ENVIRONMENT=development` is explicitly selected. `.env.example` and development Compose provide convenient local values; application code does not silently select insecure fallbacks.
+
+Secrets must not appear in validation errors or logs. CORS wildcard mode is not accepted in production.
+
 ## Exercise seed architecture
 
 `scripts/bootstrap.py` is the only release command. It applies migrations, ensures the S3 bucket exists, and invokes one exercise seed workflow.
@@ -101,6 +109,22 @@ Measurement schemas reject clearly invalid negative values and percentages outsi
 
 Remote dataset, PostgreSQL, migration, or S3 failures make `scripts/bootstrap.py` exit unsuccessfully. Errors identify the failed provisioning stage without exposing credentials.
 
+Catch concrete external-boundary exceptions where practical. Use a consistent HTTP mapping: 404 for missing resources, 403 for resources owned by another user, 409 for integrity/concurrency conflicts, and 422 for invalid requested state.
+
+Keep multi-row mutations and each seed stage transactional. A failed plan, import, or metadata upsert must not commit partial database state.
+
+## Development quality
+
+Configure all backend tooling in `pyproject.toml`:
+
+- Ruff for formatting and linting.
+- Pyright for static type checking. Pyright complements Pydantic: Pyright checks code paths before execution, while Pydantic validates runtime input and settings.
+- Pytest for unit and PostgreSQL integration tests.
+
+Do not add a Makefile, task runner, or mandatory pre-commit framework. Document direct `uv run` commands so local and CI execution use the same entry points.
+
+Add a minimal GitHub Actions workflow that runs `uv sync --locked`, Ruff checks, Pyright, tests, and an Alembic migration consistency check. Docker installs locked production dependencies and runs the bootstrap release job separately from API startup.
+
 ## Verification
 
 Add the smallest useful backend test suite covering:
@@ -124,3 +148,6 @@ Update README, Compose configuration, contributor documentation, and attribution
 - Adding a generic repository/service architecture.
 - Running seed work inside API startup.
 - Maintaining both `requirements.txt` and `pyproject.toml`.
+- Generic task-runner or pre-commit infrastructure.
+- API versioning until a real compatibility boundary requires it.
+- Caches, queues, event buses, CQRS, or custom dependency-injection containers.
