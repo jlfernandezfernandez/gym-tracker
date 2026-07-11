@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing import Optional
 
-from database import get_session as get_db_session
-from telegram_auth import current_user_id
-from models import BODYWEIGHT_WEIGHT, Exercise, WorkoutSession, PlannedExercise, PerformedSet
-from schemas import (
+from app.database import get_session as get_db_session
+from app.auth import current_user_id
+from app.models import BODYWEIGHT_WEIGHT, Exercise, WorkoutSession, PlannedExercise, PerformedSet
+from app.schemas.sessions import (
     SessionOut,
     SessionSummary,
     PerformedSetCreate,
@@ -18,7 +18,7 @@ from schemas import (
     SessionUpdate,
 )
 
-router = APIRouter(prefix="/api/sessions", tags=["sessions"])
+router = APIRouter(prefix="/sessions", tags=["sessions"])
 
 
 async def _load_session(session_id: int, db: AsyncSession) -> WorkoutSession:

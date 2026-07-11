@@ -5,12 +5,12 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session
-from telegram_auth import current_user_id
-from models import AthleteProfile, AthleteMeasurement
-from schemas import AthleteProfilePatch, AthleteProfileOut, AthleteMeasurementIn, AthleteMeasurementOut
+from app.database import get_session
+from app.auth import current_user_id
+from app.models import AthleteProfile, AthleteMeasurement
+from app.schemas.profile import AthleteProfilePatch, AthleteProfileOut, AthleteMeasurementIn, AthleteMeasurementOut
 
-router = APIRouter(prefix="/api/profile", tags=["profile"])
+router = APIRouter(prefix="/profile", tags=["profile"])
 
 
 async def _get_or_create_profile(db: AsyncSession, user_id: int | None = None) -> AthleteProfile:

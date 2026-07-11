@@ -12,14 +12,14 @@ from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from database import get_session
-from telegram_auth import current_user_id
-from models import AthleteMeasurement, BODYWEIGHT_WEIGHT, Exercise, PerformedSet, WorkoutSession, PlannedExercise
-from schemas import CoachImportRequest, CoachPlanRequest, SessionOut, SessionSummary
-from routers.sessions import _current_state, _load_session
-from routers.profile import _get_or_create_profile
+from app.database import get_session
+from app.auth import current_user_id
+from app.models import AthleteMeasurement, BODYWEIGHT_WEIGHT, Exercise, PerformedSet, WorkoutSession, PlannedExercise
+from app.schemas.sessions import CoachImportRequest, CoachPlanRequest, SessionOut, SessionSummary
+from app.api.routes.sessions import _current_state, _load_session
+from app.api.routes.profile import _get_or_create_profile
 
-router = APIRouter(prefix="/api/coach", tags=["coach"])
+router = APIRouter(prefix="/coach", tags=["coach"])
 
 
 @router.get("/snapshot")

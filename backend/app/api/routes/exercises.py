@@ -4,12 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from database import get_session as get_db_session
-from telegram_auth import current_user_id
-from models import BODYWEIGHT_WEIGHT, Exercise, PerformedSet, PlannedExercise, WorkoutSession
-from schemas import ExerciseFacets, ExerciseOut
+from app.database import get_session as get_db_session
+from app.auth import current_user_id
+from app.models import BODYWEIGHT_WEIGHT, Exercise, PerformedSet, PlannedExercise, WorkoutSession
+from app.schemas.sessions import ExerciseOut
+from app.schemas.exercises import ExerciseFacets
 
-router = APIRouter(prefix="/api/exercises", tags=["exercises"])
+router = APIRouter(prefix="/exercises", tags=["exercises"])
 
 
 @router.get("", response_model=list[ExerciseOut])

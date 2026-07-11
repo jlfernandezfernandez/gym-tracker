@@ -4,8 +4,6 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 
-# ── Session ──
-
 class PlannedExerciseCreate(BaseModel):
     exercise_id: int = Field(gt=0)
     order: int = Field(default=0, ge=0)
@@ -43,14 +41,11 @@ class SessionUpdate(BaseModel):
 
 
 class SessionFinish(BaseModel):
-    # None = let the backend compute from started_at (issue #8).
     duration_actual: Optional[int] = None
     feedback: str = ""
     energy: int = Field(default=5, ge=1, le=10)
     discomfort: str = ""
 
-
-# ── Coach ──
 
 class CoachPlanRequest(BaseModel):
     title: str = ""
@@ -82,59 +77,6 @@ class CoachImportRequest(BaseModel):
     duration_actual: int = Field(default=0, ge=0)
     exercises: list[ImportExercise] = Field(min_length=1)
 
-
-# ── Athlete profile / onboarding ──
-
-class AthleteProfileIn(BaseModel):
-    name: str = "Athlete"
-    age: Optional[int] = None
-    height_cm: Optional[float] = None
-    weight_kg: Optional[float] = None
-    goal: str = ""
-    experience_level: str = ""
-    preferred_exercises: str = ""
-    disliked_exercises: str = ""
-    notes: str = ""
-    onboarding_complete: bool = False
-
-
-class AthleteProfilePatch(BaseModel):
-    name: Optional[str] = None
-    age: Optional[int] = Field(default=None, ge=0, le=120)
-    height_cm: Optional[float] = Field(default=None, gt=0, le=300)
-    weight_kg: Optional[float] = Field(default=None, gt=0, le=500)
-    goal: Optional[str] = None
-    experience_level: Optional[str] = None
-    preferred_exercises: Optional[str] = None
-    disliked_exercises: Optional[str] = None
-    notes: Optional[str] = None
-    onboarding_complete: Optional[bool] = None
-
-
-class AthleteProfileOut(AthleteProfileIn):
-    id: int
-    updated_at: datetime
-
-
-# ── Athlete measurements ──
-
-class AthleteMeasurementIn(BaseModel):
-    measured_at: Optional[datetime] = None
-    source: str = "manual"
-    weight_kg: Optional[float] = None
-    muscle_kg: Optional[float] = None
-    fat_kg: Optional[float] = None
-    body_fat_pct: Optional[float] = None
-    visceral_fat: Optional[float] = None
-    notes: str = ""
-
-
-class AthleteMeasurementOut(AthleteMeasurementIn):
-    id: int
-    measured_at: datetime
-
-
-# ── Response schemas ──
 
 class ExerciseOut(BaseModel):
     id: int
@@ -194,12 +136,6 @@ class SessionOut(BaseModel):
     share_token: str
     total_volume: float
     planned_exercises: list[PlannedExerciseOut] = Field(default_factory=list)
-
-
-class ExerciseFacets(BaseModel):
-    muscle_groups: list[str]
-    body_parts: list[str]
-    equipment: list[str]
 
 
 class SessionSummary(BaseModel):
