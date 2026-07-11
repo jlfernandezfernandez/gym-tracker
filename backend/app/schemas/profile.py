@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class AthleteProfileIn(BaseModel):
@@ -38,11 +38,11 @@ class AthleteProfileOut(AthleteProfileIn):
 class AthleteMeasurementIn(BaseModel):
     measured_at: Optional[datetime] = None
     source: str = "manual"
-    weight_kg: Optional[float] = None
-    muscle_kg: Optional[float] = None
-    fat_kg: Optional[float] = None
-    body_fat_pct: Optional[float] = None
-    visceral_fat: Optional[float] = None
+    weight_kg: Optional[float] = Field(default=None, ge=0)
+    muscle_kg: Optional[float] = Field(default=None, ge=0)
+    fat_kg: Optional[float] = Field(default=None, ge=0)
+    body_fat_pct: Optional[float] = Field(default=None, ge=0, le=100)
+    visceral_fat: Optional[float] = Field(default=None, ge=0)
     notes: str = ""
 
 

@@ -2,10 +2,17 @@ from datetime import datetime, timezone
 
 from fastapi import HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models import PlannedExercise, WorkoutSession
+
+
+def set_conflict_error(error: IntegrityError) -> HTTPException:
+    if "uq_performed_set_number" in str(error.orig):
+        return HTTPException(status_code=409, detail="Set was already logged by another request")
+    raise error
 
 
 def check_session_owner(workout: WorkoutSession, user_id: int | None, auth_disabled: bool) -> None:

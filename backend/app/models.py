@@ -2,6 +2,7 @@ from datetime import date, datetime, timezone
 from typing import Optional
 from uuid import uuid4
 
+import sqlalchemy as sa
 from sqlmodel import Field, SQLModel, Relationship
 from sqlalchemy import CheckConstraint, UniqueConstraint
 
@@ -137,6 +138,14 @@ class AthleteMeasurement(SQLModel, table=True):
 
 class AthleteProfile(SQLModel, table=True):
     __tablename__ = "athlete_profiles"
+    __table_args__ = (
+        sa.Index(
+            "uq_athlete_profiles_telegram_user_id",
+            "telegram_user_id",
+            unique=True,
+            postgresql_where=sa.text("telegram_user_id IS NOT NULL"),
+        ),
+    )
 
     id: int = Field(default=None, primary_key=True)
     name: str = Field(default="Athlete")

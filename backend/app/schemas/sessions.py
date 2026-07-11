@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class PlannedExerciseCreate(BaseModel):
@@ -55,6 +55,13 @@ class CoachPlanRequest(BaseModel):
     time_available: int = Field(default=45, ge=1, le=1440)
     exercises: list[PlannedExerciseCreate] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def validate_unique_orders(self) -> "CoachPlanRequest":
+        orders = [ex.order for ex in self.exercises]
+        if len(orders) != len(set(orders)):
+            raise ValueError("exercise order values must be unique")
+        return self
+
 
 class ImportSet(BaseModel):
     weight: float = Field(default=0.0, ge=-1)
@@ -76,6 +83,13 @@ class CoachImportRequest(BaseModel):
     feedback: str = ""
     duration_actual: int = Field(default=0, ge=0)
     exercises: list[ImportExercise] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_unique_orders(self) -> "CoachImportRequest":
+        orders = [ex.order for ex in self.exercises]
+        if len(orders) != len(set(orders)):
+            raise ValueError("exercise order values must be unique")
+        return self
 
 
 class ExerciseOut(BaseModel):
