@@ -25,5 +25,5 @@ def test_development_explicitly_allows_disabled_auth() -> None:
 
 
 def test_dataset_repository_is_configurable() -> None:
-    settings = Settings(**BASE, exercise_dataset_repository="owner/fork")  # pyright: ignore[reportArgumentType]
+    settings = Settings(**BASE, exercise_dataset_repository="owner/fork")
     assert settings.exercise_dataset_raw_base == "https://raw.githubusercontent.com/owner/fork/main"

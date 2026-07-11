@@ -13,7 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.api.routes.profile import _get_or_create_profile
-from app.api.routes.sessions import _current_state, _load_session
 from app.auth import current_user_id
 from app.database import get_session
 from app.models import (
@@ -25,6 +24,7 @@ from app.models import (
     WorkoutSession,
 )
 from app.schemas.sessions import CoachImportRequest, CoachPlanRequest, SessionOut, SessionSummary
+from app.services.sessions import current_state, load_session
 
 router = APIRouter(prefix="/coach", tags=["coach"])
 
@@ -97,7 +97,7 @@ async def training_snapshot(
         "profile": profile,
         "active_session": {
             "session": SessionOut.model_validate(active, from_attributes=True),
-            "current": _current_state(active),
+            "current": current_state(active),
         }
         if active
         else None,
@@ -195,7 +195,7 @@ async def coach_plan(
         )
 
     await db.commit()
-    return await _load_session(workout.id, db)
+    return await load_session(workout.id, db)
 
 
 @router.post("/import", response_model=SessionOut)
@@ -260,4 +260,4 @@ async def coach_import(
             )
 
     await db.commit()
-    return await _load_session(workout.id, db)
+    return await load_session(workout.id, db)

@@ -15,10 +15,14 @@ def set_conflict_error(error: IntegrityError) -> HTTPException:
     raise error
 
 
-def check_session_owner(workout: WorkoutSession, user_id: int | None, auth_disabled: bool) -> None:
-    if auth_disabled and user_id is None:
-        return
-    if user_id is None or workout.telegram_user_id != user_id:
+def check_session_owner(workout: WorkoutSession, user_id: int | None) -> None:
+    """Enforce ownership between Telegram users.
+
+    A None user_id is only reachable in development with auth disabled:
+    current_user_id rejects everything else with 401, and the coach key is
+    always scoped to one user via X-Telegram-User-Id.
+    """
+    if user_id is not None and workout.telegram_user_id != user_id:
         raise HTTPException(status_code=403, detail="This session belongs to another user")
 
 

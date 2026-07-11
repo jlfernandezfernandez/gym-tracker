@@ -11,6 +11,21 @@ from app.config import get_settings
 
 telegram_header = APIKeyHeader(name="X-Telegram-Init-Data", auto_error=False)
 coach_header = APIKeyHeader(name="X-Coach-Key", auto_error=False)
+acting_user_header = APIKeyHeader(name="X-Telegram-User-Id", auto_error=False)
+
+
+def coach_acting_user_id(acting_user: str | None) -> int:
+    """The coach key grants access only on behalf of one Telegram user.
+
+    Honored exclusively after the coach key is validated; a Telegram client
+    cannot impersonate because its signed init data wins.
+    """
+    if not acting_user or not acting_user.isdigit():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Coach requests must include X-Telegram-User-Id",
+        )
+    return int(acting_user)
 
 
 def validate_auth_date(auth_date: str | None, now: float, ttl: int) -> int:
@@ -53,12 +68,13 @@ def validate_init_data(init_data: str, bot_token: str, ttl: int = 86400) -> dict
 async def current_user_id(
     telegram_data: str | None = Depends(telegram_header),
     coach_key: str | None = Depends(coach_header),
+    acting_user: str | None = Depends(acting_user_header),
 ) -> int | None:
     settings = get_settings()
     if settings.auth_disabled:
         return None
     if coach_key and coach_key == settings.coach_api_key:
-        return None
+        return coach_acting_user_id(acting_user)
     if not telegram_data:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authentication"

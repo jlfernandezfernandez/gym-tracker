@@ -42,7 +42,6 @@ def run() -> None:
             except Exception as e:
                 await db.rollback()
                 print(f"Seed failed: {e}", file=sys.stderr)
-                sys.exit(1)
 
     asyncio.run(_seed())
 

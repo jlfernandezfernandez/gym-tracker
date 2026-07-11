@@ -8,7 +8,7 @@ from app.schemas.sessions import CoachPlanRequest, PlannedExerciseCreate
 @pytest.mark.parametrize("field,value", [("weight_kg", -1), ("body_fat_pct", 101)])
 def test_measurements_reject_invalid_values(field: str, value: float) -> None:
     with pytest.raises(ValidationError):
-        AthleteMeasurementIn(**{field: value})  # pyright: ignore[reportArgumentType]
+        AthleteMeasurementIn(**{field: value})
 
 
 def test_plan_rejects_duplicate_orders() -> None:

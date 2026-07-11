@@ -7,6 +7,6 @@ from app.schemas.sessions import SessionOut
 def test_backend_modules_have_stable_package_imports() -> None:
     assert api_router.prefix == "/api"
     assert callable(get_session)
-    assert str(Exercise.__tablename__) == "exercises"  # pyright: ignore[reportGeneralTypeIssues]
-    assert str(WorkoutSession.__tablename__) == "workout_sessions"  # pyright: ignore[reportGeneralTypeIssues]
+    assert Exercise.__tablename__ == "exercises"
+    assert WorkoutSession.__tablename__ == "workout_sessions"
     assert "total_volume" in SessionOut.model_fields
