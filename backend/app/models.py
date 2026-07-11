@@ -116,9 +116,7 @@ class PerformedSet(SQLModel, table=True):
     rpe: float | None = Field(default=None, ge=1.0, le=10.0)
     sensation: str = Field(default="")
     notes: str = Field(default="")
-    timestamp: datetime = Field(
-        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
-    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
 
     planned_exercise: "PlannedExercise" = Relationship(back_populates="performed_sets")
 
@@ -167,6 +165,4 @@ class AthleteProfile(SQLModel, table=True):
     disliked_exercises: str = Field(default="")
     notes: str = Field(default="")
     onboarding_complete: bool = Field(default=False)
-    updated_at: datetime = Field(
-        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None)
-    )
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))

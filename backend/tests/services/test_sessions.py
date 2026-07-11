@@ -6,7 +6,12 @@ from app.services.sessions import find_planned_exercise, start_session
 
 
 def test_find_planned_exercise_is_scoped_to_session() -> None:
-    workout = WorkoutSession(planned_exercises=[PlannedExercise(id=1), PlannedExercise(id=2)])
+    workout = WorkoutSession(
+        planned_exercises=[
+            PlannedExercise(id=1, session_id=1, exercise_id=1),
+            PlannedExercise(id=2, session_id=1, exercise_id=2),
+        ]
+    )
     assert find_planned_exercise(workout, 2).id == 2
     with pytest.raises(HTTPException) as error:
         find_planned_exercise(workout, 3)

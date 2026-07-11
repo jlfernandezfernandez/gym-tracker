@@ -20,5 +20,5 @@ async def serve_media(path: str):
     except ClientError as e:
         error_code = e.response.get("Error", {}).get("Code", "")
         if error_code in ("NoSuchKey", "404"):
-            raise HTTPException(status_code=404, detail="Media not found")
-        raise HTTPException(status_code=502, detail="Storage unavailable")
+            raise HTTPException(status_code=404, detail="Media not found") from None
+        raise HTTPException(status_code=502, detail="Storage unavailable") from e

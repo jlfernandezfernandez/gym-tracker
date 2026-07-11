@@ -21,7 +21,8 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     duplicates = sa.text(
         "DELETE FROM athlete_profiles WHERE id NOT IN "
-        "(SELECT MIN(id) FROM athlete_profiles WHERE telegram_user_id IS NOT NULL GROUP BY telegram_user_id)"
+        "(SELECT MIN(id) FROM athlete_profiles "
+        "WHERE telegram_user_id IS NOT NULL GROUP BY telegram_user_id)"
     )
     op.execute(duplicates)
     op.create_index(

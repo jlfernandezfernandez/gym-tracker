@@ -3,7 +3,7 @@ from pydantic import ValidationError
 
 from app.config import Environment, Settings
 
-BASE = {
+BASE: dict[str, str] = {
     "database_url": "postgresql+asyncpg://user:pass@db/app",
     "s3_endpoint": "http://minio:9000",
     "s3_access_key": "access",
@@ -16,7 +16,7 @@ BASE = {
 
 def test_production_requires_all_external_services() -> None:
     with pytest.raises(ValidationError):
-        Settings(environment=Environment.PRODUCTION)
+        Settings(environment=Environment.PRODUCTION)  # pyright: ignore[reportCallIssue]
 
 
 def test_development_explicitly_allows_disabled_auth() -> None:
@@ -25,5 +25,5 @@ def test_development_explicitly_allows_disabled_auth() -> None:
 
 
 def test_dataset_repository_is_configurable() -> None:
-    settings = Settings(**BASE, exercise_dataset_repository="owner/fork")
+    settings = Settings(**BASE, exercise_dataset_repository="owner/fork")  # pyright: ignore[reportArgumentType]
     assert settings.exercise_dataset_raw_base == "https://raw.githubusercontent.com/owner/fork/main"

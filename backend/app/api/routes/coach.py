@@ -151,7 +151,10 @@ async def coach_plan(
     if not body.exercises:
         raise HTTPException(
             status_code=422,
-            detail="exercises is required: pick exercises from list_exercises and send them in the plan.",
+            detail=(
+                "exercises is required: pick exercises from list_exercises"
+                " and send them in the plan."
+            ),
         )
     workout = WorkoutSession(
         title=body.title or "Entreno de hoy",

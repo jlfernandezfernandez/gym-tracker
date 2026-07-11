@@ -43,10 +43,10 @@ def validate_init_data(init_data: str, bot_token: str, ttl: int = 86400) -> dict
     if user_data:
         try:
             return json.loads(user_data)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as exc:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user data"
-            )
+            ) from exc
     return {}
 
 
@@ -71,5 +71,7 @@ async def current_user_id(
         if not user_id:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing user ID")
         return int(user_id)
-    except (ValueError, TypeError):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user ID")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid user ID"
+        ) from exc

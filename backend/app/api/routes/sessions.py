@@ -292,7 +292,7 @@ async def update_session(
     db: AsyncSession = Depends(get_db_session),
     user_id: int | None = Depends(current_user_id),
 ):
-    """Update session metadata: date, title, goal, feedback, summary, discomfort, energy or duration."""
+    """Update session metadata: date, title, goal, feedback, summary, discomfort, energy or duration."""  # noqa: E501
     workout = await _load_session(session_id, db)
     _check_owner(workout, user_id)
     for field, value in body.model_dump(exclude_none=True).items():
@@ -410,7 +410,11 @@ async def finish_session(
     else:
         raise HTTPException(
             status_code=422,
-            detail="Cannot derive duration: session has no started_at and duration_actual is missing. Log at least one set or pass duration_actual.",
+            detail=(
+                "Cannot derive duration: session has no started_at and"
+                " duration_actual is missing. Log at least one set or pass"
+                " duration_actual."
+            ),
         )
 
     workout.status = "completed"

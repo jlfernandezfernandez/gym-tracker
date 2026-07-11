@@ -1,4 +1,3 @@
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,7 +60,7 @@ async def personal_records(
 ):
     """Personal records with a backend-owned weight mode."""
     statement = (
-        select(
+        select(  # pyright: ignore[reportCallIssue]
             Exercise.id,
             Exercise.name,
             Exercise.muscle_group,
@@ -144,7 +143,7 @@ async def exercise_progress(
     if not exercise:
         raise HTTPException(status_code=404, detail="Exercise not found")
     statement = (
-        select(
+        select(  # pyright: ignore[reportCallIssue]
             WorkoutSession.id,
             WorkoutSession.session_date,
             func.max(PerformedSet.weight),
