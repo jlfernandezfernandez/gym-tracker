@@ -62,7 +62,7 @@ Secrets must not appear in validation errors or logs. CORS wildcard mode is not 
 
 `scripts/bootstrap.py` is the only release command. It applies migrations, ensures the S3 bucket exists, and invokes one exercise seed workflow.
 
-The exercise seed downloads `exercises.json` once from the `main` branch of `jlfernandezfernandez/exercises-dataset-es`. The downloaded data stays in memory. The workflow then:
+The exercise seed downloads `exercises.json` once from the `main` branch of the dataset repository configured in `app/config.py` (default: `jlfernandezfernandez/exercises-dataset-es`). A fork or repository rename therefore requires configuration only, not a code change. The downloaded data stays in memory. The workflow then:
 
 1. Parses and validates the remote catalog.
 2. Inserts new exercises in PostgreSQL and updates metadata for existing exercises, matched by `external_id`.
