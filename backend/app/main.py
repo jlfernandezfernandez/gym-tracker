@@ -1,5 +1,9 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app import APP_VERSION
 from app.api.router import api_router
@@ -18,7 +22,20 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     app.include_router(health_router)
+    app.include_router(health_router, prefix="/api")
     app.include_router(api_router)
+
+    static_dir = next((path for path in ("static", "../frontend/dist") if os.path.isdir(path)), None)
+    if static_dir:
+
+        @app.get("/", include_in_schema=False)
+        @app.get("/session/share/{share_token}", include_in_schema=False)
+        @app.get("/session/share/{share_token}/exercise/{planned_exercise_id}", include_in_schema=False)
+        async def frontend_shell() -> FileResponse:
+            return FileResponse(os.path.join(static_dir, "index.html"))
+
+        app.mount("/", StaticFiles(directory=static_dir, html=True), name="frontend")
+
     return app
 
 
