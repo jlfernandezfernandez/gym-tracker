@@ -4,9 +4,55 @@
 
 Harden the backend without changing successful API responses, and make exercise provisioning a single coherent remote-to-PostgreSQL-and-S3 operation. The application must not store or serve a local copy of the exercise catalog or media.
 
+## Target backend structure
+
+Reorganize the backend as a conventional Python package while keeping the number of layers proportional to the application:
+
+```text
+backend/
+├── app/
+│   ├── main.py
+│   ├── config.py
+│   ├── database.py
+│   ├── models.py
+│   ├── auth.py
+│   ├── api/
+│   │   ├── router.py
+│   │   └── routes/
+│   │       ├── coach.py
+│   │       ├── exercises.py
+│   │       ├── health.py
+│   │       ├── media.py
+│   │       ├── profile.py
+│   │       └── sessions.py
+│   ├── schemas/
+│   │   ├── exercises.py
+│   │   ├── profile.py
+│   │   └── sessions.py
+│   ├── services/
+│   │   ├── exercise_catalog.py
+│   │   └── sessions.py
+│   └── storage/
+│       └── s3.py
+├── alembic/
+│   └── versions/
+├── scripts/
+│   └── bootstrap.py
+├── tests/
+├── alembic.ini
+├── pyproject.toml
+└── uv.lock
+```
+
+`app/main.py` only creates and configures FastAPI. HTTP concerns stay in route modules; application transitions stay in focused services; database engine/session setup stays in `database.py`; S3 access stays in `storage/s3.py`.
+
+Keep related SQLModel tables together in `models.py` to avoid circular relationship imports. Do not introduce generic repositories, interfaces with one implementation, or domain/infrastructure layers. Database queries may remain beside a focused service until reuse justifies extracting them.
+
+Use `uv` as the only dependency manager. `pyproject.toml` declares runtime and development dependencies and `uv.lock` pins resolved versions. Remove `requirements.txt`; local development, tests, Docker builds, and documentation use `uv sync` or `uv run` consistently.
+
 ## Exercise seed architecture
 
-`operations.py` remains the only release command. It applies migrations, ensures the S3 bucket exists, and invokes one exercise seed workflow.
+`scripts/bootstrap.py` is the only release command. It applies migrations, ensures the S3 bucket exists, and invokes one exercise seed workflow.
 
 The exercise seed downloads `exercises.json` once from the `main` branch of `jlfernandezfernandez/exercises-dataset-es`. The downloaded data stays in memory. The workflow then:
 
@@ -53,7 +99,7 @@ Duplicate exercise order values are rejected before plan/import persistence. Con
 
 Measurement schemas reject clearly invalid negative values and percentages outside their valid range. Existing successful response formats and endpoint paths remain unchanged.
 
-Remote dataset, PostgreSQL, migration, or S3 failures make `operations.py` exit unsuccessfully. Errors identify the failed provisioning stage without exposing credentials.
+Remote dataset, PostgreSQL, migration, or S3 failures make `scripts/bootstrap.py` exit unsuccessfully. Errors identify the failed provisioning stage without exposing credentials.
 
 ## Verification
 
@@ -77,3 +123,4 @@ Update README, Compose configuration, contributor documentation, and attribution
 - Overwriting existing S3 media.
 - Adding a generic repository/service architecture.
 - Running seed work inside API startup.
+- Maintaining both `requirements.txt` and `pyproject.toml`.
