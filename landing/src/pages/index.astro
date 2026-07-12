@@ -58,10 +58,10 @@ const features = [
 				Tú hablas, él apunta.
 			</p>
 			<div class="mt-10 flex flex-wrap items-center justify-center gap-4 lg:justify-start">
-				<a href="https://github.com/jlfernandezfernandez/gym-tracker" class="cta rounded-control bg-accent px-6 py-3 font-semibold text-canvas">
+				<a href="https://github.com/jlfernandezfernandez/gym-tracker" class="rounded-control bg-accent px-6 py-3 font-semibold text-canvas transition duration-150 ease-out active:scale-[.97]">
 					Ver en GitHub
 				</a>
-				<a href="#como-funciona" class="cta rounded-control border border-edge bg-surface px-6 py-3 font-semibold text-ink hover:bg-hover">
+				<a href="#como-funciona" class="rounded-control border border-edge bg-surface px-6 py-3 font-semibold text-ink transition duration-150 ease-out hover:bg-hover active:scale-[.97]">
 					Cómo funciona
 				</a>
 			</div>
@@ -159,7 +159,7 @@ const features = [
 		<div class="stagger mt-10 grid grid-cols-2 gap-5 sm:grid-cols-4">
 			{
 				demoExercises.map((exercise) => (
-					<div class="excard overflow-hidden rounded-card border border-edge bg-surface shadow-card">
+					<div class="overflow-hidden rounded-card border border-edge bg-surface shadow-card transition duration-200 ease-out hover:-translate-y-1">
 						<img src={exercise.gif} alt={exercise.name} loading="lazy" class="aspect-square w-full bg-white object-cover" />
 						<div class="p-3">
 							<h3 class="text-sm font-semibold text-ink">{exercise.name}</h3>
@@ -177,7 +177,7 @@ const features = [
 		<p class="mx-auto mt-3 max-w-xl text-hint">Dos comandos y un token de bot. Guías para Docker Compose y Coolify en el repo.</p>
 		<pre class="mx-auto mt-8 max-w-xl overflow-x-auto rounded-card border border-edge bg-surface p-6 text-left text-sm text-ink shadow-card"><code>cp .env.example .env
 docker compose up -d</code></pre>
-		<a href="https://github.com/jlfernandezfernandez/gym-tracker" class="cta mt-8 inline-block rounded-control bg-accent px-6 py-3 font-semibold text-canvas">
+		<a href="https://github.com/jlfernandezfernandez/gym-tracker" class="mt-8 inline-block rounded-control bg-accent px-6 py-3 font-semibold text-canvas transition duration-150 ease-out active:scale-[.97]">
 			Empezar ahora →
 		</a>
 	</section>
@@ -191,14 +191,6 @@ docker compose up -d</code></pre>
 <style>
 	:root {
 		--ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
-	}
-
-	/* ── CTA buttons: press feedback ── */
-	.cta {
-		transition: transform 160ms var(--ease-out-strong), background-color 160ms ease;
-	}
-	.cta:active {
-		transform: scale(0.97);
 	}
 
 	/* ── Scroll reveal ── */
@@ -264,137 +256,9 @@ docker compose up -d</code></pre>
 		from { background-position: 0 100%; }
 		to { background-position: 0 -200%; }
 	}
-
-	/* ── Chat simulator ── */
-	.phone :global(.msg) {
-		max-width: 85%;
-		border-radius: 16px;
-		padding: 9px 12px;
-		font-size: 0.875rem;
-		line-height: 1.4;
-		opacity: 1;
-		transform: translateY(0) scale(1);
-		transition: opacity 250ms var(--ease-out-strong), transform 250ms var(--ease-out-strong);
-	}
-	@starting-style {
-		.phone :global(.msg) {
-			opacity: 0;
-			transform: translateY(8px) scale(0.97);
-		}
-	}
-	.phone :global(.msg.coach) {
-		align-self: flex-start;
-		background: var(--color-hover);
-		border: 1px solid var(--color-edge);
-		border-bottom-left-radius: 5px;
-		color: var(--color-ink);
-	}
-	.phone :global(.msg.user) {
-		align-self: flex-end;
-		background: color-mix(in srgb, var(--color-accent) 22%, var(--color-surface));
-		border-bottom-right-radius: 5px;
-		color: var(--color-ink);
-	}
-
-	.phone :global(.typing) {
-		display: inline-flex;
-		gap: 4px;
-		padding: 12px;
-	}
-	.phone :global(.typing i) {
-		width: 6px;
-		height: 6px;
-		border-radius: 50%;
-		background: var(--color-hint);
-		animation: bounce 1.1s ease-in-out infinite;
-	}
-	.phone :global(.typing i:nth-child(2)) { animation-delay: 0.15s; }
-	.phone :global(.typing i:nth-child(3)) { animation-delay: 0.3s; }
 	@keyframes bounce {
-		0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+		0%, 60%, 100% { transform: translateY(0); opacity: .5; }
 		30% { transform: translateY(-4px); opacity: 1; }
-	}
-
-	.phone :global(.workout) {
-		align-self: flex-start;
-		width: 92%;
-		border-radius: 16px;
-		border-bottom-left-radius: 5px;
-		border: 1px solid var(--color-edge);
-		background: var(--color-hover);
-		padding: 10px 12px;
-		opacity: 1;
-		transform: translateY(0) scale(1);
-		transition: opacity 250ms var(--ease-out-strong), transform 250ms var(--ease-out-strong);
-	}
-	@starting-style {
-		.phone :global(.workout) {
-			opacity: 0;
-			transform: translateY(8px) scale(0.97);
-		}
-	}
-	.phone :global(.workout header) {
-		font-size: 0.68rem;
-		font-weight: 700;
-		letter-spacing: 0.07em;
-		text-transform: uppercase;
-		color: var(--color-hint);
-		margin-bottom: 6px;
-	}
-	.phone :global(.workout .row) {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 6px 0;
-	}
-	.phone :global(.workout .row + .row) {
-		border-top: 1px solid var(--color-edge);
-	}
-	.phone :global(.workout img) {
-		width: 34px;
-		height: 34px;
-		border-radius: 9px;
-		background: #fff;
-		object-fit: cover;
-	}
-	.phone :global(.workout .row > div) { flex: 1; min-width: 0; }
-	.phone :global(.workout .row p) {
-		font-size: 0.8rem;
-		font-weight: 600;
-		color: var(--color-ink);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.phone :global(.workout .row span) {
-		font-size: 0.7rem;
-		color: var(--color-hint);
-	}
-	.phone :global(.workout .row em) {
-		font-style: normal;
-		font-size: 0.66rem;
-		font-weight: 700;
-		padding: 3px 8px;
-		border-radius: var(--radius-pill);
-		color: var(--color-ok);
-		background: var(--color-ok-bg);
-		opacity: 0;
-		transform: scale(0.9);
-		transition: opacity 220ms var(--ease-out-strong), transform 220ms var(--ease-out-strong);
-	}
-	.phone :global(.workout .row em.done) {
-		opacity: 1;
-		transform: scale(1);
-	}
-
-	/* ── Exercise cards hover (pointer devices only) ── */
-	@media (hover: hover) and (pointer: fine) {
-		.excard {
-			transition: transform 200ms var(--ease-out-strong);
-		}
-		.excard:hover {
-			transform: translateY(-4px);
-		}
 	}
 
 	/* ── Reduced motion: keep opacity, drop movement ── */
@@ -403,14 +267,6 @@ docker compose up -d</code></pre>
 		.stagger > * {
 			transform: none;
 			transition: opacity 200ms ease;
-		}
-		.phone :global(.msg),
-		.phone :global(.workout) {
-			transition: opacity 200ms ease;
-			transform: none;
-		}
-		.phone :global(.typing i) {
-			animation: none;
 		}
 		.flow-link i {
 			animation: none;
@@ -451,7 +307,9 @@ docker compose up -d</code></pre>
 
 	function addMessage(kind: 'coach' | 'user', text: string) {
 		const bubble = document.createElement('div');
-		bubble.className = `msg ${kind}`;
+		bubble.className = kind === 'coach'
+			? 'max-w-[85%] self-start rounded-2xl rounded-bl-[5px] border border-edge bg-hover px-3 py-[9px] text-sm leading-[1.4] text-ink'
+			: 'max-w-[85%] self-end rounded-2xl rounded-br-[5px] bg-[color-mix(in_srgb,var(--color-accent)_22%,var(--color-surface))] px-3 py-[9px] text-sm leading-[1.4] text-ink';
 		bubble.textContent = text;
 		chat.appendChild(bubble);
 		scrollDown();
@@ -461,8 +319,8 @@ docker compose up -d</code></pre>
 	async function showTyping(ms: number) {
 		status.textContent = 'escribiendo…';
 		const typing = document.createElement('div');
-		typing.className = 'msg coach typing';
-		typing.innerHTML = '<i></i><i></i><i></i>';
+		typing.className = 'inline-flex max-w-[85%] self-start gap-1 rounded-2xl rounded-bl-[5px] border border-edge bg-hover p-3';
+		typing.innerHTML = '<i class="size-1.5 animate-[bounce_1.1s_ease-in-out_infinite] rounded-full bg-hint"></i><i class="size-1.5 animate-[bounce_1.1s_ease-in-out_infinite] rounded-full bg-hint [animation-delay:.15s]"></i><i class="size-1.5 animate-[bounce_1.1s_ease-in-out_infinite] rounded-full bg-hint [animation-delay:.3s]"></i>';
 		chat.appendChild(typing);
 		scrollDown();
 		await sleep(ms);
@@ -472,13 +330,13 @@ docker compose up -d</code></pre>
 
 	function addWorkoutCard() {
 		const card = document.createElement('div');
-		card.className = 'workout';
+		card.className = 'w-[92%] self-start rounded-2xl rounded-bl-[5px] border border-edge bg-hover px-3 py-2.5';
 		card.innerHTML =
-			'<header>Hoy · Empuje</header>' +
+			'<header class="mb-1.5 text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Hoy · Empuje</header>' +
 			exercises
 				.map(
 					(exercise) =>
-						`<div class="row"><img src="${exercise.gif}" alt="" loading="lazy"><div><p>${exercise.name}</p><span>${exercise.sets}</span></div><em>hecho ✓</em></div>`,
+					`<div class="flex items-center gap-2 border-t border-edge py-1.5 first:border-t-0"><img class="size-[34px] rounded-[9px] bg-white object-cover" src="${exercise.gif}" alt="" loading="lazy"><div class="min-w-0 flex-1"><p class="overflow-hidden text-ellipsis whitespace-nowrap text-[.8rem] font-semibold text-ink">${exercise.name}</p><span class="text-[.7rem] text-hint">${exercise.sets}</span></div><em class="scale-90 rounded-pill bg-ok-bg px-2 py-[3px] text-[.66rem] font-bold not-italic text-ok opacity-0 transition">hecho ✓</em></div>`,
 				)
 				.join('');
 		chat.appendChild(card);
@@ -504,7 +362,7 @@ docker compose up -d</code></pre>
 
 		for (const check of card.querySelectorAll('em')) {
 			await sleep(1000);
-			check.classList.add('done');
+			check.classList.add('scale-100', 'opacity-100');
 		}
 
 		await sleep(1100);
@@ -522,7 +380,7 @@ docker compose up -d</code></pre>
 		addMessage('coach', 'Buenos días, Jordi 💪 Hoy toca empuje.');
 		addMessage('user', 'Dale, tengo 45 min');
 		const card = addWorkoutCard();
-		card.querySelectorAll('em').forEach((check) => check.classList.add('done'));
+		card.querySelectorAll('em').forEach((check) => check.classList.add('scale-100', 'opacity-100'));
 		addMessage('coach', 'Bien ahí 🔥 Todo guardado ✅');
 	} else {
 		playConversation();
