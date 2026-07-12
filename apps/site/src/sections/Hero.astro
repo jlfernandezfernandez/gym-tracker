@@ -1,0 +1,70 @@
+---
+const repo = 'https://github.com/jlfernandezfernandez/gym-tracker';
+---
+
+<header class="overflow-hidden border-b border-edge">
+	<nav class="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8">
+		<a href="/" class="flex items-center gap-2 font-[750] tracking-[-.02em] text-ink">
+			<span class="grid size-8 place-items-center rounded-xl bg-dark text-sm text-white">G</span>
+			Gym Tracker
+		</a>
+		<div class="flex items-center gap-5 text-sm text-hint">
+			<a href="#producto" class="hidden hover:text-ink sm:block">Producto</a>
+			<a href="#instalar" class="hidden hover:text-ink sm:block">Instalar</a>
+			<a href={repo} class="rounded-xl border border-edge bg-surface px-3.5 py-2 font-semibold text-ink shadow-sm transition-transform duration-150 active:scale-[.97]">GitHub ↗</a>
+		</div>
+	</nav>
+
+	<div class="mx-auto grid max-w-7xl items-center gap-12 px-5 pt-14 pb-20 sm:px-8 lg:grid-cols-[1.02fr_.98fr] lg:pt-24 lg:pb-28">
+		<div class="max-w-2xl">
+			<p class="mb-5 font-mono text-[.7rem] font-bold tracking-[.14em] text-accent uppercase">Telegram · MCP · Self-hosted</p>
+			<h1 class="font-display text-[clamp(3rem,8vw,6.4rem)] leading-[.92] font-[780] tracking-[-.065em] text-balance">
+				Habla con tu coach.<br /><span class="text-accent">Entrena de verdad.</span>
+			</h1>
+			<p class="mt-7 max-w-xl text-lg leading-relaxed text-pretty text-hint sm:text-xl">
+				Tu agente crea el entreno en Telegram. Gym Tracker convierte la conversación en una sesión clara, registra cada serie y recuerda tu progreso.
+			</p>
+			<div class="mt-9 flex flex-wrap gap-3">
+				<a href="#instalar" class="rounded-control bg-dark px-5 py-3 font-semibold text-white transition-transform duration-150 active:scale-[.97]">Instalar Gym Tracker</a>
+				<a href={repo} class="rounded-control border border-edge bg-surface px-5 py-3 font-semibold text-ink transition-transform duration-150 active:scale-[.97]">Ver el código</a>
+			</div>
+			<p class="mt-4 text-xs text-hint">Código abierto · licencia MIT · tus datos en tu servidor</p>
+		</div>
+
+		<div class="relative mx-auto w-full max-w-[470px]" aria-label="Una conversación de Telegram se convierte en un entrenamiento">
+			<div class="absolute -inset-10 -z-10 rounded-full bg-accent/8 blur-3xl"></div>
+			<div class="overflow-hidden rounded-[34px] border border-edge bg-surface shadow-card">
+				<div class="flex items-center gap-3 border-b border-edge px-4 py-3.5">
+					<div class="grid size-9 place-items-center rounded-full bg-accent/12">🏋️</div>
+					<div><p class="m-0 text-sm font-bold">Gym Coach</p><p class="m-0 text-xs text-ok">en línea</p></div>
+				</div>
+				<div class="grid min-h-[480px] content-end gap-2.5 bg-[linear-gradient(rgba(88,86,214,.035)_1px,transparent_1px),linear-gradient(90deg,rgba(88,86,214,.035)_1px,transparent_1px)] bg-[size:24px_24px] p-4">
+					<div class="hero-message max-w-[86%] rounded-2xl rounded-bl-md border border-edge bg-surface px-3 py-2.5 text-sm">Hoy toca empuje. ¿Tienes 45 minutos?</div>
+					<div class="hero-message ml-auto rounded-2xl rounded-br-md bg-accent px-3 py-2.5 text-sm text-white">Dale. Vamos.</div>
+					<div class="hero-message max-w-[90%] rounded-2xl rounded-bl-md border border-edge bg-surface px-3 py-2.5 text-sm">He ajustado volumen y descansos. Te abro la sesión 👇</div>
+					<div class="hero-workout mt-2 rounded-[22px] bg-dark p-4 text-white shadow-xl">
+						<div class="flex items-start justify-between gap-4">
+							<div><p class="m-0 font-mono text-[.62rem] tracking-[.12em] text-white/55 uppercase">Serie actual · 2 de 3</p><h2 class="mt-1.5 text-xl font-bold tracking-tight">Press banca</h2></div>
+							<span class="rounded-full bg-white/10 px-2.5 py-1 text-xs">42%</span>
+						</div>
+						<div class="mt-5 grid grid-cols-2 gap-2">
+							<div class="rounded-2xl bg-white/8 p-3"><span class="text-xs text-white/55">Peso</span><strong class="mt-1 block text-2xl">60 kg</strong></div>
+							<div class="rounded-2xl bg-white/8 p-3"><span class="text-xs text-white/55">Reps</span><strong class="mt-1 block text-2xl">8</strong></div>
+						</div>
+						<div class="mt-4 flex gap-1.5"><i class="h-1.5 flex-1 rounded-full bg-ok"></i><i class="h-1.5 flex-1 rounded-full bg-accent"></i><i class="h-1.5 flex-1 rounded-full bg-white/15"></i></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+</header>
+
+<style>
+	.hero-message { animation: arrive .45s cubic-bezier(.23,1,.32,1) both; }
+	.hero-message:nth-child(2) { animation-delay: .12s; }
+	.hero-message:nth-child(3) { animation-delay: .24s; }
+	.hero-workout { animation: materialize .65s .38s cubic-bezier(.23,1,.32,1) both; }
+	@keyframes arrive { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+	@keyframes materialize { from { opacity: 0; transform: translateY(16px) scale(.96); filter: blur(3px); } }
+	@media (prefers-reduced-motion: reduce) { .hero-message, .hero-workout { animation: none; } }
+</style>

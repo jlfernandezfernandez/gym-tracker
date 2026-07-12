@@ -61,8 +61,7 @@ la Mini App.
 
 ## Seguridad
 
-- No publiques `TELEGRAM_BOT_TOKEN`, `COACH_API_KEY` ni credenciales S3.
-- Mantén MCP, PostgreSQL y MinIO privados.
+- No publiques `TELEGRAM_BOT_TOKEN` ni `COACH_API_KEY`.
+- Mantén MCP y PostgreSQL privados.
 - El MCP debe pasar siempre `telegram_user_id` en las operaciones multiusuario.
 - No construyas URLs de sesiones manualmente; usa las herramientas MCP.
-

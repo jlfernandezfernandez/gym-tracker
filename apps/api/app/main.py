@@ -24,6 +24,11 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(health_router, prefix="/api")
     app.include_router(api_router)
+    app.mount(
+        "/exercise-media",
+        StaticFiles(directory=settings.exercise_dataset_dir, check_dir=False),
+        name="exercise-media",
+    )
 
     static_dir = next((path for path in ("static", "../miniapp/dist") if os.path.isdir(path)), None)
     if static_dir:

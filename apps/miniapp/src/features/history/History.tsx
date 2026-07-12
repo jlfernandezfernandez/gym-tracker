@@ -1,9 +1,10 @@
 /** History: recent sessions list. */
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
-import { cleanTitle, formatDate } from '../../lib/helpers';
+import { formatDate } from '../../lib/helpers';
 import { useApp } from '../../app/App';
-import { Empty, Loading, TopBar } from '../../components/ui';
+import { Empty, Loading } from '../../components/feedback';
+import { TopBar } from '../../components/navigation';
 
 /** Monday 00:00 (local) of the week containing the given date. */
 function weekStart(date: Date): Date {
@@ -39,7 +40,7 @@ export function History() {
 
   return (
     <>
-      <TopBar title="Historial" subtitle="Tu entrenamiento, en orden" onBack={app.pop} />
+      <TopBar title="Historial" subtitle="Tu entrenamiento, en orden" />
       {sessionsQuery.isLoading ? (
         <Loading />
       ) : sessionsQuery.isError ? (
@@ -58,7 +59,7 @@ export function History() {
               {sessions.map((session: any) => (
                 <button class="grid min-h-[76px] w-full cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 border-b border-edge bg-transparent px-[15px] py-3 text-left text-ink last:border-b-0 hover:bg-surface-2 active:bg-surface-2" key={session.id} onClick={() => app.openSession(session.id)}>
                   <span class="text-[.74rem] text-hint">{formatDate(session.session_date)}</span>
-                  <span class="min-w-0"><b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">{cleanTitle(session.title)}</b><small class="mt-[3px] block text-[.72rem] text-hint">{session.exercise_count || 0} ejercicios · {session.total_sets || 0} series{session.duration_actual ? ` · ${session.duration_actual} min` : ''}</small></span>
+                  <span class="min-w-0"><b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">{session.title || 'Entrenamiento'}</b><small class="mt-[3px] block text-[.72rem] text-hint">{session.exercise_count || 0} ejercicios · {session.total_sets || 0} series{session.duration_actual ? ` · ${session.duration_actual} min` : ''}</small></span>
                   <span class="text-[1.4rem] text-divider">›</span>
                 </button>
               ))}

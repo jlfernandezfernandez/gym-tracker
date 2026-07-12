@@ -2,14 +2,13 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch } from "../../lib/api";
 import {
-  cleanTitle,
   currentExercise,
   formatWeight,
   mediaUrl,
   normalizeSession,
 } from "../../lib/helpers";
 import { useApp } from "../../app/App";
-import { Empty } from "../../components/ui";
+import { Empty, Stat } from "../../components/feedback";
 
 export function Home() {
   const app = useApp();
@@ -77,7 +76,7 @@ export function Home() {
           ) : (
             <>
               <div class="flex items-start justify-between gap-3 [&>div]:min-w-0">
-                <h2>{cleanTitle(plan.title)}</h2>
+                <h2>{plan.title || 'Entrenamiento'}</h2>
                 <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{progressPct}%</span>
               </div>
               {/* During a workout the landing IS the workout: the upcoming set, grouped as one inset card. */}
@@ -113,14 +112,8 @@ export function Home() {
                   ))}
                 </div>
                 <div class="grid grid-cols-2 gap-[9px]">
-                  <div class="rounded-control bg-surface px-2 py-[14px] text-center">
-                    <b>{formatWeight(nextWeight, activeExercise?.weight_mode)}</b>
-                    <span>{activeExercise?.weight_mode === "weighted" ? "carga" : ""}</span>
-                  </div>
-                  <div class="rounded-control bg-surface px-2 py-[14px] text-center">
-                    <b>{activeExercise?.reps || "-"}</b>
-                    <span>reps</span>
-                  </div>
+                  <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode)} />
+                  <Stat surface label="Reps" value={activeExercise?.reps || "-"} />
                 </div>
               </div>
               <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-white transition active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(true)}>
@@ -134,50 +127,6 @@ export function Home() {
         </div>
       )}
 
-      <div class="mt-3.5 grid grid-cols-3 gap-[9px] [&>button]:grid [&>button]:min-h-[72px] [&>button]:place-content-center [&>button]:gap-[5px] [&>button]:rounded-2xl [&>button]:border-0 [&>button]:bg-surface [&>button]:text-[.75rem] [&>button]:font-[680] [&>button]:text-ink [&>button]:shadow-card [&>button]:active:scale-95 [&>button>svg]:size-5 [&>button>svg]:justify-self-center [&>button>svg]:text-accent">
-        <button onClick={() => app.push({ name: "history" })}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <path d="M3 12a9 9 0 1 0 2.6-6.4" />
-            <path d="M3 4v5h5" />
-          </svg>
-          Historial
-        </button>
-        <button onClick={() => app.push({ name: "records" })}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <polyline points="3 17 9 11 13 15 21 7" />
-            <polyline points="15 7 21 7 21 13" />
-          </svg>
-          Marcas
-        </button>
-        <button onClick={() => app.push({ name: "profile" })}>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          >
-            <circle cx="12" cy="8" r="4" />
-            <path d="M4 21c0-4 3.6-6 8-6s8 2 8 6" />
-          </svg>
-          Perfil
-        </button>
-      </div>
     </>
   );
 }

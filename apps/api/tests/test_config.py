@@ -5,9 +5,6 @@ from app.core.config import Environment, Settings
 
 BASE: dict[str, str] = {
     "database_url": "postgresql+asyncpg://user:pass@db/app",
-    "s3_endpoint": "http://minio:9000",
-    "s3_access_key": "access",
-    "s3_secret_key": "secret",
     "telegram_bot_token": "bot-token",
     "coach_api_key": "coach-key",
     "cors_origins": "https://gym.example.com",
@@ -24,6 +21,7 @@ def test_development_explicitly_allows_disabled_auth() -> None:
     assert settings.auth_disabled is True
 
 
-def test_dataset_repository_is_configurable() -> None:
-    settings = Settings(**BASE, exercise_dataset_repository="owner/fork")
-    assert settings.exercise_dataset_raw_base == "https://raw.githubusercontent.com/owner/fork/main"
+def test_dataset_release_is_pinned() -> None:
+    settings = Settings(**BASE, exercise_dataset_version="v2.0.0")
+    assert settings.exercise_dataset_dir.name == "v2.0.0"
+    assert settings.exercise_dataset_release_url.endswith("/releases/download/v2.0.0")

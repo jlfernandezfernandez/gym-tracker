@@ -1,14 +1,6 @@
 /** Session data helpers and small UI utilities. */
 import taxonomy from './exercise-taxonomy.json';
-
-const STATUS_ES: Record<string, string> = {
-  planned: 'Planificada',
-  active: 'Activa',
-  pending: 'Pendiente',
-  in_progress: 'En curso',
-  completed: 'Hecho',
-  skipped: 'Saltado',
-};
+import { EQUIPMENT_ES, STATUS_ES } from './translations';
 
 type TaxonomyTerm = { es: string; bodyMap: string[] };
 export const EXERCISE_TAXONOMY = taxonomy as Record<string, TaxonomyTerm>;
@@ -23,14 +15,11 @@ export const formatMuscle = (muscle: string) => {
 export const formatWeight = (weight: number, mode: string) =>
   mode === 'bodyweight' ? 'Peso corporal' : mode === 'unloaded' ? 'Sin carga' : `${weight} kg`;
 
-export const formatEquipment = (equipment: string) => (equipment === 'body weight' ? 'Peso corporal' : equipment);
+export const formatEquipment = (equipment: string) =>
+  EQUIPMENT_ES[String(equipment || '').toLowerCase()] || equipment;
 
 export const formatDate = (isoDate: string) =>
   new Date(isoDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-
-/** Legacy titles embed the date ("Pecho · 09/07"); session_date is the source of truth. */
-export const cleanTitle = (title: string) =>
-  String(title || 'Entrenamiento').replace(/\s*[·\-–—]\s*\d{1,2}\/\d{1,2}(\/\d{2,4})?\s*$/, '');
 
 export function normalizeSession(session: any) {
   const orderedExercises = [...(session?.planned_exercises || [])].sort(

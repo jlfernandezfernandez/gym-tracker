@@ -1,2 +1,10 @@
 @import 'tailwindcss';
 @import './theme.css';
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--color-canvas); color: var(--color-ink); }
+  ::selection { background: color-mix(in srgb, var(--color-accent) 22%, white); }
+  a, button { -webkit-tap-highlight-color: transparent; }
+  :focus-visible { outline: 3px solid color-mix(in srgb, var(--color-accent) 42%, transparent); outline-offset: 3px; }
+}

@@ -1,22 +1,57 @@
 import asyncio
+import hashlib
 import json
+import os
+import re
+import shutil
+import tarfile
+import tempfile
 import urllib.request
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings
-from app.models import Exercise
-from app.storage.s3 import S3Storage
+from app.models import CatalogState, Exercise
 
 
-@dataclass
+@dataclass(frozen=True)
+class DatasetManifest:
+    dataset_version: str
+    sha256: str
+    exercise_count: int
+    media_count: int
+    archive: str = "exercise-dataset.tar.gz"
+
+    @classmethod
+    def parse(cls, payload: dict[str, Any], expected_version: str) -> "DatasetManifest":
+        if payload.get("schema_version") != 1:
+            raise ValueError("Unsupported dataset manifest")
+        if payload.get("dataset_version") != expected_version:
+            raise ValueError("Dataset version mismatch")
+        if payload.get("archive") != "exercise-dataset.tar.gz":
+            raise ValueError("Unexpected dataset archive")
+        sha256 = payload.get("sha256", "")
+        if not isinstance(sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", sha256):
+            raise ValueError("Invalid dataset checksum")
+        return cls(
+            dataset_version=expected_version,
+            sha256=sha256,
+            exercise_count=int(payload.get("exercise_count", 0)),
+            media_count=int(payload.get("media_count", 0)),
+        )
+
+
+@dataclass(frozen=True)
 class SeedResult:
     added: int
     updated: int
-    media_uploaded: int
+    media_installed: int
+    skipped: bool = False
 
 
 def parse_exercise(entry: dict[str, Any]) -> dict[str, Any]:
@@ -42,88 +77,141 @@ def parse_exercise(entry: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def media_paths(entries: list[dict[str, Any]], existing_keys: set[str]) -> list[str]:
-    paths = set()
-    for entry in entries:
-        if image := entry.get("image"):
-            paths.add(image)
-        if gif := entry.get("gif_url"):
-            paths.add(gif)
-    missing = sorted(paths - existing_keys)
-    return missing
+def manifest_url(settings: Settings) -> str:
+    return f"{settings.exercise_dataset_release_url}/manifest.json"
 
 
-async def fetch_catalog(settings: Settings) -> list[dict[str, Any]]:
-    url = f"{settings.exercise_dataset_raw_base}/data/exercises.json"
-
-    def _fetch() -> list[dict[str, Any]]:
-        with urllib.request.urlopen(url, timeout=30) as response:
-            return json.load(response)
-
-    return await asyncio.to_thread(_fetch)
+def archive_url(settings: Settings) -> str:
+    return f"{settings.exercise_dataset_release_url}/exercise-dataset.tar.gz"
 
 
-async def seed_catalog(db: AsyncSession, entries: list[dict[str, Any]]) -> SeedResult:
+def fetch_manifest(settings: Settings) -> DatasetManifest:
+    with urllib.request.urlopen(manifest_url(settings), timeout=30) as response:
+        payload = json.load(response)
+    return DatasetManifest.parse(payload, settings.exercise_dataset_version)
+
+
+def download_archive(settings: Settings, destination: Path, expected_sha256: str) -> None:
+    digest = hashlib.sha256()
+    with urllib.request.urlopen(archive_url(settings), timeout=60) as response:
+        with destination.open("wb") as output:
+            while chunk := response.read(1024 * 1024):
+                output.write(chunk)
+                digest.update(chunk)
+    if digest.hexdigest() != expected_sha256:
+        raise ValueError("Dataset checksum mismatch")
+
+
+def _safe_member_name(name: str) -> bool:
+    path = PurePosixPath(name)
+    return not path.is_absolute() and ".." not in path.parts
+
+
+def extract_archive(
+    archive_path: Path, destination: Path, manifest: DatasetManifest
+) -> tuple[list[dict[str, Any]], int]:
+    with tarfile.open(archive_path, "r:gz") as archive:
+        members = archive.getmembers()
+        if any(not member.isfile() or not _safe_member_name(member.name) for member in members):
+            raise ValueError("Unsafe dataset archive")
+        by_name = {member.name: member for member in members}
+        if len(by_name) != len(members) or "data/exercises.json" not in by_name:
+            raise ValueError("Invalid dataset archive")
+        dataset_file = archive.extractfile(by_name["data/exercises.json"])
+        if dataset_file is None:
+            raise ValueError("Dataset is missing")
+        entries = json.load(dataset_file)
+        if not isinstance(entries, list) or len(entries) != manifest.exercise_count:
+            raise ValueError("Exercise count mismatch")
+        if any(
+            not isinstance(entry.get("image"), str)
+            or not entry["image"].startswith("images/")
+            or not isinstance(entry.get("gif_url"), str)
+            or not entry["gif_url"].startswith("videos/")
+            for entry in entries
+        ):
+            raise ValueError("Invalid media path")
+        media = sorted({entry[field] for entry in entries for field in ("image", "gif_url")})
+        if len(media) != manifest.media_count or any(name not in by_name for name in media):
+            raise ValueError("Media count mismatch")
+        allowed = {"data/exercises.json", "LICENSE", "NOTICE.md", *media}
+        if set(by_name) != allowed:
+            raise ValueError("Unexpected dataset archive contents")
+
+        for name in [*media, "LICENSE", "NOTICE.md"]:
+            source = archive.extractfile(by_name[name])
+            if source is None:
+                raise ValueError(f"Missing archive member: {name}")
+            target = destination / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with target.open("wb") as output:
+                shutil.copyfileobj(source, output)
+    return entries, len(media)
+
+
+async def seed_catalog(db: AsyncSession, entries: list[dict[str, Any]]) -> tuple[int, int]:
     result = await db.execute(select(Exercise))
     existing = {exercise.external_id: exercise for exercise in result.scalars()}
-    added = 0
-    updated = 0
+    added = updated = 0
     for entry in entries:
         parsed = parse_exercise(entry)
         external_id = parsed["external_id"]
         if not external_id:
             continue
-        if external_id in existing:
-            exercise = existing[external_id]
+        if exercise := existing.get(external_id):
             for key, value in parsed.items():
                 if key != "external_id":
                     setattr(exercise, key, value)
             updated += 1
         else:
-            exercise = Exercise(**parsed)
-            db.add(exercise)
+            db.add(Exercise(**parsed))
             added += 1
     await db.flush()
-    return SeedResult(added=added, updated=updated, media_uploaded=0)
+    return added, updated
 
 
-async def seed_missing_media(
-    storage: S3Storage, settings: Settings, entries: list[dict[str, Any]]
-) -> int:
-    existing_keys = storage.list_keys()
-    missing = media_paths(entries, existing_keys)
-    if not missing:
-        return 0
+async def install_dataset(db: AsyncSession, settings: Settings) -> SeedResult:
+    version_dir = settings.exercise_dataset_dir
+    marker = version_dir / ".installed"
+    state = await db.get(CatalogState, 1)
+    if (
+        state
+        and state.dataset_version == settings.exercise_dataset_version
+        and marker.is_file()
+        and marker.read_text(encoding="utf-8").strip() == state.sha256
+    ):
+        return SeedResult(0, 0, 0, skipped=True)
 
-    semaphore = asyncio.Semaphore(8)
-    uploaded = 0
-
-    async def _upload_one(path: str) -> None:
-        nonlocal uploaded
-        async with semaphore:
-            url = f"{settings.exercise_dataset_raw_base}/{path}"
-
-            def _download_and_upload() -> None:
-                with urllib.request.urlopen(url, timeout=30) as response:
-                    content = response.read()
-                    content_type = response.headers.get("Content-Type", "application/octet-stream")
-                storage.upload(path, content, content_type)
-
-            await asyncio.to_thread(_download_and_upload)
-            uploaded += 1
-
-    await asyncio.gather(*[_upload_one(path) for path in missing])
-    return uploaded
-
-
-async def sync_exercise_catalog(
-    db: AsyncSession, storage: S3Storage, settings: Settings
-) -> SeedResult:
-    entries = await fetch_catalog(settings)
-    seed_result = await seed_catalog(db, entries)
-    media_uploaded = await seed_missing_media(storage, settings, entries)
-    return SeedResult(
-        added=seed_result.added,
-        updated=seed_result.updated,
-        media_uploaded=media_uploaded,
+    manifest = await asyncio.to_thread(fetch_manifest, settings)
+    settings.exercise_dataset_root.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile(dir=settings.exercise_dataset_root, delete=False) as temporary:
+        archive_path = Path(temporary.name)
+    temporary_dir = Path(
+        tempfile.mkdtemp(
+            prefix=f".{settings.exercise_dataset_version}-", dir=settings.exercise_dataset_root
+        )
     )
+    try:
+        await asyncio.to_thread(download_archive, settings, archive_path, manifest.sha256)
+        entries, media_count = await asyncio.to_thread(
+            extract_archive, archive_path, temporary_dir, manifest
+        )
+        added, updated = await seed_catalog(db, entries)
+        (temporary_dir / ".installed").write_text(manifest.sha256 + "\n", encoding="utf-8")
+        for stale in settings.exercise_dataset_root.iterdir():
+            if stale != temporary_dir:
+                shutil.rmtree(stale, ignore_errors=True)
+        os.replace(temporary_dir, version_dir)
+        if state is None:
+            state = CatalogState(dataset_version=manifest.dataset_version, sha256=manifest.sha256)
+            db.add(state)
+        else:
+            state.dataset_version = manifest.dataset_version
+            state.sha256 = manifest.sha256
+            state.installed_at = datetime.now(UTC).replace(tzinfo=None)
+        await db.flush()
+        return SeedResult(added, updated, media_count)
+    finally:
+        archive_path.unlink(missing_ok=True)
+        if temporary_dir.exists():
+            shutil.rmtree(temporary_dir)

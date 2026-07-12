@@ -1,51 +1,349 @@
 {
-  "abdominals": { "es": "Abdominales", "bodyMap": ["abs"] },
-  "abductors": { "es": "Abductores", "bodyMap": ["abductors"] },
-  "adductors": { "es": "Aductores", "bodyMap": ["adductor"] },
-  "ankle stabilizers": { "es": "Estabilizadores de tobillo", "bodyMap": ["calves"] },
-  "ankles": { "es": "Tobillos", "bodyMap": ["calves"] },
-  "back": { "es": "Espalda", "bodyMap": ["upper-back", "lower-back", "trapezius"] },
-  "biceps": { "es": "Bíceps", "bodyMap": ["biceps"] },
-  "brachialis": { "es": "Braquial", "bodyMap": ["biceps"] },
-  "calves": { "es": "Gemelos", "bodyMap": ["calves"] },
-  "cardio": { "es": "Cardio", "bodyMap": [] },
-  "chest": { "es": "Pecho", "bodyMap": ["chest"] },
-  "core": { "es": "Core", "bodyMap": ["abs", "obliques"] },
-  "deltoids": { "es": "Deltoides", "bodyMap": ["front-deltoids", "back-deltoids"] },
-  "feet": { "es": "Pies", "bodyMap": [] },
-  "forearms": { "es": "Antebrazos", "bodyMap": ["forearm"] },
-  "glutes": { "es": "Glúteos", "bodyMap": ["gluteal"] },
-  "grip muscles": { "es": "Músculos de agarre", "bodyMap": ["forearm"] },
-  "groin": { "es": "Ingle", "bodyMap": ["adductor"] },
-  "hamstrings": { "es": "Isquiotibiales", "bodyMap": ["hamstring"] },
-  "hands": { "es": "Manos", "bodyMap": ["forearm"] },
-  "hip flexors": { "es": "Flexores de cadera", "bodyMap": ["abs", "quadriceps"] },
-  "inner thighs": { "es": "Muslos internos", "bodyMap": ["adductor"] },
-  "latissimus dorsi": { "es": "Dorsales", "bodyMap": ["upper-back"] },
-  "lats": { "es": "Dorsales", "bodyMap": ["upper-back"] },
-  "lower abs": { "es": "Abdominales inferiores", "bodyMap": ["abs"] },
-  "lower arms": { "es": "Antebrazos", "bodyMap": ["forearm"] },
-  "lower back": { "es": "Lumbar", "bodyMap": ["lower-back"] },
-  "lower legs": { "es": "Piernas inferiores", "bodyMap": ["calves"] },
-  "neck": { "es": "Cuello", "bodyMap": ["neck"] },
-  "obliques": { "es": "Oblicuos", "bodyMap": ["obliques"] },
-  "quadriceps": { "es": "Cuádriceps", "bodyMap": ["quadriceps"] },
-  "rear deltoids": { "es": "Deltoides posteriores", "bodyMap": ["back-deltoids"] },
-  "rhomboids": { "es": "Romboides", "bodyMap": ["upper-back"] },
-  "rotator cuff": { "es": "Manguito rotador", "bodyMap": ["back-deltoids"] },
-  "shins": { "es": "Tibiales", "bodyMap": ["calves"] },
-  "shoulders": { "es": "Hombros", "bodyMap": ["front-deltoids", "back-deltoids"] },
-  "soleus": { "es": "Sóleo", "bodyMap": ["calves"] },
-  "sternocleidomastoid": { "es": "Esternocleidomastoideo", "bodyMap": ["neck"] },
-  "trapezius": { "es": "Trapecio", "bodyMap": ["trapezius"] },
-  "traps": { "es": "Trapecio", "bodyMap": ["trapezius"] },
-  "triceps": { "es": "Tríceps", "bodyMap": ["triceps"] },
-  "upper arms": { "es": "Brazos", "bodyMap": ["biceps", "triceps"] },
-  "upper back": { "es": "Espalda alta", "bodyMap": ["upper-back"] },
-  "upper chest": { "es": "Pecho superior", "bodyMap": ["chest"] },
-  "upper legs": { "es": "Muslos", "bodyMap": ["quadriceps", "hamstring", "gluteal"] },
-  "waist": { "es": "Abdomen", "bodyMap": ["abs", "obliques"] },
-  "wrist extensors": { "es": "Extensores de muñeca", "bodyMap": ["forearm"] },
-  "wrist flexors": { "es": "Flexores de muñeca", "bodyMap": ["forearm"] },
-  "wrists": { "es": "Muñecas", "bodyMap": ["forearm"] }
+  "abdominals": {
+    "es": "Abdominales",
+    "bodyMap": [
+      "abs"
+    ]
+  },
+  "abductors": {
+    "es": "Abductores",
+    "bodyMap": [
+      "abductors"
+    ]
+  },
+  "adductors": {
+    "es": "Aductores",
+    "bodyMap": [
+      "adductor"
+    ]
+  },
+  "ankle stabilizers": {
+    "es": "Estabilizadores de tobillo",
+    "bodyMap": [
+      "calves"
+    ]
+  },
+  "ankles": {
+    "es": "Tobillos",
+    "bodyMap": [
+      "calves"
+    ]
+  },
+  "back": {
+    "es": "Espalda",
+    "bodyMap": [
+      "upper-back",
+      "lower-back",
+      "trapezius"
+    ]
+  },
+  "biceps": {
+    "es": "Bíceps",
+    "bodyMap": [
+      "biceps"
+    ]
+  },
+  "brachialis": {
+    "es": "Braquial",
+    "bodyMap": [
+      "biceps"
+    ]
+  },
+  "calves": {
+    "es": "Gemelos",
+    "bodyMap": [
+      "calves"
+    ]
+  },
+  "cardio": {
+    "es": "Cardio",
+    "bodyMap": []
+  },
+  "chest": {
+    "es": "Pecho",
+    "bodyMap": [
+      "chest"
+    ]
+  },
+  "core": {
+    "es": "Core",
+    "bodyMap": [
+      "abs",
+      "obliques"
+    ]
+  },
+  "deltoids": {
+    "es": "Deltoides",
+    "bodyMap": [
+      "front-deltoids",
+      "back-deltoids"
+    ]
+  },
+  "feet": {
+    "es": "Pies",
+    "bodyMap": []
+  },
+  "forearms": {
+    "es": "Antebrazos",
+    "bodyMap": [
+      "forearm"
+    ]
+  },
+  "glutes": {
+    "es": "Glúteos",
+    "bodyMap": [
+      "gluteal"
+    ]
+  },
+  "grip muscles": {
+    "es": "Músculos de agarre",
+    "bodyMap": [
+      "forearm"
+    ]
+  },
+  "groin": {
+    "es": "Ingle",
+    "bodyMap": [
+      "adductor"
+    ]
+  },
+  "hamstrings": {
+    "es": "Isquiotibiales",
+    "bodyMap": [
+      "hamstring"
+    ]
+  },
+  "hands": {
+    "es": "Manos",
+    "bodyMap": [
+      "forearm"
+    ]
+  },
+  "hip flexors": {
+    "es": "Flexores de cadera",
+    "bodyMap": [
+      "abs",
+      "quadriceps"
+    ]
+  },
+  "inner thighs": {
+    "es": "Muslos internos",
+    "bodyMap": [
+      "adductor"
+    ]
+  },
+  "latissimus dorsi": {
+    "es": "Dorsales",
+    "bodyMap": [
+      "upper-back"
+    ]
+  },
+  "lats": {
+    "es": "Dorsales",
+    "bodyMap": [
+      "upper-back"
+    ]
+  },
+  "lower abs": {
+    "es": "Abdominales inferiores",
+    "bodyMap": [
+      "abs"
+    ]
+  },
+  "lower arms": {
+    "es": "Antebrazos",
+    "bodyMap": [
+      "forearm"
+    ]
+  },
+  "lower back": {
+    "es": "Lumbar",
+    "bodyMap": [
+      "lower-back"
+    ]
+  },
+  "lower legs": {
+    "es": "Piernas inferiores",
+    "bodyMap": [
+      "calves"
+    ]
+  },
+  "neck": {
+    "es": "Cuello",
+    "bodyMap": [
+      "neck"
+    ]
+  },
+  "obliques": {
+    "es": "Oblicuos",
+    "bodyMap": [
+      "obliques"
+    ]
+  },
+  "quadriceps": {
+    "es": "Cuádriceps",
+    "bodyMap": [
+      "quadriceps"
+    ]
+  },
+  "rear deltoids": {
+    "es": "Deltoides posteriores",
+    "bodyMap": [
+      "back-deltoids"
+    ]
+  },
+  "rhomboids": {
+    "es": "Romboides",
+    "bodyMap": [
+      "upper-back"
+    ]
+  },
+  "rotator cuff": {
+    "es": "Manguito rotador",
+    "bodyMap": [
+      "back-deltoids"
+    ]
+  },
+  "shins": {
+    "es": "Tibiales",
+    "bodyMap": [
+      "calves"
+    ]
+  },
+  "shoulders": {
+    "es": "Hombros",
+    "bodyMap": [
+      "front-deltoids",
+      "back-deltoids"
+    ]
+  },
+  "soleus": {
+    "es": "Sóleo",
+    "bodyMap": [
+      "calves"
+    ]
+  },
+  "sternocleidomastoid": {
+    "es": "Esternocleidomastoideo",
+    "bodyMap": [
+      "neck"
+    ]
+  },
+  "trapezius": {
+    "es": "Trapecio",
+    "bodyMap": [
+      "trapezius"
+    ]
+  },
+  "traps": {
+    "es": "Trapecio",
+    "bodyMap": [
+      "trapezius"
+    ]
+  },
+  "triceps": {
+    "es": "Tríceps",
+    "bodyMap": [
+      "triceps"
+    ]
+  },
+  "upper arms": {
+    "es": "Brazos",
+    "bodyMap": [
+      "biceps",
+      "triceps"
+    ]
+  },
+  "upper back": {
+    "es": "Espalda alta",
+    "bodyMap": [
+      "upper-back"
+    ]
+  },
+  "upper chest": {
+    "es": "Pecho superior",
+    "bodyMap": [
+      "chest"
+    ]
+  },
+  "upper legs": {
+    "es": "Muslos",
+    "bodyMap": [
+      "quadriceps",
+      "hamstring",
+      "gluteal"
+    ]
+  },
+  "waist": {
+    "es": "Abdomen",
+    "bodyMap": [
+      "abs",
+      "obliques"
+    ]
+  },
+  "wrist extensors": {
+    "es": "Extensores de muñeca",
+    "bodyMap": [
+      "forearm"
+    ]
+  },
+  "wrist flexors": {
+    "es": "Flexores de muñeca",
+    "bodyMap": [
+      "forearm"
+    ]
+  },
+  "wrists": {
+    "es": "Muñecas",
+    "bodyMap": [
+      "forearm"
+    ]
+  },
+  "abs": {
+    "es": "Abdominales",
+    "bodyMap": [
+      "abs"
+    ]
+  },
+  "pectorals": {
+    "es": "Pectorales",
+    "bodyMap": [
+      "chest"
+    ]
+  },
+  "delts": {
+    "es": "Hombros",
+    "bodyMap": [
+      "front-deltoids",
+      "back-deltoids"
+    ]
+  },
+  "quads": {
+    "es": "Cuádriceps",
+    "bodyMap": [
+      "quadriceps"
+    ]
+  },
+  "spine": {
+    "es": "Lumbar",
+    "bodyMap": [
+      "lower-back"
+    ]
+  },
+  "cardiovascular system": {
+    "es": "Cardio",
+    "bodyMap": []
+  },
+  "serratus anterior": {
+    "es": "Serrato",
+    "bodyMap": [
+      "obliques"
+    ]
+  },
+  "levator scapulae": {
+    "es": "Cuello",
+    "bodyMap": [
+      "trapezius"
+    ]
+  }
 }

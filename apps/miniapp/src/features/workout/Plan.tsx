@@ -1,9 +1,8 @@
 /** Plan: session overview, exercise list, share and finish. */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
 import {
-  cleanTitle,
   completedSetCount,
   currentExercise,
   formatEquipment,
@@ -15,7 +14,10 @@ import {
 } from '../../lib/helpers';
 import { haptic } from '../../lib/telegram';
 import { useApp, useCurrent, useSession } from '../../app/App';
-import { BodyMap, BusyButton, Empty, Loading, TopBar } from '../../components/ui';
+import { BusyButton, Empty, Loading, Stat } from '../../components/feedback';
+import { TopBar } from '../../components/navigation';
+import { ConfirmSheet } from '../../components/sheet';
+import { BodyMap } from '../../components/visualizations';
 
 export function Plan() {
   const app = useApp();
@@ -44,10 +46,10 @@ export function Plan() {
   return (
     <>
       <TopBar
-        title={cleanTitle(plan.title) || 'Plan del coach'}
+        title={plan.title || 'Entrenamiento'}
         subtitle={app.readOnly ? 'Sesión compartida contigo' : 'Tu ruta para hoy'}
         onBack={app.readOnly ? undefined : app.pop}
-        action={!app.readOnly && plan.share_token ? <ShareButton title={cleanTitle(plan.title)} token={plan.share_token} /> : undefined}
+        action={!app.readOnly && plan.share_token ? <ShareButton title={plan.title || 'Entrenamiento'} token={plan.share_token} /> : undefined}
       />
       <div class="my-3 rounded-card bg-surface p-5 shadow-card">
         <div>
@@ -55,23 +57,12 @@ export function Plan() {
             <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{formatStatus(plan.status)}</span>
             <span class="rounded-pill bg-surface-2 px-2 py-1 text-[.68rem] font-[650] text-hint">{plan.duration_estimated || 0} min</span>
           </div>
-          <h1>{cleanTitle(plan.title)}</h1>
+          <h1>{plan.title || 'Entrenamiento'}</h1>
           <p>{plan.goal || plan.coach_summary || 'Plan generado por el coach'}</p>
           <div class="mt-2.5 grid grid-cols-3 gap-[9px]">
-            <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-              <b>{exercises.length}</b>
-              <span>ejercicios</span>
-            </div>
-            <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-              <b>
-                {completedSetsTotal}/{targetSetsTotal}
-              </b>
-              <span>series</span>
-            </div>
-            <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-              <b>{progressPct}%</b>
-              <span>progreso</span>
-            </div>
+            <Stat label="Ejercicios" value={exercises.length} />
+            <Stat label="Series" value={`${completedSetsTotal}/${targetSetsTotal}`} />
+            <Stat label="Progreso" value={`${progressPct}%`} />
           </div>
         </div>
       </div>
@@ -145,18 +136,9 @@ function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) 
       <h2>Sesión completada</h2>
       {plan.feedback && <p>{plan.feedback}</p>}
       <div class="mt-2.5 grid grid-cols-3 gap-[9px]">
-        <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-          <b>{totalPerformedSets}</b>
-          <span>series</span>
-        </div>
-        <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-          <b>{Math.round(plan.total_volume)}</b>
-          <span>kg volumen</span>
-        </div>
-        <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-          <b>{plan.duration_actual || plan.duration_estimated || '—'}{plan.duration_actual || plan.duration_estimated ? 'min' : ''}</b>
-          <span>duración</span>
-        </div>
+        <Stat label="Series" value={totalPerformedSets} />
+        <Stat label="Volumen" value={`${Math.round(plan.total_volume)} kg`} />
+        <Stat label="Duración" value={plan.duration_actual || plan.duration_estimated ? `${plan.duration_actual || plan.duration_estimated} min` : '—'} />
       </div>
     </div>
   );
@@ -185,12 +167,7 @@ function ShareButton({ title, token }: { title: string; token: string }) {
 function FinishButton({ sessionId, energy, discomfort }: { sessionId: number; energy: number; discomfort: string }) {
   const queryClient = useQueryClient();
   const [isOpen, setIsOpen] = useState(false);
-  const dialogRef = useRef<HTMLDialogElement>(null);
   const feedbackRef = useRef<HTMLTextAreaElement>(null);
-  // Native <dialog>: prompt() is unreliable inside the Telegram webview.
-  useEffect(() => {
-    isOpen ? dialogRef.current?.showModal() : dialogRef.current?.close();
-  }, [isOpen]);
 
   const finishSession = useMutation({
     mutationFn: () =>
@@ -219,19 +196,17 @@ function FinishButton({ sessionId, energy, discomfort }: { sessionId: number; en
       <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-surface px-[17px] py-[13px] text-[.94rem] font-[720] text-ink shadow-[inset_0_0_0_1px_var(--color-edge)] transition active:scale-[.975] active:opacity-[.82]" onClick={() => setIsOpen(true)}>
         ✓ Finalizar
       </button>
-      <dialog ref={dialogRef} class="m-auto mb-2.5 w-[min(100%-20px,430px)] rounded-[24px] border-0 bg-[rgba(250,250,252,.94)] p-5 text-ink shadow-sheet backdrop-blur-3xl backdrop-saturate-150 [&::backdrop]:bg-black/30" onClose={() => setIsOpen(false)}>
-        <h2>Finalizar sesión</h2>
-        <p>Cuéntale al coach cómo ha ido (opcional).</p>
-        <textarea ref={feedbackRef} placeholder="Fácil, duro, molestias, sensaciones..." />
-        <div class="mt-3 flex items-center gap-[9px] [&>button]:min-w-0 [&>button]:flex-1">
-          <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975] active:opacity-[.82]" onClick={() => setIsOpen(false)}>
-            Cancelar
-          </button>
-          <BusyButton busy={finishSession.isPending} busyLabel="Finalizando..." onClick={() => finishSession.mutate()}>
-            ✓ Finalizar
-          </BusyButton>
-        </div>
-      </dialog>
+      <ConfirmSheet
+        open={isOpen}
+        title="Finalizar sesión"
+        message="Cuéntale al coach cómo ha ido (opcional)."
+        confirmLabel="✓ Finalizar"
+        busy={finishSession.isPending}
+        onConfirm={() => finishSession.mutate()}
+        onCancel={() => setIsOpen(false)}
+      >
+        <textarea ref={feedbackRef} class="mt-3" placeholder="Fácil, duro, molestias, sensaciones..." />
+      </ConfirmSheet>
     </>
   );
 }

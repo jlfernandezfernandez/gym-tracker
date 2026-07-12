@@ -1,71 +1,45 @@
 # Instalar en Coolify
 
-Usa un único recurso Docker Compose.
-
 ## Crear el recurso
 
-1. Crea un proyecto y entorno en Coolify.
-2. Añade un recurso desde el repositorio público o mediante GitHub App.
-3. Selecciona el build pack **Docker Compose**.
-4. Indica `compose.production.yml` como Compose file.
-5. Configura las variables del `.env.production.example` como runtime
-   variables, nunca como build arguments.
-6. Asigna el dominio HTTPS a `app`, puerto `8000`.
+1. Crea un recurso **Docker Compose** desde este repositorio.
+2. Selecciona `compose.production.yml`.
+3. Asigna el dominio HTTPS al servicio `app`, puerto `8000`.
+4. No asignes dominio a `postgres` ni `mcp`.
 
-Después de publicar la primera release, deja los paquetes GHCR visibles para
-Coolify o configura credenciales de registry para que pueda descargar las
-imágenes privadas.
+## Variables
 
-Coolify crea una red interna para los servicios del stack. La App puede usar
-`postgres` y `minio` como hostnames; no sustituyas esos nombres por
-`localhost`.
-
-## Variables y persistencia
-
-Establece:
-
-```env
-GYM_TRACKER_VERSION=latest
-PUBLIC_APP_URL=https://gym.example.com
-CORS_ORIGINS=https://gym.example.com
-POSTGRES_USER=gym_tracker
-POSTGRES_PASSWORD=replace-with-a-url-safe-password
+```dotenv
+POSTGRES_USER=gym_user
+POSTGRES_PASSWORD=una-clave-larga
 POSTGRES_DB=gym_tracker
 TELEGRAM_BOT_TOKEN=...
-COACH_API_KEY=...
-S3_ACCESS_KEY=...
-S3_SECRET_KEY=...
-S3_BUCKET=gym-tracker-media
-S3_REGION=us-east-1
+COACH_API_KEY=otra-clave-larga
+CORS_ORIGINS=https://gym.example.com
+PUBLIC_APP_URL=https://gym.example.com
+EXERCISE_DATASET_VERSION=v1.0.0
+GYM_TRACKER_VERSION=latest
 ```
 
-Configura almacenamiento persistente para:
+## Persistencia
 
-| Servicio | Ruta |
-|---|---|
-| PostgreSQL | `/var/lib/postgresql` |
-| MinIO | `/data` |
+El Compose declara dos volúmenes:
 
-No asignes dominio público a PostgreSQL, MinIO ni MCP. El MCP queda disponible
-para la App por la red interna. Para un agente en otra red hace falta una VPN
-o túnel privado; el MCP público todavía no tiene autenticación de entrada.
+| Volumen | Contenido |
+| --- | --- |
+| `postgres_data` | sesiones, perfil y progreso |
+| `exercise_data` | release reproducible del catálogo |
 
-## Deploy y comprobación
+El primer deploy espera a PostgreSQL, aplica migraciones, verifica la release del dataset y después inicia la App.
 
-Despliega el stack y espera a que `app-init` termine. Configura el healthcheck
-de la App como:
+## Verificar
 
-```text
-GET /ready
-```
+- `https://gym.example.com/health` devuelve `status: ok`.
+- `app-init` termina con código 0.
+- `app` y `mcp` quedan saludables.
 
-Comprueba el dominio de la App y el log de `app-init`. Después conecta el agente
-al hostname interno del servicio MCP en el mismo stack. Si el agente está fuera
-de Coolify, usa una red privada; no abras 8001 al mundo.
+Después configura [Telegram](setup-telegram.md) y [el agente](agent-setup.md).
 
-El primer flujo completo debe comprobar App preparada, MCP preparado,
-descubrimiento de herramientas, creación de una sesión desde el agente y
-apertura con escritura desde Telegram.
+## Actualizar
 
-Para actualizaciones, backups y rollback consulta
-[`backup-and-update.md`](backup-and-update.md).
+Cambia `GYM_TRACKER_VERSION` y redespliega. Para actualizar el catálogo cambia `EXERCISE_DATASET_VERSION`; consulta [dataset.md](dataset.md).

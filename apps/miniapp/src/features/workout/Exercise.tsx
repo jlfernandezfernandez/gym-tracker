@@ -1,12 +1,15 @@
 /** Exercise: detail, set logging and completion. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'preact/hooks';
-import { apiFetch, type ProgressPoint } from '../../lib/api';
-import { chartUsesWeight } from '../../lib/chart';
-import { cleanTitle, completedSetCount, formatMuscle, formatWeight, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
+import { apiFetch } from '../../lib/api';
+import { chartUsesWeight, type ProgressPoint } from '../../lib/chart';
+import { completedSetCount, formatMuscle, formatWeight, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
 import { haptic } from '../../lib/telegram';
 import { useApp, useSession } from '../../app/App';
-import { BodyMap, BusyButton, ConfirmSheet, Empty, Loading, ProgressChart, TopBar } from '../../components/ui';
+import { BusyButton, Empty, Loading } from '../../components/feedback';
+import { TopBar } from '../../components/navigation';
+import { ConfirmSheet } from '../../components/sheet';
+import { BodyMap, ProgressChart } from '../../components/visualizations';
 
 function SetRow({ set, sessionId, plannedId, exerciseId, readOnly }: { set: any; sessionId: number; plannedId: number; exerciseId: number; readOnly?: boolean }) {
   const queryClient = useQueryClient();
@@ -64,14 +67,15 @@ export function Exercise({ plannedId }: { plannedId: number }) {
 
   return (
     <>
-      <TopBar title={cleanTitle(plan.title)} onBack={app.pop} />
+      <TopBar title={plan.title || 'Entrenamiento'} onBack={app.pop} />
       <div class="mx-[3px] mt-2.5 mb-[15px] flex gap-[5px] [&>span]:h-[5px] [&>span]:flex-1 [&>span]:rounded-[9px] [&>span]:bg-track-dim" aria-label={`Serie ${Math.min(loggedSetCount + 1, exercise.sets)} de ${exercise.sets}`}>
         {Array.from({ length: exercise.sets || 0 }, (_, setIndex) => (
           <span key={setIndex} class={setIndex < loggedSetCount ? '!bg-ok-bright' : setIndex === loggedSetCount ? '!bg-accent' : ''} />
         ))}
       </div>
       <div class="my-3 overflow-hidden rounded-card bg-surface shadow-card min-[720px]:grid min-[720px]:grid-cols-[1.12fr_.88fr]">
-        <div class="relative grid h-[235px] place-items-center overflow-hidden bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] min-[720px]:h-auto min-[720px]:min-h-[320px] max-[380px]:h-[210px]">{mediaSrc ? <img class="absolute inset-0 size-full object-contain p-4" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="eager" /> : '🏋️'}</div>
+        {/* Dataset media is 180×180: render at native size, never upscale. */}
+        <div class="grid h-[235px] place-items-center bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] min-[720px]:h-auto min-[720px]:min-h-[320px] max-[380px]:h-[210px]">{mediaSrc ? <img class="size-[180px] object-contain" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="eager" width="180" height="180" /> : '🏋️'}</div>
         <div class="p-[18px] min-[720px]:flex min-[720px]:flex-col min-[720px]:justify-center">
           <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Serie {Math.min(loggedSetCount + 1, exercise.sets)} de {exercise.sets}</p>
           <h1>{exercise.name || 'Ejercicio'}</h1>

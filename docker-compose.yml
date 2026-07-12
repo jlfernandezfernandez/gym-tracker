@@ -1,7 +1,7 @@
 # =============================================================================
 # gym-tracker — Docker Compose (desarrollo local)
 # =============================================================================
-# Replica la topología de producción para desarrollo: PostgreSQL 18 + MinIO + app + MCP.
+# Replica la topología de producción para desarrollo: PostgreSQL 18 + app + MCP.
 # Los datos sobreviven a `docker compose down` gracias a los volúmenes.
 # Para empezar de cero: `docker compose down -v`.
 # =============================================================================
@@ -23,19 +23,6 @@ services:
       retries: 10
       start_period: 10s
 
-  minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    restart: unless-stopped
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-gym-tracker-access-key}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-gym-tracker-secret-key-change-me}
-    volumes:
-      - minio_data:/data
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
-    command: ["server", "/data", "--console-address", ":9001"]
-
   app:
     build:
       context: .
@@ -50,11 +37,9 @@ services:
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       COACH_API_KEY: ${COACH_API_KEY:-}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-gym-tracker-access-key}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-gym-tracker-secret-key-change-me}
-      S3_BUCKET: ${S3_BUCKET:-gym-tracker-media}
-      S3_REGION: ${S3_REGION:-us-east-1}
+      EXERCISE_DATASET_VERSION: ${EXERCISE_DATASET_VERSION:-v1.0.0}
+    volumes:
+      - exercise_data:/data/exercise-datasets
     depends_on:
       app-init:
         condition: service_completed_successfully
@@ -73,17 +58,12 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       COACH_API_KEY: ${COACH_API_KEY:-}
-      S3_ENDPOINT: http://minio:9000
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-gym-tracker-access-key}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-gym-tracker-secret-key-change-me}
-      S3_BUCKET: ${S3_BUCKET:-gym-tracker-media}
-      S3_REGION: ${S3_REGION:-us-east-1}
-      EXERCISE_DATASET_REPOSITORY: ${EXERCISE_DATASET_REPOSITORY:-jlfernandezfernandez/exercises-dataset-es}
+      EXERCISE_DATASET_VERSION: ${EXERCISE_DATASET_VERSION:-v1.0.0}
+    volumes:
+      - exercise_data:/data/exercise-datasets
     depends_on:
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_started
 
   # Agente-agnostic MCP endpoint. Hermes, Claude, Codex, etc. can connect to
   # http://localhost:8001/mcp from the host without being part of this stack.
@@ -105,4 +85,4 @@ services:
 
 volumes:
   postgres_data:
-  minio_data:
+  exercise_data:

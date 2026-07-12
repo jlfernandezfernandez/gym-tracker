@@ -1,83 +1,54 @@
-# Design System
+# Diseño de interfaz
 
-Two Astro apps share one token vocabulary with different palettes:
+Gym Tracker tiene dos superficies con una misma idea visual: información directa, una acción dominante y movimiento sólo cuando explica estado.
 
-| App | Path | Palette | Styling idiom |
-|-----|------|---------|---------------|
-| Mini App (Telegram) | `apps/miniapp/` | Native, iOS-like | Tailwind utilities in Preact components |
-| Landing | `apps/site/` | Product site | Tailwind utilities in Astro components |
+## Mini App
 
-**Rule: don't mix idioms.** In the Mini App, style through semantic classes in
-`apps/miniapp/src/styles/global.css`; use Tailwind utilities in TSX
-(spacing utilities like `mt-2` are the one allowed exception). In the landing,
-use Tailwind utilities; component-specific CSS lives in the page's `<style>`.
+Ruta: `apps/miniapp/`.
 
-## Tokens
+- Tailwind v4 directamente en Preact.
+- Tipografía del sistema para conservar sensación nativa.
+- Paleta clara/oscura automática definida en `src/styles/theme.css`.
+- Violeta para interacción, verde sólo para progreso completado y rojo sólo para error/destrucción.
+- Navegación inferior en Hoy, Historial, Marcas y Perfil; se oculta durante Plan, Ejercicio y vistas compartidas.
+- Objetivos táctiles mínimos de 44px y respuesta de presión inmediata.
+- Sheets con `<dialog>`, haptics de Telegram y estados estables durante mutaciones.
 
-Defined as Tailwind v4 `@theme` in each app's `src/styles/theme.css`. Same
-names in both apps — only values differ. Both `var(--color-*)` and utilities
-(`bg-surface`, `text-ink`, `rounded-card`…) work.
+Componentes compartidos:
 
-| Token | Mini App | Landing | Use |
-|-------|----------|---------|-----|
-| `--color-canvas` | `#f5f5f7` | `#09090b` | Page background |
-| `--color-surface` | `#fff` | `#131315` | Cards |
-| `--color-surface-2` | `#f2f2f7` | — | Nested fills (stats, rows) |
-| `--color-hover` | `#fafafa` | `#1c1c1f` | Hover/active fills |
-| `--color-ink` | `#1d1d1f` | `#fafafa` | Primary text |
-| `--color-hint` | `#6e6e73` | `#a1a1aa` | Secondary text |
-| `--color-accent` | `#5856d6` (indigo) | `#4ade80` (green) | Brand / interactive |
-| `--color-ok / warn / err` | iOS greens/oranges/reds + `-bg` pairs | ok only | Status pills, toasts |
-| `--color-edge` | `rgba(60,60,67,.14)` | `rgba(255,255,255,.09)` | Borders |
-| `--radius-card` | `22px` | same | Cards |
-| `--radius-control` | `14px` | same | Inputs, buttons, nested tiles |
-| `--radius-pill` | `999px` | same | Pills, round buttons |
-| `--shadow-card/toast/sheet/sticky` | see theme.css | card only | Elevation |
-| `--font-sans` | SF Pro stack | same | Everything |
+```text
+src/components/
+  feedback.tsx        loading, empty y BusyButton
+  navigation.tsx      TopBar y TabBar
+  sheet.tsx           confirmación nativa
+  visualizations.tsx  body map y gráficas
+```
 
-Adding a token: add to the app that needs it, keep the name generic enough
-that the other app could adopt it. Structural tokens (radius, font) stay
-identical in both files — they're duplicated on purpose (two independent
-builds; sharing a file isn't worth the coupling for ~8 lines).
+`global.css` sólo contiene base, preferencias de accesibilidad y estilos de DOM generado externamente. La presentación ordinaria vive en utilidades Tailwind.
 
-## Typography (Mini App)
+## Landing
 
-Set globally in `@layer base` — headings and `<p>` need no classes:
+Ruta: `apps/site/`.
 
-- `h1` — clamp 1.75–2.25rem, weight 780, tight tracking. One per screen.
-- `h2` — 1.15rem. Card/section titles.
-- `h3` — .98rem. Row/tile titles.
-- `p` — .875rem, hint color by default.
-- `.eyebrow` — uppercase micro-label above headings.
-- Numbers get `tnum` via body `font-feature-settings`.
+- Canvas frío, grafito, violeta y verde reservado para éxito.
+- Display con `ui-rounded`, cuerpo del sistema y etiquetas técnicas monoespaciadas; no hay fuentes remotas.
+- Secciones independientes en `src/sections/`.
+- El hero muestra la conversación que se convierte en una sesión.
+- No se usan grids de features genéricos, gradientes decorativos ni animaciones dispersas.
 
-## Mini App patterns (`apps/miniapp/src/styles/global.css`)
+## Movimiento y accesibilidad
 
-- `.card` — surface + `radius-card` + `shadow-card`. Add `.tap` for pressable.
-- `.btn` — primary (ink bg). Variants `.secondary`, `.ghost`. `.row` lays buttons side by side.
-- `.pill` — status chips. Variants `.active`, `.ok`, `.warn`, `.err`; workflow states `.st-completed`, `.st-skipped`, `.st-in_progress`.
-- `.topbar` — sticky blurred header; `.back` and `.top-action` round buttons. Component: `TopBar` in `ui.tsx`.
-- `dialog.sheet` — bottom sheet via native `<dialog>` (`ConfirmSheet` in `ui.tsx`; `window.confirm` breaks in Telegram webview).
-- `.stat` / `.stats` — KPI tiles on `surface-2`.
-- `.toast`, `.loading`/`.spinner`, `.empty` — feedback states (`ui.tsx` components).
-- Media tiles (`.big-media`, `.exercise-media`, `.session-hero-media`) — always white bg (exercise GIFs have white canvases), `object-fit: contain`.
+- Presión: 100–150ms, `transform` únicamente.
+- Entradas excepcionales: menos de 300ms con curvas fuertes de salida.
+- Nada frecuente se anima por decoración.
+- `prefers-reduced-motion`, transparencia reducida, contraste aumentado, foco visible y safe areas son obligatorios.
+- Hover sólo aporta información en dispositivos que realmente soportan hover.
 
-Shared primitives live in `apps/miniapp/src/components/ui.tsx`: `Loading`,
-`Empty`, `TopBar`, `BusyButton`, `ConfirmSheet`, `BodyMap`, charts. Reuse
-before writing new ones.
+## Verificación
 
-## Motion & a11y (both apps)
+```bash
+cd apps/miniapp && npm run build
+cd ../site && npm run build
+```
 
-Non-negotiable, already wired — keep them when touching styles:
-
-- Press feedback: `:active { transform: scale(.97ish) }` on tappables.
-- Landing scroll reveal: `.reveal` + `.stagger` with IntersectionObserver.
-- `prefers-reduced-motion` — kills movement, keeps opacity fades.
-- `prefers-reduced-transparency` and `prefers-contrast: more` handled in Mini App.
-- Touch targets ≥ 44px (`min-height`/`min-width` on buttons).
-- Hover styles only inside `@media (hover: hover)`.
-
-## Checks
-
-After style changes: `npm run build` in `apps/miniapp/` and `apps/site/` must pass.
-Visual check in Telegram webview for the Mini App (safe-area insets matter).
+Revisa la Mini App en un WebView real de Telegram a 360–430px y la landing a 390, 768, 1280 y 1440px.

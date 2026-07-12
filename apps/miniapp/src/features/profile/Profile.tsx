@@ -2,8 +2,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
-import { useApp } from '../../app/App';
-import { Empty, Loading, MeasurementChart, TopBar } from '../../components/ui';
+import { Empty, Loading } from '../../components/feedback';
+import { TopBar } from '../../components/navigation';
+import { MeasurementChart } from '../../components/visualizations';
 
 const MEASURES = [
   { key: 'weight_kg', label: 'Peso corporal', unit: ' kg' },
@@ -45,14 +46,13 @@ function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value
   if (editing) {
     return (
       <input
-        class="min-h-11 w-24 rounded-[10px] border border-accent bg-surface px-2.5 py-1 text-right text-base font-[580] text-ink shadow-[0_0_0_3px_var(--color-accent-soft)] outline-none"
+        class="!min-h-9 !w-24 !rounded-[10px] !border-accent !px-2.5 !py-1 !text-right text-base font-[580]"
         type="text"
         inputmode={inputMode}
         enterkeyhint="done"
         autofocus
         value={draft}
         placeholder={placeholder}
-        onFocus={(e: any) => e.target.select()}
         onInput={(e: any) => setDraft(e.target.value)}
         onBlur={() => {
           setEditing(false);
@@ -72,7 +72,6 @@ function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value
 }
 
 export function Profile() {
-  const app = useApp();
   const queryClient = useQueryClient();
   const profileQuery = useQuery({ queryKey: ['profile'], queryFn: () => apiFetch('GET', '/profile') });
   const measurementsQuery = useQuery({
@@ -98,13 +97,13 @@ export function Profile() {
     patch.mutate(payload);
   };
 
-  if (profileQuery.isLoading) return <><TopBar title="Perfil" onBack={app.pop} /><Loading /></>;
+  if (profileQuery.isLoading) return <><TopBar title="Perfil" /><Loading /></>;
   if (profileQuery.isError || !profile)
-    return <><TopBar title="Perfil" onBack={app.pop} /><Empty icon="⚠️">No pude cargar el perfil.</Empty></>;
+    return <><TopBar title="Perfil" /><Empty icon="⚠️">No pude cargar el perfil.</Empty></>;
 
   return (
     <>
-      <TopBar title="Perfil" subtitle="El contexto que utiliza tu coach" onBack={app.pop} />
+      <TopBar title="Perfil" subtitle="El contexto que utiliza tu coach" />
 
       {/* Athlete identity */}
       <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">

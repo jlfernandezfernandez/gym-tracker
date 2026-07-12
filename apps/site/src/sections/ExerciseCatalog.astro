@@ -1,0 +1,23 @@
+---
+const base = import.meta.env.BASE_URL;
+const exercises = [
+	{ gif: `${base}/media/0025-EIeI8Vf.gif`, name: 'Press banca', meta: 'Pecho' },
+	{ gif: `${base}/media/0043-qXTaZnJ.gif`, name: 'Sentadilla', meta: 'Pierna' },
+	{ gif: `${base}/media/0032-ila4NZS.gif`, name: 'Peso muerto', meta: 'Glúteo' },
+	{ gif: `${base}/media/0861-fUBheHs.gif`, name: 'Remo en polea', meta: 'Espalda' },
+	{ gif: `${base}/media/1457-Kyd9Rz5.gif`, name: 'Press militar', meta: 'Hombro' },
+	{ gif: `${base}/media/0031-25GPyDY.gif`, name: 'Curl con barra', meta: 'Bíceps' },
+];
+---
+
+<section class="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:py-28">
+	<div class="grid items-end gap-8 lg:grid-cols-2">
+		<div><p class="font-mono text-[.68rem] font-bold tracking-[.14em] text-accent uppercase">Catálogo versionado</p><h2 class="mt-3 font-display text-4xl font-[760] tracking-[-.045em] sm:text-5xl">1.324 ejercicios.<br />Una fuente reproducible.</h2></div>
+		<p class="max-w-xl leading-relaxed text-hint lg:justify-self-end">Nombres e instrucciones multilingües, equipo, músculos y demostraciones. Cada release queda fijada para que una actualización nunca cambie tu instalación por sorpresa.</p>
+	</div>
+	<!-- GIFs are 180px sources: small tiles keep them at native resolution instead of upscaling. -->
+	<div class="mt-12 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+		{exercises.map((exercise) => <figure class="overflow-hidden rounded-card border border-edge bg-surface shadow-sm"><div class="grid place-items-center bg-white py-3"><img src={exercise.gif} alt={exercise.name} loading="lazy" width="180" height="180" class="size-[140px] object-contain sm:size-[160px]"/></div><figcaption class="p-3"><strong class="block text-sm">{exercise.name}</strong><span class="mt-0.5 block text-xs text-hint">{exercise.meta}</span></figcaption></figure>)}
+	</div>
+	<p class="mt-5 text-xs text-hint">Demostraciones © Gym visual. Dataset abierto: <a href="https://github.com/jlfernandezfernandez/exercises-dataset-es" target="_blank" rel="noopener" class="font-[650] text-accent underline underline-offset-2">exercises-dataset-es</a>, con condiciones de uso y releases versionadas.</p>
+</section>

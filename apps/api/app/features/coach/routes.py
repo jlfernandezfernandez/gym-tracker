@@ -5,7 +5,7 @@ No LLM call here — the agent IS the LLM. The agent picks exercises from the
 catalog (`list_exercises`) and must send them in the body.
 """
 
-from datetime import UTC, datetime, time
+from datetime import datetime, time
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import case, select
@@ -226,7 +226,7 @@ async def coach_import(
     await db.flush()
 
     # ponytail: fixed midday timestamp — the source tracker rarely keeps per-set times
-    performed_at = datetime.combine(body.session_date, time(12, 0), tzinfo=UTC)
+    performed_at = datetime.combine(body.session_date, time(12, 0))
     for exercise_spec in body.exercises:
         exercise = await db.get(Exercise, exercise_spec.exercise_id)
         if not exercise:

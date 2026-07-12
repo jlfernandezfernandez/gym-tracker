@@ -4,7 +4,9 @@ import { apiFetch } from '../../lib/api';
 import { chartUsesWeight } from '../../lib/chart';
 import { formatDate } from '../../lib/helpers';
 import { useApp } from '../../app/App';
-import { Empty, Loading, ProgressChart, TopBar } from '../../components/ui';
+import { Empty, Loading, Stat } from '../../components/feedback';
+import { TopBar } from '../../components/navigation';
+import { ProgressChart } from '../../components/visualizations';
 
 export function RecordDetail({ exerciseId, title }: { exerciseId: number; title: string }) {
   const app = useApp();
@@ -31,18 +33,9 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
         <>
           <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
             <div class="grid grid-cols-3 gap-[9px]">
-              <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-                <b>{usesWeight ? `${maxWeight} kg` : `${maxReps} reps`}</b>
-                <span>máximo</span>
-              </div>
-              <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-                <b>{points.length}</b>
-                <span>sesiones</span>
-              </div>
-              <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
-                <b>{usesWeight ? `${latestPoint.top_weight} kg` : `${latestPoint.top_reps} reps`}</b>
-                <span>última</span>
-              </div>
+              <Stat label="Máximo" value={usesWeight ? `${maxWeight} kg` : `${maxReps} reps`} />
+              <Stat label="Sesiones" value={points.length} />
+              <Stat label="Última" value={usesWeight ? `${latestPoint.top_weight} kg` : `${latestPoint.top_reps} reps`} />
             </div>
           </div>
           {points.length >= 2 && (

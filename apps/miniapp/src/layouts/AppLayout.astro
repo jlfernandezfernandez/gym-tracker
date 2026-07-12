@@ -20,11 +20,15 @@ const { title = 'Gym Coach' } = Astro.props;
 		<meta name="apple-mobile-web-app-capable" content="yes" />
 		<meta name="apple-mobile-web-app-status-bar-style" content="default" />
 		<meta name="mobile-web-app-capable" content="yes" />
+		<link
+			rel="icon"
+			href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏋️</text></svg>"
+		/>
 		<title>{title}</title>
 		<script is:inline src="https://telegram.org/js/telegram-web-app.js"></script>
 	</head>
 	<body>
-		<main class="mx-auto max-w-[540px] px-4 pt-[calc(12px+env(safe-area-inset-top))] pb-[calc(48px+env(safe-area-inset-bottom)] min-[720px]:max-w-[720px] min-[720px]:px-6 min-[720px]:pt-[30px] min-[720px]:pb-[90px] max-[380px]:px-3">
+		<main class="mx-auto max-w-[540px] px-4 pt-[calc(12px+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))] min-[720px]:max-w-[720px] min-[720px]:px-6 min-[720px]:pt-[30px] min-[720px]:pb-[110px] max-[380px]:px-3">
 			<slot />
 		</main>
 	</body>

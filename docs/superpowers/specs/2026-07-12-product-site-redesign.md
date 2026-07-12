@@ -21,7 +21,7 @@ Use a cool training-journal aesthetic instead of the current near-black/acid-gre
 - completion green `#30A46C`;
 - dark demo material `#17191E`.
 
-Self-host one Manrope variable WOFF2 for display type and include its license. Body uses the system stack; commands and system labels use a system monospace stack. No remote font request.
+Use the native `ui-rounded` stack for display type, the system stack for body, and the system monospace stack for commands and labels. No font download, package, license file, or remote request is needed.
 
 The signature interaction is “conversation becomes workout”: the hero's Telegram messages resolve into the same workout rail and set card used conceptually in the Mini App. This is the one orchestrated motion moment; the rest of the page is quiet.
 

@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
 import { formatDate, formatMuscle, mediaUrl } from '../../lib/helpers';
 import { useApp } from '../../app/App';
-import { Empty, Loading, TopBar } from '../../components/ui';
+import { Empty, Loading } from '../../components/feedback';
+import { TopBar } from '../../components/navigation';
 
 /** Groups records by muscle group, largest group first; exercises alphabetical inside each. */
 function groupByMuscle(records: any[]): [string, any[]][] {
@@ -20,7 +21,7 @@ export function Records() {
 
   return (
     <>
-      <TopBar title="Marcas" subtitle="Tu mejor resultado por ejercicio" onBack={app.pop} />
+      <TopBar title="Marcas" subtitle="Tu mejor resultado por ejercicio" />
       {recordsQuery.isLoading ? (
         <Loading />
       ) : recordsQuery.isError ? (

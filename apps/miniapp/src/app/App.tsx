@@ -5,7 +5,10 @@ import { useContext, useMemo, useState } from 'preact/hooks';
 import { apiFetch } from '../lib/api';
 import { normalizeSession } from '../lib/helpers';
 import { inTelegram } from '../lib/telegram';
-import { Empty } from '../components/ui';
+import { Empty } from '../components/feedback';
+import { TabBar } from '../components/navigation';
+import { Catalog } from '../features/catalog/Catalog';
+import { CatalogExercise } from '../features/catalog/CatalogExercise';
 import { History } from '../features/history/History';
 import { Profile } from '../features/profile/Profile';
 import { RecordDetail } from '../features/records/RecordDetail';
@@ -18,6 +21,8 @@ type View =
   | { name: 'landing' }
   | { name: 'plan' }
   | { name: 'exercise'; plannedId: number }
+  | { name: 'catalog' }
+  | { name: 'catalogExercise'; exerciseId: number }
   | { name: 'history' }
   | { name: 'records' }
   | { name: 'recordDetail'; exerciseId: number; title: string }
@@ -31,6 +36,7 @@ interface AppContextValue {
   sessionId?: number;
   shareToken?: string;
   readOnly: boolean;
+  selectTab: (name: string) => void;
 }
 
 const AppContext = createContext<AppContextValue>(null as any);
@@ -96,6 +102,7 @@ function Router() {
     sessionId,
     shareToken,
     readOnly,
+    selectTab: (name) => setViewStack([{ name } as View]),
   };
 
   if (!shareToken && !inTelegram() && location.hostname !== 'localhost') {
@@ -114,12 +121,22 @@ function Router() {
     landing: <Home />,
     plan: <Plan />,
     exercise: <Exercise plannedId={view.plannedId} />,
+    catalog: <Catalog />,
+    catalogExercise: <CatalogExercise exerciseId={view.exerciseId} />,
     history: <History />,
     records: <Records />,
     recordDetail: <RecordDetail exerciseId={view.exerciseId} title={view.title} />,
     profile: <Profile />,
   };
-  return <AppContext.Provider value={appContext}>{screens[activeView.name]}</AppContext.Provider>;
+  const rootTabs = ['landing', 'catalog', 'history', 'records', 'profile'];
+  return (
+    <AppContext.Provider value={appContext}>
+      {screens[activeView.name]}
+      {!readOnly && rootTabs.includes(activeView.name) && (
+        <TabBar active={activeView.name} onSelect={appContext.selectTab} />
+      )}
+    </AppContext.Provider>
+  );
 }
 
 export default function App() {

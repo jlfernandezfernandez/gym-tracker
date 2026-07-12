@@ -2,29 +2,28 @@
    Landing design tokens → Tailwind v4 @theme
    Same token vocabulary as the Mini App
    (apps/miniapp/src/styles/theme.css) but its
-   own dark palette — the landing has its
-   own identity, inherited from the legacy
-   docs/index.html page.
+   cool training-journal palette.
    ────────────────────────────────────── */
 @theme {
   /* Surfaces */
-  --color-canvas: #09090b;
-  --color-surface: #131315;
-  --color-hover: #1c1c1f;
+  --color-canvas: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-hover: #eef0f4;
+  --color-dark: #17191e;
 
   /* Text */
-  --color-ink: #fafafa;
-  --color-hint: #a1a1aa;
+  --color-ink: #101318;
+  --color-hint: #667085;
 
   /* Brand */
-  --color-accent: #4ade80;
+  --color-accent: #5856d6;
 
   /* Status */
-  --color-ok: #4ade80;
-  --color-ok-bg: rgba(74, 222, 128, .12);
+  --color-ok: #248a3d;
+  --color-ok-bg: #eaf7ed;
 
   /* Structure */
-  --color-edge: rgba(255, 255, 255, .09);
+  --color-edge: rgba(16, 19, 24, .11);
 
   /* Radius */
   --radius-card: 22px;
@@ -32,8 +31,10 @@
   --radius-pill: 999px;
 
   /* Shadows */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, .3);
+  --shadow-card: 0 18px 60px rgba(16, 19, 24, .09);
 
   /* Font */
   --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  --font-display: ui-rounded, "SF Pro Rounded", "Arial Rounded MT Bold", var(--font-sans);
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
 }

@@ -1,5 +1,6 @@
 from enum import StrEnum
 from functools import lru_cache
+from pathlib import Path
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,12 +21,8 @@ class Settings(BaseSettings):
     coach_api_key: str = ""
     auth_ttl: int = 86_400
     log_level: str = "INFO"
-    s3_endpoint: str = ""
-    s3_access_key: str = ""
-    s3_secret_key: str = ""
-    s3_bucket: str = "gym-tracker-media"
-    s3_region: str = "us-east-1"
-    exercise_dataset_repository: str = "jlfernandezfernandez/exercises-dataset-es"
+    exercise_dataset_version: str = "v1.0.0"
+    exercise_dataset_root: Path = Path("/data/exercise-datasets")
 
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":
@@ -35,9 +32,6 @@ class Settings(BaseSettings):
                 "cors_origins",
                 "telegram_bot_token",
                 "coach_api_key",
-                "s3_endpoint",
-                "s3_access_key",
-                "s3_secret_key",
             )
             missing = [name for name in required if not getattr(self, name)]
             if missing:
@@ -55,8 +49,15 @@ class Settings(BaseSettings):
         return [value.strip() for value in self.cors_origins.split(",") if value.strip()]
 
     @property
-    def exercise_dataset_raw_base(self) -> str:
-        return f"https://raw.githubusercontent.com/{self.exercise_dataset_repository}/main"
+    def exercise_dataset_dir(self) -> Path:
+        return self.exercise_dataset_root / self.exercise_dataset_version
+
+    @property
+    def exercise_dataset_release_url(self) -> str:
+        return (
+            "https://github.com/jlfernandezfernandez/exercises-dataset-es/releases/download/"
+            f"{self.exercise_dataset_version}"
+        )
 
 
 @lru_cache

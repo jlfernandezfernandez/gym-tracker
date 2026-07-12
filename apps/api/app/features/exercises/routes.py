@@ -11,6 +11,12 @@ from app.models import BODYWEIGHT_WEIGHT, Exercise, PerformedSet, PlannedExercis
 router = APIRouter(prefix="/exercises", tags=["exercises"])
 
 
+def weight_mode(is_bodyweight: bool, top_weight) -> str:
+    if is_bodyweight:
+        return "bodyweight"
+    return "weighted" if top_weight and top_weight > 0 else "unloaded"
+
+
 @router.get("", response_model=list[ExerciseOut])
 async def list_exercises(
     muscle_group: str | None = Query(None, description="Filter by muscle group"),
@@ -31,7 +37,11 @@ async def list_exercises(
     if equipment:
         statement = statement.where(Exercise.equipment == equipment)
     if search:
-        statement = statement.where(Exercise.name.ilike(f"%{search}%"))
+        # Word-wise match so "press banca" finds "Press de banca ancho con barra".
+        for term in search.split():
+            statement = statement.where(
+                Exercise.name.ilike(f"%{term}%") | Exercise.name_en.ilike(f"%{term}%")
+            )
 
     statement = statement.order_by(Exercise.name).offset(offset).limit(limit)
     result = await db.execute(statement)
@@ -110,11 +120,7 @@ async def personal_records(
                 if equipment == "body weight"
                 else float(weight or 0),
                 "max_reps": int(reps or 0),
-                "weight_mode": "bodyweight"
-                if equipment == "body weight"
-                else "weighted"
-                if weight and weight > 0
-                else "unloaded",
+                "weight_mode": weight_mode(equipment == "body weight", weight),
                 "last_date": session_date,
                 "sessions": {session_id},
             }
@@ -174,11 +180,7 @@ async def exercise_progress(
             else BODYWEIGHT_WEIGHT,
             "top_reps": int(top_reps or 0),
             "volume": float(volume or 0) if not exercise.is_bodyweight else 0,
-            "weight_mode": "bodyweight"
-            if exercise.is_bodyweight
-            else "weighted"
-            if top_weight and top_weight > 0
-            else "unloaded",
+            "weight_mode": weight_mode(exercise.is_bodyweight, top_weight),
             "sets": set_count,
         }
         for session_id, session_date, top_weight, top_reps, volume, set_count in reversed(rows)

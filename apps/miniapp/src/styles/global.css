@@ -2,6 +2,7 @@
 @import "./theme.css";
 
 @layer base {
+  :root { color-scheme: light dark; }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html { background: var(--color-canvas); scroll-behavior: smooth; touch-action: manipulation; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
   body { min-height: 100dvh; overflow-x: hidden; overscroll-behavior: none; background: var(--color-canvas); color: var(--color-ink); font-family: var(--font-sans); font-feature-settings: "tnum"; font-size: 100%; line-height: 1.45; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
@@ -12,6 +13,7 @@
   h2 { font-size: 1.15rem; font-weight: 720; letter-spacing: -.025em; line-height: 1.15; }
   h3 { font-size: .98rem; font-weight: 700; letter-spacing: -.015em; line-height: 1.25; }
   p { color: var(--color-hint); font-size: .875rem; line-height: 1.45; text-wrap: pretty; }
+  label { display: block; margin-bottom: 6px; color: var(--color-hint); font-size: .62rem; font-weight: 700; letter-spacing: .07em; text-align: center; text-transform: uppercase; }
   input, textarea { width: 100%; min-height: 48px; padding: 11px 12px; border: 1px solid var(--color-edge); border-radius: 13px; outline: none; background: var(--color-surface); color: var(--color-ink); font-size: 1rem; }
   input { text-align: center; }
   textarea { min-height: 78px; resize: none; }
@@ -24,19 +26,21 @@ details > summary::after { content: "›"; color: var(--color-divider); font-siz
 details[open] > summary::after { transform: rotate(-90deg); }
 
 /* Body-map renders its internal SVG outside Preact's tree. */
-.bodymap { display: flex; justify-content: center; gap: 12px; margin-top: 10px; padding: 6px 0; }
+.bodymap { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin-top: 10px; padding: 6px 0; }
 .bodymap-figure { display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .bodymap-figure > div { width: 125px; }
 .bodymap-figure > div[data-side="posterior"] { width: 120px; }
 .bodymap-figure span { color: var(--color-hint); font-size: .58rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
 
 /* Toast nodes are created by lib/helpers.ts, outside component rendering. */
-.toast { position: fixed; right: 16px; bottom: calc(18px + env(safe-area-inset-bottom)); left: 16px; z-index: 20; max-width: 500px; margin: auto; padding: 13px 16px; border-radius: 15px; background: rgba(35, 35, 38, .92); color: white; box-shadow: var(--shadow-toast); backdrop-filter: blur(18px); font-size: .85rem; font-weight: 650; animation: tin .22s; }
+.toast { position: fixed; right: 16px; bottom: calc(86px + env(safe-area-inset-bottom)); left: 16px; z-index: 30; max-width: 500px; margin: auto; padding: 13px 16px; border-radius: 15px; background: rgba(35, 35, 38, .92); color: white; box-shadow: var(--shadow-toast); backdrop-filter: blur(18px); font-size: .85rem; font-weight: 650; transition: opacity .18s cubic-bezier(.23,1,.32,1), transform .18s cubic-bezier(.23,1,.32,1); }
+.toast { @starting-style { opacity: 0; transform: translateY(10px) scale(.98); } }
 .toast.ok { background: rgba(36, 138, 61, .95); }
 .toast.err { background: rgba(215, 0, 21, .95); }
 
 @keyframes spin { to { transform: rotate(360deg); } }
-@keyframes tin { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; } }
+.native-sheet { transition: opacity .18s cubic-bezier(.23,1,.32,1), transform .26s cubic-bezier(.32,.72,0,1), overlay .2s allow-discrete, display .2s allow-discrete; }
+.native-sheet[open] { @starting-style { opacity: 0; transform: translateY(100%); } }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }

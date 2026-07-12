@@ -2,8 +2,8 @@ from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import text
 
 from app import APP_VERSION
+from app.core.config import get_settings
 from app.core.database import _get_async_session
-from app.storage.s3 import get_storage
 
 router = APIRouter(tags=["health"])
 
@@ -17,7 +17,8 @@ async def check_dependencies() -> None:
     """Verify the dependencies required to serve real application traffic."""
     async with _get_async_session()() as session:
         await session.execute(text("SELECT 1"))
-    get_storage().head_bucket()
+    if not (get_settings().exercise_dataset_dir / ".installed").is_file():
+        raise RuntimeError("exercise dataset is not installed")
 
 
 @router.get("/ready")

@@ -71,5 +71,5 @@ No guardes series, sesiones ni datos corporales en la memoria del agente: Gym Tr
 - El endpoint MCP público no está soportado todavía: `COACH_API_KEY` autentica
   MCP → API, no al cliente que se conecta al MCP. Para un agente remoto usa
   una VPN o túnel privado.
-- No compartas tokens de Telegram, claves MCP ni credenciales S3.
+- No compartas tokens de Telegram ni claves MCP.
 - Usa los enlaces generados por `session_web_url` y `share_web_url`; no construyas URLs de sesiones manualmente.

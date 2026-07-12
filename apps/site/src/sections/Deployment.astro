@@ -1,0 +1,26 @@
+<section id="instalar" class="border-t border-edge bg-surface py-20 lg:py-28">
+	<div class="mx-auto max-w-7xl px-5 sm:px-8">
+		<div class="max-w-2xl">
+			<p class="font-mono text-[.68rem] font-bold tracking-[.14em] text-accent uppercase">Tu servidor, tus datos</p>
+			<h2 class="mt-3 font-display text-4xl font-[760] tracking-[-.045em] sm:text-5xl">Elige cómo levantarlo.</h2>
+			<p class="mt-5 leading-relaxed text-hint">La App es pública. PostgreSQL y MCP permanecen privados. El catálogo se instala desde una release fijada.</p>
+		</div>
+		<div class="mt-12 grid border-y border-edge lg:grid-cols-2 lg:divide-x lg:divide-edge">
+			<article class="py-8 lg:pr-10">
+				<span class="font-mono text-xs text-hint">DOCKER COMPOSE</span>
+				<h3 class="mt-3 text-2xl font-bold">En la máquina del agente</h3>
+				<p class="mt-3 text-sm leading-relaxed text-hint">Una opción directa para Hermes, OpenClaw o cualquier host con Docker.</p>
+				<pre class="mt-6 overflow-x-auto rounded-2xl bg-dark p-5 text-sm text-white"><code>cp .env.example .env
+docker compose up -d</code></pre>
+				<a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/docs/install-docker.md" class="mt-5 inline-block font-semibold text-accent">Guía de Docker →</a>
+			</article>
+			<article class="border-t border-edge py-8 lg:border-0 lg:pl-10">
+				<span class="font-mono text-xs text-hint">COOLIFY</span>
+				<h3 class="mt-3 text-2xl font-bold">Despliegue gestionado</h3>
+				<p class="mt-3 text-sm leading-relaxed text-hint">Importa el Compose, añade dominio y secretos, y conserva dos volúmenes: PostgreSQL y catálogo reproducible.</p>
+				<div class="mt-6 grid gap-2 text-sm"><div class="flex justify-between rounded-xl bg-canvas px-4 py-3"><span>App</span><strong>pública · :8000</strong></div><div class="flex justify-between rounded-xl bg-canvas px-4 py-3"><span>MCP</span><strong>privado · :8001</strong></div><div class="flex justify-between rounded-xl bg-canvas px-4 py-3"><span>PostgreSQL</span><strong>privado</strong></div></div>
+				<a href="https://github.com/jlfernandezfernandez/gym-tracker/blob/main/docs/install-coolify.md" class="mt-5 inline-block font-semibold text-accent">Guía de Coolify →</a>
+			</article>
+		</div>
+	</div>
+</section>

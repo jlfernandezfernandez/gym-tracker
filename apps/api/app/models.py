@@ -37,6 +37,15 @@ class Exercise(SQLModel, table=True):
         return self.equipment == "body weight"
 
 
+class CatalogState(SQLModel, table=True):
+    __tablename__ = "catalog_state"
+
+    id: int = Field(default=1, primary_key=True)
+    dataset_version: str
+    sha256: str
+    installed_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+
+
 class WorkoutSession(SQLModel, table=True):
     __tablename__ = "workout_sessions"
     __table_args__ = (
