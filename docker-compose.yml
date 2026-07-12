@@ -9,7 +9,6 @@
 services:
   postgres:
     image: postgres:18-alpine
-    container_name: gym-tracker-postgres
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-gym_user}
@@ -26,7 +25,6 @@ services:
 
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: gym-tracker-minio
     restart: unless-stopped
     environment:
       MINIO_ROOT_USER: ${S3_ACCESS_KEY:-gym-tracker-access-key}
@@ -42,7 +40,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: gym-tracker-app
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8000}:8000"
@@ -94,7 +91,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.mcp
-    container_name: gym-tracker-mcp
     restart: unless-stopped
     ports:
       - "127.0.0.1:${MCP_PORT:-8001}:8001"
@@ -109,6 +105,4 @@ services:
 
 volumes:
   postgres_data:
-    name: gym-tracker-postgres-data
   minio_data:
-    name: gym-tracker-minio-data

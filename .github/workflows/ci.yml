@@ -6,8 +6,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # lfs: false a propósito — el build no necesita los GIFs reales
-      # (punteros LFS bastan) y cada checkout LFS gasta ~136MB de cuota.
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: "3.13"}

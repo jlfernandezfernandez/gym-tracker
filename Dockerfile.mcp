@@ -6,12 +6,7 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
-# Coolify's healthcheck runner uses curl/wget inside the image.
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
-
-RUN pip install --no-cache-dir "mcp>=1.28,<2" fastmcp
+RUN pip install --no-cache-dir "mcp>=1.28,<2"
 
 COPY mcp/ ./mcp/
 COPY run_mcp.py .
