@@ -1,45 +1,79 @@
 # Instalar en Coolify
 
-## Crear el recurso
+Gym Tracker se despliega como **un recurso Docker Compose**: base de datos,
+bootstrap del dataset, App y MCP. El repositorio no contiene dominios ni redes de
+tu instalación; Coolify gestiona el dominio de la App.
 
-1. Crea un recurso **Docker Compose** desde este repositorio.
+## 1. Crea el recurso
+
+1. En Coolify, crea una aplicación **Docker Compose** desde este repositorio.
 2. Selecciona `compose.production.yml`.
-3. Asigna el dominio HTTPS al servicio `app`, puerto `8000`.
-4. No asignes dominio a `postgres` ni `mcp`.
+3. En el servicio **app**, añade tu dominio HTTPS, por ejemplo
+   `https://gym.example.com`.
+4. No asignes dominio a `db`, `app-init` ni `mcp`.
 
-## Variables
+No añadas etiquetas Traefik, redes externas ni IPs al Compose. Coolify ya conecta
+a la App con su proxy.
+
+## 2. Variables
+
+Crea estas variables de runtime antes del primer deploy:
 
 ```dotenv
 POSTGRES_USER=gym_user
-POSTGRES_PASSWORD=una-clave-larga
+POSTGRES_PASSWORD=<secreto-largo>
 POSTGRES_DB=gym_tracker
-TELEGRAM_BOT_TOKEN=...
-COACH_API_KEY=otra-clave-larga
-CORS_ORIGINS=https://gym.example.com
+TELEGRAM_BOT_TOKEN=<token-del-bot-que-abre-la-Mini-App>
+COACH_API_KEY=<otro-secreto-largo>
 PUBLIC_APP_URL=https://gym.example.com
+CORS_ORIGINS=https://gym.example.com
 EXERCISE_DATASET_VERSION=v1.0.0
-GYM_TRACKER_VERSION=latest
+GYM_TRACKER_VERSION=1.0.0
+
+# Evitan ocupar puertos reservados por la propia instalación de Coolify.
+APP_BIND=127.0.0.1
+APP_PORT=18000
+MCP_BIND=127.0.0.1
+MCP_PORT=18001
 ```
 
-## Persistencia
+Marca los secretos como runtime-only si tu versión de Coolify ofrece esa opción.
+No pegues valores de ejemplo en producción.
 
-El Compose declara dos volúmenes:
+## 3. Persistencia
+
+El Compose crea dos volúmenes propios:
 
 | Volumen | Contenido |
 | --- | --- |
-| `postgres_data` | sesiones, perfil y progreso |
-| `exercise_data` | release reproducible del catálogo |
+| `postgres_data` | Perfil, sesiones, series y mediciones |
+| `exercise_data` | Dataset y media versionados |
 
-El primer deploy espera a PostgreSQL, aplica migraciones, verifica la release del dataset y después inicia la App.
+No borres esos volúmenes al redeployar. Haz un `pg_dump` antes de cambiar versión,
+restaurar datos o eliminar el recurso.
 
-## Verificar
+## 4. Deploy y comprobación
 
-- `https://gym.example.com/health` devuelve `status: ok`.
-- `app-init` termina con código 0.
-- `app` y `mcp` quedan saludables.
+Despliega y espera a que `app-init` termine. Después:
 
-Después configura [Telegram](setup-telegram.md) y [el agente](agent-setup.md).
+- La App responde en `https://gym.example.com/ready`.
+- `app` y `mcp` quedan healthy.
+- La Mini App abre desde el **mismo bot** configurado en `TELEGRAM_BOT_TOKEN`.
+- Perfil, sesiones y mediciones aparecen al abrir el menú de Telegram.
+
+## MCP en Coolify
+
+MCP no necesita dominio público. Si tu agente también está en Coolify, conecta los
+recursos mediante **Connect to Predefined Network** y usa el hostname interno que
+muestra Coolify para `mcp:8001/mcp`.
+
+Si el agente está fuera, usa VPN/red privada o permite un puerto de MCP solo desde
+la IP del agente. No expongas MCP directamente a Internet.
 
 ## Actualizar
 
-Cambia `GYM_TRACKER_VERSION` y redespliega. Para actualizar el catálogo cambia `EXERCISE_DATASET_VERSION`; consulta [dataset.md](dataset.md).
+1. Cambia `GYM_TRACKER_VERSION` a un tag publicado.
+2. Redespiega el recurso.
+3. Comprueba `/ready`, MCP `/health` y una Mini App abierta desde Telegram.
+
+Para actualizar el catálogo, cambia también `EXERCISE_DATASET_VERSION`.

@@ -1,28 +1,27 @@
 # Gym Tracker
 
-Gym Tracker convierte cualquier agente compatible con MCP en un coach de gimnasio con memoria. Hablas en Telegram; el agente crea la sesión y abre una Mini App para seguirla, registrar series y consultar progreso.
+Gym Tracker añade memoria de entrenamiento a cualquier agente compatible con MCP.
+Hablas con tu agente en Telegram; el agente usa MCP para guardar perfil, sesiones,
+series y mediciones. La Mini App sirve para ver y registrar el entrenamiento.
 
-- Telegram Mini App para el entrenamiento.
-- API FastAPI + PostgreSQL para sesiones, perfil y mediciones.
-- MCP Streamable HTTP para Hermes, OpenClaw, Claude, Codex y otros agentes.
-- Catálogo versionado de 1.324 ejercicios con demostraciones.
-- Docker Compose y Coolify.
-- Open source, licencia MIT.
+- Mini App de Telegram + API FastAPI.
+- PostgreSQL para perfil, historial y mediciones.
+- MCP Streamable HTTP para Hermes, Claude, Codex y otros clientes.
+- Catálogo versionado de 1.324 ejercicios con imágenes y GIFs.
 
-## Cómo encaja
+## Elige un camino
 
-```text
-Telegram
-   │ conversación + botón Mini App
-   ▼
-Tu agente ──MCP──▶ Gym Tracker API ──▶ PostgreSQL
-                         │
-                         └──▶ catálogo versionado en volumen local
-```
+| Quiero | Lee | Resultado |
+| --- | --- | --- |
+| Probarlo en mi ordenador | [Arranque local](#arranque-local) | App y MCP en `localhost` |
+| Publicarlo con Docker | [Docker en producción](docs/install-docker.md) | App HTTPS mediante tu proxy |
+| Usar Coolify | [Coolify](docs/install-coolify.md) | Un recurso Compose portable |
+| Abrirlo desde Telegram | [Telegram](docs/setup-telegram.md) | Botón Mini App autenticado |
+| Conectar mi agente | [MCP](docs/agent-setup.md) | Agente con herramientas de gimnasio |
 
-La App es el único servicio público. PostgreSQL y MCP deben permanecer privados.
+## Arranque local
 
-## Arranque rápido
+Requisitos: Docker Engine + Docker Compose v2.
 
 ```bash
 git clone https://github.com/jlfernandezfernandez/gym-tracker.git
@@ -31,96 +30,73 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Servicios locales:
+Comprueba que el primer arranque ha terminado:
 
-| Servicio | URL |
-| --- | --- |
-| Mini App + API | `http://localhost:8000` |
-| MCP | `http://localhost:8001/mcp` |
-| Salud | `http://localhost:8000/health` |
-
-Para Telegram real, edita `.env` y configura al menos:
-
-```dotenv
-TELEGRAM_BOT_TOKEN=...
-COACH_API_KEY=...
-CORS_ORIGINS=https://gym.example.com
-PUBLIC_APP_URL=https://gym.example.com
+```bash
+docker compose ps
+curl http://localhost:8000/ready
+curl http://localhost:8001/health
 ```
 
-Después crea el botón de la Mini App siguiendo [la guía de Telegram](docs/setup-telegram.md) y conecta el agente con [la guía MCP](docs/agent-setup.md).
+Abre `http://localhost:8000`. Este modo es desarrollo: no valida identidad de
+Telegram mientras `TELEGRAM_BOT_TOKEN` esté vacío. No lo expongas a Internet.
 
-## Dataset
+## Qué queda privado
 
-`app-init` instala una release inmutable y fijada:
+Por defecto, App y MCP escuchan solo en `127.0.0.1`; PostgreSQL no publica ningún
+puerto. Para producción, deja MCP privado y pon un proxy HTTPS delante de la App.
 
-```dotenv
-EXERCISE_DATASET_VERSION=v1.0.0
+```text
+Telegram ─HTTPS→ Mini App + API ─→ PostgreSQL
+Agente ─MCP privado──────────────→ API
 ```
 
-La primera ejecución descarga un único `tar.gz`, comprueba SHA-256, importa los metadatos y extrae la media al volumen `exercise_data`. Los siguientes arranques no descargan nada si la versión instalada coincide.
+## Variables importantes
 
-Consulta [actualización del dataset](docs/dataset.md).
-
-## Producción
-
-- [Docker en tu propia máquina](docs/install-docker.md)
-- [Coolify](docs/install-coolify.md)
-
-El stack de producción está en `compose.production.yml`. Usa imágenes publicadas y exige secretos explícitos.
-
-## Configuración
-
-| Variable | Uso |
+| Variable | Para qué sirve |
 | --- | --- |
-| `DATABASE_URL` | conexión PostgreSQL |
-| `TELEGRAM_BOT_TOKEN` | valida Telegram Mini App |
-| `COACH_API_KEY` | protege la API usada por MCP |
-| `CORS_ORIGINS` | dominio público permitido |
-| `PUBLIC_APP_URL` | URL que el MCP entrega al agente |
-| `EXERCISE_DATASET_VERSION` | release fijada del catálogo |
-| `GYM_TRACKER_VERSION` | tag de imágenes en producción |
-| `APP_PORT`, `MCP_PORT` | puertos publicados |
+| `POSTGRES_*` | Base de datos incluida en Compose |
+| `TELEGRAM_BOT_TOKEN` | Valida la identidad de la Mini App |
+| `COACH_API_KEY` | Permite que MCP actúe ante la API |
+| `PUBLIC_APP_URL` | URL HTTPS que reciben los enlaces de sesión |
+| `CORS_ORIGINS` | Origen HTTPS de la Mini App |
+| `GYM_TRACKER_VERSION` | Tag de imágenes GHCR en producción |
 
-Consulta `.env.example` para la lista completa.
+Copia `.env.example`; contiene valores locales seguros y comentarios de cada
+variable. Para una Mini App real, `TELEGRAM_BOT_TOKEN` debe ser exactamente el
+token del bot que abre el botón Web App.
+
+## Actualizar
+
+Local:
+
+```bash
+git pull --ff-only
+docker compose up -d --build
+```
+
+Producción: fija un tag publicado en `GYM_TRACKER_VERSION` y sigue la guía de tu
+plataforma. Un volumen no sustituye un backup: exporta PostgreSQL antes de cambios
+mayores.
 
 ## Desarrollo
 
-API:
-
 ```bash
-cd apps/api
-uv sync --locked
-uv run ruff format --check .
-uv run ruff check .
-uv run pyright
-uv run pytest -q
+cd apps/api && uv sync --locked
+cd ../miniapp && npm ci
+cd ../site && npm ci
 ```
 
-Mini App y landing:
+Consulta `CONTRIBUTING.md` para los checks del repositorio.
 
-```bash
-cd apps/miniapp && npm ci && npm run build
-cd ../site && npm ci && npm run build
-```
+## Seguridad
 
-## Estructura
-
-```text
-apps/
-  api/       FastAPI, migraciones y tests
-  miniapp/   Astro + Preact + Tailwind
-  site/      landing Astro + Tailwind
-  mcp/       servidor MCP
-docs/        instalación y operación
-templates/   contexto opcional para agentes
-```
-
-## Seguridad y datos
-
-- No publiques PostgreSQL ni MCP directamente en Internet.
+- No publiques PostgreSQL.
+- No publiques MCP sin una red privada, VPN o autenticación de cliente.
 - No compartas `TELEGRAM_BOT_TOKEN` ni `COACH_API_KEY`.
-- La media del catálogo es © Gym visual; conserva la atribución y revisa `NOTICE.md` en el [repositorio del dataset](https://github.com/jlfernandezfernandez/exercises-dataset-es).
+- Usa URLs de sesión generadas por MCP; no construyas IDs o tokens a mano.
+
 ## Licencia
 
-MIT. Consulta [LICENSE](LICENSE).
+MIT. La media del catálogo conserva su atribución; revisa `NOTICE.md` en el
+[repositorio del dataset](https://github.com/jlfernandezfernandez/exercises-dataset-es).

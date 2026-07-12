@@ -1,75 +1,75 @@
 # Conectar un agente MCP
 
-Gym Tracker es agnóstico al agente. Puedes usar Hermes, Claude, Codex u otro cliente compatible con MCP.
+Gym Tracker no incluye un agente conversacional. Expone un servidor MCP; Hermes,
+Claude, Codex u otro cliente compatible decide cuándo crear planes y registrar
+series.
 
-## Endpoint
+## Conexión local
 
-### Docker Compose local
-
-```text
-http://localhost:8001/mcp
-```
-
-### Coolify
-
-Usa el hostname interno si el agente está dentro de Coolify:
+Con el Compose local o de producción en la misma máquina:
 
 ```text
-http://<mcp-host>:8001/mcp
+http://127.0.0.1:8001/mcp
 ```
 
-## Configuración
-
-Añade el endpoint a la configuración MCP del agente. En Hermes, por ejemplo:
+Ejemplo para Hermes:
 
 ```bash
-hermes mcp add gym_tracker --url http://localhost:8001/mcp
+hermes mcp add gym_tracker --url http://127.0.0.1:8001/mcp
 hermes mcp test gym_tracker
 ```
 
-Otros agentes usan el mismo endpoint con su propio formato de configuración.
+La configuración exacta de otros agentes cambia, pero usan el mismo endpoint
+Streamable HTTP.
 
-El agente necesita recibir las instrucciones y herramientas del servidor MCP. La aplicación no contiene la lógica conversacional: el agente decide cuándo hacer onboarding, crear planes, registrar series o abrir la Mini App.
+## Agente remoto
 
-## Variables internas del MCP
+MCP queda privado por defecto. Para un agente en otra máquina usa una VPN, una
+red Docker privada o un firewall que permita el puerto únicamente desde la IP del
+agente. No lo publiques directamente en Internet.
 
-Estas variables las configura Docker Compose o Coolify, no el usuario del agente:
+En Coolify, la opción preferida es **Connect to Predefined Network** y el hostname
+interno que la interfaz muestra para el servicio MCP.
 
-```env
-GYM_TRACKER_API_BASE=http://<app-host>:8000/api
+## Variables internas
+
+Compose configura estas variables dentro del servicio MCP:
+
+```dotenv
+GYM_TRACKER_API_BASE=http://app:8000/api
 GYM_TRACKER_APP_BASE=https://gym.example.com
-GYM_TRACKER_COACH_KEY=<mismo valor que COACH_API_KEY>
+GYM_TRACKER_COACH_KEY=<mismo-valor-que-COACH_API_KEY>
 ```
 
-`GYM_TRACKER_APP_BASE` es la URL pública que aparecerá en los enlaces de la Mini App. Es independiente de la URL que use el agente para conectar con el MCP.
+`GYM_TRACKER_APP_BASE` crea enlaces de la Mini App. No es la URL que utiliza el
+agente para conectar al MCP.
 
-## Telegram
+## Telegram y multiusuario
 
-El gateway de Telegram pertenece al agente. Gym Tracker solo proporciona:
+El gateway de Telegram pertenece al agente. Gym Tracker valida el `initData` de
+la Mini App con `TELEGRAM_BOT_TOKEN` y guarda los datos por usuario.
 
-- API;
-- persistencia;
-- catálogo de ejercicios;
-- servidor MCP;
-- Mini App.
+El agente debe pasar `telegram_user_id` en operaciones de perfil y sesión. El MCP
+lo convierte en `X-Telegram-User-Id` junto a la clave de coach; la API rechaza
+peticiones de coach sin usuario para evitar mezclar atletas.
 
-Configura `TELEGRAM_BOT_TOKEN` en la aplicación y el gateway del agente según la documentación de ese agente.
+No guardes series, sesiones ni mediciones en la memoria del agente: PostgreSQL de
+Gym Tracker es la fuente de verdad.
 
-## Multiusuario
+## Comprobación
 
-El agente debe pasar siempre el `telegram_user_id` en las operaciones de perfil
-y sesión. El MCP lo traduce a `X-Telegram-User-Id` junto con
-`GYM_TRACKER_COACH_KEY`; la API rechaza llamadas del coach sin usuario. Así los
-datos permanecen aislados por atleta.
+Después de conectar el agente:
 
-No guardes series, sesiones ni datos corporales en la memoria del agente: Gym Tracker es la fuente de verdad.
+1. Ejecuta la prueba MCP de tu cliente.
+2. Lee el perfil de un usuario de Telegram.
+3. Lista sus sesiones.
+4. Crea un plan de prueba solo si el usuario lo pide.
+
+Usa los enlaces devueltos por `session_web_url` y `share_web_url`; no construyas
+IDs ni tokens de sesión manualmente.
 
 ## Seguridad
 
-- Usa `COACH_API_KEY` fuerte.
-- Mantén el MCP privado.
-- El endpoint MCP público no está soportado todavía: `COACH_API_KEY` autentica
-  MCP → API, no al cliente que se conecta al MCP. Para un agente remoto usa
-  una VPN o túnel privado.
-- No compartas tokens de Telegram ni claves MCP.
-- Usa los enlaces generados por `session_web_url` y `share_web_url`; no construyas URLs de sesiones manualmente.
+- `COACH_API_KEY` protege MCP → API, no autentica a quien abre el endpoint MCP.
+- No compartas claves de coach ni tokens de Telegram.
+- Mantén PostgreSQL y MCP fuera de Internet.

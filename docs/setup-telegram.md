@@ -1,39 +1,47 @@
 # Configurar Telegram y la Mini App
 
-Gym Tracker no incluye un gateway de Telegram. Hermes, OpenClaw u otro agente
-recibe los mensajes y se conecta al MCP; la App solo valida la identidad de
-Telegram mediante `TELEGRAM_BOT_TOKEN`.
+Gym Tracker no recibe mensajes de Telegram: Hermes, OpenClaw u otro agente hace
+de gateway y usa MCP. La Mini App valida únicamente la identidad que Telegram le
+entrega al abrirla.
 
-## 1. Bot y URL HTTPS
+## 1. Usa un único bot
 
-1. Crea un bot en `@BotFather` o utiliza el bot que ya usa tu agente.
-2. Copia su token en `TELEGRAM_BOT_TOKEN`.
-3. Publica la App en una URL HTTPS estable, por ejemplo
-   `https://gym.example.com`.
-4. Usa exactamente ese origen en `PUBLIC_APP_URL` y `CORS_ORIGINS`.
+1. Crea un bot con `@BotFather` o usa el que ya recibe tus mensajes.
+2. Copia su token en `TELEGRAM_BOT_TOKEN` de Gym Tracker.
+3. Configura **ese mismo bot** en el gateway del agente.
 
-La URL debe ser accesible desde el teléfono que abre Telegram. El MCP puede ser
-local; la Mini App no, salvo que el teléfono también tenga acceso a la red
-privada donde está el servidor.
+Si el token de Gym Tracker no coincide con el bot que abre la Mini App, todas las
+lecturas de perfil, sesiones y mediciones devolverán `401`.
 
-## 2. Menú de Telegram
+## 2. Publica la App por HTTPS
 
-En `@BotFather`, configura **Bot Settings → Menu Button** (o `/setmenubutton`)
-con:
+Elige una URL estable y accesible desde el teléfono:
+
+```text
+https://gym.example.com
+```
+
+Usa exactamente el mismo origen en producción:
+
+```dotenv
+PUBLIC_APP_URL=https://gym.example.com
+CORS_ORIGINS=https://gym.example.com
+```
+
+Telegram exige un certificado HTTPS válido. `localhost`, HTTP y certificados
+autofirmados no sirven para la Mini App real.
+
+## 3. Configura el botón de menú
+
+En `@BotFather`, usa `/setmenubutton`:
 
 ```text
 Texto: Entrenar
 URL: https://gym.example.com/
 ```
 
-Así el usuario puede abrir la Mini App aunque el agente no sepa enviar botones
-Web App todavía.
-
-## 3. Botones de las sesiones
-
-Las herramientas `session_web_url` y `share_web_url` devuelven URLs seguras. La
-URL de una sesión debe enviarse al atleta como botón Telegram `web_app`, no solo
-como enlace de texto:
+Abre la App desde el menú del chat del bot. Para una sesión concreta, el agente
+debe enviar un botón Telegram `web_app` con la URL devuelta por `session_web_url`:
 
 ```json
 {
@@ -42,26 +50,22 @@ como enlace de texto:
 }
 ```
 
-El formato exacto depende del gateway del agente. Un botón URL normal puede
-abrir la página, pero no garantiza que Telegram entregue `initData` y la
-sesión quedará sin escritura. Los enlaces de compartir para acompañantes sí
-pueden ser enlaces normales de solo lectura.
+Un enlace normal no garantiza que Telegram entregue `initData`; úsalo solo para
+vistas de compartir de solo lectura.
 
-## 4. Prueba de identidad y escritura
+## 4. Checklist real
 
-1. Abre el menú `Entrenar` desde el chat del bot.
-2. La App debe cargar sin mostrar “Esta app vive dentro de Telegram”.
-3. El agente debe crear un plan pasando el `telegram_user_id` del chat.
-4. Abre el botón `Abrir sesión` y registra una serie.
-5. Comprueba que la serie aparece en el historial.
+1. Abre **Entrenar** desde el chat del bot, no desde un navegador externo.
+2. Comprueba que se muestra el perfil, las sesiones y las mediciones.
+3. Pide al agente un plan pasando el `telegram_user_id` del chat.
+4. Abre la sesión desde su botón Web App y registra una serie.
+5. Vuelve al historial y comprueba la serie.
 
-Si la App abre como solo lectura, revisa que el gateway haya usado `web_app`,
-que el dominio sea HTTPS y que `TELEGRAM_BOT_TOKEN` sea el mismo bot que abrió
-la Mini App.
+Si falla con `401`, verifica primero: bot correcto, `TELEGRAM_BOT_TOKEN` idéntico,
+URL HTTPS y que has abierto la App desde Telegram.
 
 ## Seguridad
 
 - No publiques `TELEGRAM_BOT_TOKEN` ni `COACH_API_KEY`.
 - Mantén MCP y PostgreSQL privados.
-- El MCP debe pasar siempre `telegram_user_id` en las operaciones multiusuario.
-- No construyas URLs de sesiones manualmente; usa las herramientas MCP.
+- Nunca construyas URLs de sesiones manualmente; usa las herramientas MCP.

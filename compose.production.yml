@@ -1,5 +1,5 @@
-# Production stack for a Docker host or one Coolify Compose resource.
-# The App is public; MCP is bound to localhost and PostgreSQL stays private.
+# Portable production stack: Docker host or Coolify Docker Compose resource.
+# App and MCP bind to localhost by default; PostgreSQL is private.
 
 x-app-environment: &app-environment
   ENVIRONMENT: production
@@ -41,20 +41,11 @@ services:
   app:
     image: ghcr.io/jlfernandezfernandez/gym-tracker:${GYM_TRACKER_VERSION:-latest}
     restart: unless-stopped
-    expose:
-      - "8000"
+    ports:
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8000}:8000"
     environment: *app-environment
     volumes:
       - exercise_data:/data/exercise-datasets
-    networks:
-      - default
-      - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
-      - "traefik.http.routers.gym-tracker-app.rule=Host(`gym.jordixlab.com`)"
-      - "traefik.http.routers.gym-tracker-app.entrypoints=http"
-      - "traefik.http.services.gym-tracker-app.loadbalancer.server.port=8000"
     depends_on:
       app-init:
         condition: service_completed_successfully
@@ -64,22 +55,13 @@ services:
   mcp:
     image: ghcr.io/jlfernandezfernandez/gym-tracker-mcp:${GYM_TRACKER_VERSION:-latest}
     restart: unless-stopped
-    expose:
-      - "8001"
+    ports:
+      - "${MCP_BIND:-127.0.0.1}:${MCP_PORT:-8001}:8001"
     environment:
       MCP_PORT: 8001
       GYM_TRACKER_API_BASE: http://app:8000/api
       GYM_TRACKER_APP_BASE: ${PUBLIC_APP_URL:?Set PUBLIC_APP_URL}
       GYM_TRACKER_COACH_KEY: ${COACH_API_KEY:?Set COACH_API_KEY}
-    networks:
-      - default
-      - coolify
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=coolify"
-      - "traefik.http.routers.gym-tracker-mcp.rule=Host(`gym-mcp.192.168.0.73.sslip.io`)"
-      - "traefik.http.routers.gym-tracker-mcp.entrypoints=http"
-      - "traefik.http.services.gym-tracker-mcp.loadbalancer.server.port=8001"
     depends_on:
       app:
         condition: service_healthy
@@ -87,7 +69,3 @@ services:
 volumes:
   postgres_data:
   exercise_data:
-
-networks:
-  coolify:
-    external: true
