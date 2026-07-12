@@ -75,7 +75,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.gym-tracker-mcp.rule=Host(`${SERVICE_FQDN_MCP:?Set SERVICE_FQDN_MCP}`)"
+      - "traefik.http.routers.gym-tracker-mcp.rule=Host(`${MCP_PUBLIC_FQDN:?Set MCP_PUBLIC_FQDN}`)"
       - "traefik.http.routers.gym-tracker-mcp.entrypoints=http"
       - "traefik.http.services.gym-tracker-mcp.loadbalancer.server.port=8001"
     depends_on:
