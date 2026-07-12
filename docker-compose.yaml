@@ -67,7 +67,7 @@ services:
       MCP_PORT: 8001
       GYM_TRACKER_API_BASE: http://app:8000/api
       GYM_TRACKER_APP_BASE: ${PUBLIC_APP_URL:?Set PUBLIC_APP_URL}
-      GYM_TRACKER_COACH_KEY: ${COACH_API_KEY:?Set COACH_API_KEY}
+      GYM_TRACKER_COACH_KEY: ${COACH_API_KEY:-}
     depends_on:
       app:
         condition: service_healthy
