@@ -51,6 +51,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
       - "traefik.http.routers.gym-tracker-app.rule=Host(`${APP_PUBLIC_FQDN:?Set APP_PUBLIC_FQDN}`)"
       - "traefik.http.routers.gym-tracker-app.entrypoints=http"
       - "traefik.http.services.gym-tracker-app.loadbalancer.server.port=8000"
@@ -75,6 +76,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
       - "traefik.http.routers.gym-tracker-mcp.rule=Host(`${MCP_PUBLIC_FQDN:?Set MCP_PUBLIC_FQDN}`)"
       - "traefik.http.routers.gym-tracker-mcp.entrypoints=http"
       - "traefik.http.services.gym-tracker-mcp.loadbalancer.server.port=8001"
