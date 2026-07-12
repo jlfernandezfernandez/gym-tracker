@@ -49,26 +49,26 @@ export function Plan() {
         onBack={app.readOnly ? undefined : app.pop}
         action={!app.readOnly && plan.share_token ? <ShareButton title={cleanTitle(plan.title)} token={plan.share_token} /> : undefined}
       />
-      <div class="session-hero card">
-        <div class="session-hero-content">
-          <div class="meta">
-            <span class="pill active">{formatStatus(plan.status)}</span>
-            <span class="pill">{plan.duration_estimated || 0} min</span>
+      <div class="my-3 rounded-card bg-surface p-5 shadow-card">
+        <div>
+          <div class="mt-[9px] flex flex-wrap gap-1.5">
+            <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{formatStatus(plan.status)}</span>
+            <span class="rounded-pill bg-surface-2 px-2 py-1 text-[.68rem] font-[650] text-hint">{plan.duration_estimated || 0} min</span>
           </div>
           <h1>{cleanTitle(plan.title)}</h1>
           <p>{plan.goal || plan.coach_summary || 'Plan generado por el coach'}</p>
-          <div class="grid stats mt-2.5">
-            <div class="stat">
+          <div class="mt-2.5 grid grid-cols-3 gap-[9px]">
+            <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
               <b>{exercises.length}</b>
               <span>ejercicios</span>
             </div>
-            <div class="stat">
+            <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
               <b>
                 {completedSetsTotal}/{targetSetsTotal}
               </b>
               <span>series</span>
             </div>
-            <div class="stat">
+            <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
               <b>{progressPct}%</b>
               <span>progreso</span>
             </div>
@@ -76,9 +76,9 @@ export function Plan() {
         </div>
       </div>
 
-      <div class="section-heading">
-        <p class="eyebrow">Ruta del entreno</p>
-        <h2>{exercises.length} ejercicios</h2>
+      <div class="px-[3px] pt-[22px] pb-[3px]">
+        <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Ruta del entreno</p>
+        <h2 class="mt-1">{exercises.length} ejercicios</h2>
       </div>
 
       {exercises.map((exercise: any) => (
@@ -91,7 +91,7 @@ export function Plan() {
       ))}
 
       {muscles.length > 0 && (
-        <div class="card">
+        <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
           <h2>Mapa muscular de hoy</h2>
           <BodyMap muscles={muscles} />
         </div>
@@ -100,8 +100,8 @@ export function Plan() {
       {plan.status === 'completed' && <CompletedSummary plan={plan} exercises={exercises} />}
 
       {!app.readOnly && plan.status !== 'completed' && (
-        <div class="row mt-3">
-          <button class="btn" onClick={() => openExercise(currentExercise(plan, currentQuery.data)?.planned_id)}>
+        <div class="mt-3 flex items-center gap-[9px] [&>button]:min-w-0 [&>button]:flex-1">
+          <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-white transition active:scale-[.975] active:opacity-[.82]" onClick={() => openExercise(currentExercise(plan, currentQuery.data)?.planned_id)}>
             Continuar
           </button>
           <FinishButton sessionId={plan.id} energy={plan.energy} discomfort={plan.discomfort} />
@@ -114,12 +114,12 @@ export function Plan() {
 function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurrent: boolean; onOpen: () => void }) {
   const mediaSrc = mediaUrl(exercise.image_url || exercise.gif_url);
   return (
-    <button class={`card tap exercise-card ${isCurrent ? 'current' : ''}`} onClick={onOpen}>
-      <div class="exercise-media">{mediaSrc ? <img src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}</div>
-      <div class="exercise-card-body">
-        <div class="exercise-title-row">
+    <button class={`my-3 grid w-full cursor-pointer grid-cols-[88px_1fr] items-center gap-[13px] rounded-card border-0 bg-surface p-[11px] text-left text-ink shadow-card transition hover:bg-hover active:scale-[.985] active:bg-hover max-[380px]:grid-cols-[76px_1fr] ${isCurrent ? 'ring-2 ring-accent/30 shadow-[0_6px_24px_rgba(0,0,0,.06)]' : ''}`} onClick={onOpen}>
+      <div class="relative grid h-[88px] place-items-center overflow-hidden rounded-2xl bg-white text-[1.7rem] shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] max-[380px]:h-[76px]">{mediaSrc ? <img class="absolute inset-0 size-full object-contain" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}</div>
+      <div class="min-w-0">
+        <div class="flex items-start justify-between gap-3 [&>div]:min-w-0">
           <h3>{exercise.name || 'Ejercicio'}</h3>
-          <span class="pill">
+          <span class="rounded-pill bg-surface-2 px-2 py-1 text-[.68rem] font-[650] text-hint">
             {completedSetCount(exercise)}/{exercise.sets}
           </span>
         </div>
@@ -127,11 +127,11 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
           {formatMuscle(exercise.target || exercise.muscle_group || '')}
           {exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}
         </p>
-        <div class="meta">
-          <span class="pill active">
+        <div class="mt-[9px] flex flex-wrap gap-1.5">
+          <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
             {exercise.sets}×{exercise.reps}
           </span>
-          <span class={`pill st-${exercise.status}`}>{formatStatus(exercise.status)}</span>
+          <span class={`rounded-pill px-2 py-1 text-[.68rem] font-[650] ${exercise.status === 'completed' ? 'bg-ok-bg text-ok' : exercise.status === 'skipped' ? 'bg-warn-bg text-warn' : exercise.status === 'in_progress' ? 'bg-accent-bg text-accent' : 'bg-surface-2 text-hint'}`}>{formatStatus(exercise.status)}</span>
         </div>
       </div>
     </button>
@@ -141,19 +141,19 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
 function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) {
   const totalPerformedSets = exercises.reduce((total, exercise) => total + (exercise.performed_sets || []).length, 0);
   return (
-    <div class="card">
+    <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
       <h2>Sesión completada</h2>
       {plan.feedback && <p>{plan.feedback}</p>}
-      <div class="grid stats mt-2.5">
-        <div class="stat">
+      <div class="mt-2.5 grid grid-cols-3 gap-[9px]">
+        <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
           <b>{totalPerformedSets}</b>
           <span>series</span>
         </div>
-        <div class="stat">
+        <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
           <b>{Math.round(plan.total_volume)}</b>
           <span>kg volumen</span>
         </div>
-        <div class="stat">
+        <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
           <b>{plan.duration_actual || plan.duration_estimated || '—'}{plan.duration_actual || plan.duration_estimated ? 'min' : ''}</b>
           <span>duración</span>
         </div>
@@ -176,7 +176,7 @@ function ShareButton({ title, token }: { title: string; token: string }) {
     }
   };
   return (
-    <button class="top-action" onClick={share}>
+    <button class="min-h-11 min-w-11 cursor-pointer rounded-pill border-0 bg-surface px-[14px] text-[.82rem] font-[680] text-accent shadow-[0_1px_2px_rgba(0,0,0,.06),inset_0_0_0_1px_rgba(0,0,0,.04)] active:scale-95" onClick={share}>
       Compartir
     </button>
   );
@@ -216,15 +216,15 @@ function FinishButton({ sessionId, energy, discomfort }: { sessionId: number; en
 
   return (
     <>
-      <button class="btn secondary" onClick={() => setIsOpen(true)}>
+      <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-surface px-[17px] py-[13px] text-[.94rem] font-[720] text-ink shadow-[inset_0_0_0_1px_var(--color-edge)] transition active:scale-[.975] active:opacity-[.82]" onClick={() => setIsOpen(true)}>
         ✓ Finalizar
       </button>
-      <dialog ref={dialogRef} class="sheet" onClose={() => setIsOpen(false)}>
+      <dialog ref={dialogRef} class="m-auto mb-2.5 w-[min(100%-20px,430px)] rounded-[24px] border-0 bg-[rgba(250,250,252,.94)] p-5 text-ink shadow-sheet backdrop-blur-3xl backdrop-saturate-150 [&::backdrop]:bg-black/30" onClose={() => setIsOpen(false)}>
         <h2>Finalizar sesión</h2>
         <p>Cuéntale al coach cómo ha ido (opcional).</p>
         <textarea ref={feedbackRef} placeholder="Fácil, duro, molestias, sensaciones..." />
-        <div class="row mt-3">
-          <button class="btn ghost" onClick={() => setIsOpen(false)}>
+        <div class="mt-3 flex items-center gap-[9px] [&>button]:min-w-0 [&>button]:flex-1">
+          <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975] active:opacity-[.82]" onClick={() => setIsOpen(false)}>
             Cancelar
           </button>
           <BusyButton busy={finishSession.isPending} busyLabel="Finalizando..." onClick={() => finishSession.mutate()}>

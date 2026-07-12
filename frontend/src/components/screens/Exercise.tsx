@@ -27,12 +27,12 @@ function SetRow({ set, sessionId, plannedId, exerciseId, readOnly }: { set: any;
     },
   });
   return (
-    <div class="set-row" key={set.id}>
-      <span class="n">Serie {set.set_number}</span>
-      <span class="v">
+    <div class="flex items-center justify-between gap-2.5 rounded-control bg-surface-2 px-[13px] py-3" key={set.id}>
+      <span class="text-[.78rem] text-hint">Serie {set.set_number}</span>
+      <span class="flex items-center gap-[9px] text-[.83rem] font-bold">
         {set.reps} reps · {formatWeight(set.weight, set.weight_mode)}
         {!readOnly && (
-          <button class="set-del" disabled={del.isPending} onClick={() => del.mutate()} aria-label="Borrar serie">
+          <button class="min-h-9 min-w-9 cursor-pointer rounded-pill border-0 bg-transparent text-err disabled:opacity-30" disabled={del.isPending} onClick={() => del.mutate()} aria-label="Borrar serie">
             ✕
           </button>
         )}
@@ -65,15 +65,15 @@ export function Exercise({ plannedId }: { plannedId: number }) {
   return (
     <>
       <TopBar title={cleanTitle(plan.title)} onBack={app.pop} />
-      <div class="workout-progress" aria-label={`Serie ${Math.min(loggedSetCount + 1, exercise.sets)} de ${exercise.sets}`}>
+      <div class="mx-[3px] mt-2.5 mb-[15px] flex gap-[5px] [&>span]:h-[5px] [&>span]:flex-1 [&>span]:rounded-[9px] [&>span]:bg-track-dim" aria-label={`Serie ${Math.min(loggedSetCount + 1, exercise.sets)} de ${exercise.sets}`}>
         {Array.from({ length: exercise.sets || 0 }, (_, setIndex) => (
-          <span key={setIndex} class={setIndex < loggedSetCount ? 'done' : setIndex === loggedSetCount ? 'active' : ''} />
+          <span key={setIndex} class={setIndex < loggedSetCount ? '!bg-ok-bright' : setIndex === loggedSetCount ? '!bg-accent' : ''} />
         ))}
       </div>
-      <div class="exercise-focus card">
-        <div class="big-media">{mediaSrc ? <img src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="eager" /> : '🏋️'}</div>
-        <div class="exercise-focus-content">
-          <p class="eyebrow">Serie {Math.min(loggedSetCount + 1, exercise.sets)} de {exercise.sets}</p>
+      <div class="my-3 overflow-hidden rounded-card bg-surface shadow-card min-[720px]:grid min-[720px]:grid-cols-[1.12fr_.88fr]">
+        <div class="relative grid h-[235px] place-items-center overflow-hidden bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] min-[720px]:h-auto min-[720px]:min-h-[320px] max-[380px]:h-[210px]">{mediaSrc ? <img class="absolute inset-0 size-full object-contain p-4" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="eager" /> : '🏋️'}</div>
+        <div class="p-[18px] min-[720px]:flex min-[720px]:flex-col min-[720px]:justify-center">
+          <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Serie {Math.min(loggedSetCount + 1, exercise.sets)} de {exercise.sets}</p>
           <h1>{exercise.name || 'Ejercicio'}</h1>
           <p>{formatMuscle(exercise.target || exercise.muscle_group || '')}</p>
         </div>
@@ -88,9 +88,9 @@ export function Exercise({ plannedId }: { plannedId: number }) {
         <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} />
       )}
       {loggedSetCount > 0 && (
-        <div class="card">
+        <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
           <h3>Series registradas</h3>
-          <div class="sets mt-2">
+          <div class="mt-2 grid gap-[7px]">
             {(exercise.performed_sets || []).map((performedSet: any) => (
               <SetRow
                 key={performedSet.id}
@@ -105,21 +105,21 @@ export function Exercise({ plannedId }: { plannedId: number }) {
         </div>
       )}
       {!app.readOnly && exercise.status === 'completed' && (
-        <div class="card done-card">
-          <div class="done-check">✓</div>
+        <div class="my-3 rounded-card bg-surface p-7 text-center shadow-card">
+          <div class="mx-auto mb-3 grid size-[52px] place-items-center rounded-full bg-ok-bg text-2xl font-extrabold text-ok">✓</div>
           <h3>Ejercicio completado</h3>
-          <button class="btn ghost mt-2.5" onClick={app.pop}>
+          <button class="mt-2.5 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975]" onClick={app.pop}>
             Volver al plan
           </button>
         </div>
       )}
-      <details class="card details-card">
+      <details class="my-3 rounded-card bg-surface p-[18px] shadow-card [&[open]>summary]:mb-2.5">
         <summary>Técnica</summary>
-        <p class="instr open">{instructions}</p>
+        <p class="whitespace-pre-line">{instructions}</p>
         {exercise.notes && <p class="mt-2">{exercise.notes}</p>}
       </details>
       {muscles.length > 0 && (
-        <div class="card">
+        <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
           <h3>Músculos trabajados</h3>
           <BodyMap muscles={muscles} />
         </div>
@@ -145,19 +145,19 @@ function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
 
   return (
     <>
-      <div class="card best-card">
-        <div class="best-stat">
-          <span class="eyebrow">🏆 Mejor</span>
+      <div class="my-2 mt-3 flex items-center rounded-card bg-surface px-[18px] py-[14px] shadow-card">
+        <div class="flex-1 text-center">
+          <span class="mb-1 block text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">🏆 Mejor</span>
           <b>{usesWeight ? `${best} kg` : `${best} reps`}</b>
         </div>
-        <div class="best-divider" />
-        <div class="best-stat">
-          <span class="eyebrow">⏱ Última</span>
+        <div class="mx-3 h-9 w-px bg-edge" />
+        <div class="flex-1 text-center">
+          <span class="mb-1 block text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">⏱ Última</span>
           <b>{usesWeight ? `${lastValue} kg` : `${lastValue} reps`}</b>
         </div>
       </div>
       {points.length >= 2 && (
-        <div class="card">
+        <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
           <h3>Progresión</h3>
           <p class="text-xs">{usesWeight ? 'Peso máximo por sesión' : 'Repeticiones máximas por sesión'}</p>
           <ProgressChart points={points.slice(-12)} />
@@ -191,12 +191,12 @@ function SetCountControl({ sessionId, plannedId, currentSets, loggedSets }: { se
     adjust.mutate(next);
   };
   return (
-    <div class="card set-count-card">
-      <span class="eyebrow">Series</span>
-      <div class="set-count-row">
-        <button class="set-count-btn" disabled={adjust.isPending || sets <= loggedSets} onClick={() => step(-1)} aria-label="Quitar serie">−</button>
-        <span class="set-count-value">{sets}</span>
-        <button class="set-count-btn" disabled={adjust.isPending || sets >= 20} onClick={() => step(1)} aria-label="Añadir serie">+</button>
+    <div class="my-3 flex items-center justify-between rounded-card bg-surface px-[18px] py-[14px] shadow-card">
+      <span class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Series</span>
+      <div class="flex items-center gap-3">
+        <button class="grid size-9 cursor-pointer place-items-center rounded-xl border-0 bg-surface-2 text-[1.3rem] font-bold text-ink transition active:scale-90 active:bg-hover disabled:cursor-default disabled:opacity-30" disabled={adjust.isPending || sets <= loggedSets} onClick={() => step(-1)} aria-label="Quitar serie">−</button>
+        <span class="min-w-8 text-center text-[1.4rem] font-[720] tracking-[-.03em]">{sets}</span>
+        <button class="grid size-9 cursor-pointer place-items-center rounded-xl border-0 bg-surface-2 text-[1.3rem] font-bold text-ink transition active:scale-90 active:bg-hover disabled:cursor-default disabled:opacity-30" disabled={adjust.isPending || sets >= 20} onClick={() => step(1)} aria-label="Añadir serie">+</button>
       </div>
     </div>
   );
@@ -277,30 +277,30 @@ function LogSetForm({
   const isBusy = logSet.isPending || completeExercise.isPending;
 
   return (
-    <div class="card set-card">
-      <div class="row steppers">
-        <div class="stepper">
+    <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+      <div class="flex items-stretch gap-[9px]">
+        <div class="min-w-0 flex-1">
           <label for="set-weight">{isBodyweight ? 'Peso corporal' : 'Peso (kg)'}</label>
-          <div>
+          <div class="flex items-center gap-1.5">
             {isBodyweight ? (
-              <div class="stepper-fixed">Peso corporal</div>
+              <div class="grid min-h-14 min-w-0 flex-1 place-items-center rounded-control bg-surface-2 text-[1.25rem] font-[720] tracking-[-.03em] text-hint">Peso corporal</div>
             ) : (
               <input id="set-weight" type="text" inputmode="decimal" enterkeyhint="done" value={weight} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setWeight(event.target.value)} />
             )}
           </div>
         </div>
-        <div class="stepper">
+        <div class="min-w-0 flex-1">
           <label for="set-reps">Reps</label>
-          <div>
+          <div class="flex items-center gap-1.5">
             <input id="set-reps" type="text" inputmode="numeric" enterkeyhint="done" value={reps} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setReps(event.target.value)} />
           </div>
         </div>
       </div>
-      <BusyButton busy={isBusy} busyLabel="Guardando..." class="btn set-save" onClick={saveSet}>
+      <BusyButton busy={isBusy} busyLabel="Guardando..." class="mt-5 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-white transition active:scale-[.975] active:opacity-[.82] disabled:pointer-events-none disabled:opacity-35" onClick={saveSet}>
         {isLastSet ? 'Registrar' : 'Continuar'}
       </BusyButton>
       {!isLastSet && (
-        <button class="btn ghost mt-2" disabled={isBusy} onClick={() => setConfirmFinishOpen(true)}>
+        <button class="mt-2 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975] disabled:pointer-events-none disabled:opacity-35" disabled={isBusy} onClick={() => setConfirmFinishOpen(true)}>
           Terminar ejercicio
         </button>
       )}

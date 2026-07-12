@@ -31,7 +31,7 @@ const ALL_FIELDS = [...SELECT_FIELDS, ...NUMERIC_FIELDS];
 
 function InlineSelect({ value, options, onSave }: { value: string; options: readonly string[]; onSave: (v: string) => void }) {
   return (
-    <select class="profile-value-select" value={value} onChange={(e: any) => onSave(e.target.value)}>
+    <select class="min-h-9 cursor-pointer border-0 bg-transparent pr-1 text-right text-[.85rem] font-[580] text-hint outline-none" value={value} onChange={(e: any) => onSave(e.target.value)}>
       {(value ? [] : ['']).concat([...options]).map((opt) => (
         <option key={opt} value={opt}>{opt || '—'}</option>
       ))}
@@ -45,7 +45,7 @@ function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value
   if (editing) {
     return (
       <input
-        class="profile-value-input"
+        class="min-h-11 w-24 rounded-[10px] border border-accent bg-surface px-2.5 py-1 text-right text-base font-[580] text-ink shadow-[0_0_0_3px_var(--color-accent-soft)] outline-none"
         type="text"
         inputmode={inputMode}
         enterkeyhint="done"
@@ -65,7 +65,7 @@ function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value
     );
   }
   return (
-    <button class="profile-value-btn" onClick={() => { setDraft(value); setEditing(true); }}>
+    <button class="min-h-9 cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1 text-right text-[.85rem] font-[580] text-hint transition active:bg-hover" onClick={() => { setDraft(value); setEditing(true); }}>
       {value ? `${value}${suffix}` : '—'}
     </button>
   );
@@ -107,21 +107,21 @@ export function Profile() {
       <TopBar title="Perfil" subtitle="El contexto que utiliza tu coach" onBack={app.pop} />
 
       {/* Athlete identity */}
-      <div class="card">
-        <p class="eyebrow">Atleta</p>
+      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+        <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Atleta</p>
         <h1>{profile.name || 'Atleta'}</h1>
         <p>{profile.onboarding_complete ? 'Perfil deportivo activo' : 'Completa el perfil con tu coach'}</p>
       </div>
 
       {/* Training & body */}
-      <div class="card">
+      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
         <h2>Entrenamiento y cuerpo</h2>
-        <div class="profile-fields mt-2.5">
+        <div class="mt-2.5 grid overflow-hidden rounded-control bg-surface-2">
           {ALL_FIELDS.map((field) => {
             const raw = String((profile as any)[field.key] ?? '');
             return (
-              <div class="profile-field-row" key={field.key}>
-                <span class="profile-field-label">{field.label}</span>
+              <div class="flex min-h-12 items-center justify-between gap-3 border-b border-edge px-[15px] py-[13px] last:border-b-0" key={field.key}>
+                <span class="whitespace-nowrap text-[.85rem] font-[680] text-ink">{field.label}</span>
                 {'options' in field ? (
                   <InlineSelect value={raw} options={field.options} onSave={(v) => saveField(field.key, v)} />
                 ) : <InlineNumber value={raw} placeholder={field.placeholder} suffix={field.suffix} inputMode={field.inputMode} onSave={(v) => saveField(field.key, v)} />}
@@ -133,21 +133,21 @@ export function Profile() {
 
       {/* Coach notes */}
       {profile.notes && (
-        <div class="card">
+        <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
           <h2>Notas del coach</h2>
           <p>{profile.notes}</p>
         </div>
       )}
 
       {/* Measurements with charts */}
-      <div class="card">
+      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
         <h2>Mediciones</h2>
         {measurements.length < 2 ? (
           <p>{measurements.length === 0
             ? 'Aquí irán peso, grasa, músculo, perímetros o cualquier medición por fecha cuando el coach las añada.'
             : 'Necesitas al menos 2 mediciones para ver la evolución.'}</p>
         ) : (
-          <div class="measure-charts mt-2.5">
+          <div class="mt-2.5 grid gap-3">
             {MEASURES.map((metric) => {
               const points = measurements
                 .filter((m: any) => m[metric.key] != null)
@@ -162,10 +162,10 @@ export function Profile() {
               const delta = latest - first;
               const trend = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
               return (
-                <div class="measure-chart-card" key={metric.key}>
-                  <div class="measure-chart-header">
+                <div class="rounded-control bg-surface-2 px-[15px] py-[14px]" key={metric.key}>
+                  <div class="mb-1 flex items-center justify-between">
                     <h3>{metric.label}</h3>
-                    <span class={`pill ${delta > 0 ? 'ok' : delta < 0 ? 'warn' : ''}`}>
+                    <span class={`rounded-pill px-2 py-1 text-[.68rem] font-[650] ${delta > 0 ? 'bg-ok-bg text-ok' : delta < 0 ? 'bg-warn-bg text-warn' : 'bg-surface text-hint'}`}>
                       {trend} {delta !== 0 ? `${Math.abs(delta).toFixed(1)}${metric.unit}` : 'igual'}
                     </span>
                   </div>

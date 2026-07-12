@@ -56,9 +56,9 @@ export function Landing() {
 
   return (
     <>
-      <div class="hero landing-hero">
-        <p class="eyebrow">Gym Coach</p>
-        <h1>
+      <div class="px-0.5 pt-[26px] pb-[17px]">
+        <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Gym Coach</p>
+        <h1 class="mt-[5px]">
           {profileQuery.data?.name ? `Hola, ${profileQuery.data.name}` : "Hola"}
         </h1>
         <p>
@@ -71,23 +71,23 @@ export function Landing() {
       </div>
 
       {!activeQuery.isLoading && (
-        <div class={`card landing-session ${plan ? "has-session" : ""}`}>
+        <div class="my-3 rounded-card bg-surface p-5 shadow-card">
           {!plan ? (
             <Empty icon="🏋️">Sin sesión activa.</Empty>
           ) : (
             <>
-              <div class="exercise-title-row">
+              <div class="flex items-start justify-between gap-3 [&>div]:min-w-0">
                 <h2>{cleanTitle(plan.title)}</h2>
-                <span class="pill active">{progressPct}%</span>
+                <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{progressPct}%</span>
               </div>
               {/* During a workout the landing IS the workout: the upcoming set, grouped as one inset card. */}
-              <div class="landing-next">
-                <div class="landing-current">
-                  <div class="exercise-media">
+              <div class="mt-[14px] rounded-[18px] bg-surface-2 p-[14px] shadow-[inset_0_0_0_1px_var(--color-edge)]">
+                <div class="grid grid-cols-[88px_1fr] items-center gap-[13px]">
+                  <div class="relative grid h-[88px] place-items-center overflow-hidden rounded-2xl bg-white text-[1.7rem] shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
                     {mediaSrc ? <img src={mediaSrc} alt={activeExercise?.name || 'Ejercicio actual'} loading="eager" /> : "🏋️"}
                   </div>
-                  <div class="landing-current-info">
-                    <p class="eyebrow">Serie actual</p>
+                  <div>
+                    <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Serie actual</p>
                     <h3>
                       {currentState?.current_exercise_name ||
                         activeExercise?.name ||
@@ -96,7 +96,7 @@ export function Landing() {
                   </div>
                 </div>
                 <div
-                  class="workout-progress"
+                  class="my-[13px] flex gap-[5px] [&>span]:h-[5px] [&>span]:flex-1 [&>span]:rounded-[9px] [&>span]:bg-track-dim"
                   aria-label={`Serie ${doneSetCount + 1} de ${totalSetCount}`}
                 >
                   {Array.from({ length: totalSetCount }, (_, setIndex) => (
@@ -104,29 +104,29 @@ export function Landing() {
                       key={setIndex}
                       class={
                         setIndex < doneSetCount
-                          ? "done"
+                          ? "!bg-ok-bright"
                           : setIndex === doneSetCount
-                            ? "active"
+                            ? "!bg-accent"
                             : ""
                       }
                     />
                   ))}
                 </div>
-                <div class="grid stats kpis">
-                  <div class="stat">
+                <div class="grid grid-cols-2 gap-[9px]">
+                  <div class="rounded-control bg-surface px-2 py-[14px] text-center">
                     <b>{formatWeight(nextWeight, activeExercise?.weight_mode)}</b>
                     <span>{activeExercise?.weight_mode === "weighted" ? "carga" : ""}</span>
                   </div>
-                  <div class="stat">
+                  <div class="rounded-control bg-surface px-2 py-[14px] text-center">
                     <b>{activeExercise?.reps || "-"}</b>
                     <span>reps</span>
                   </div>
                 </div>
               </div>
-              <button class="btn mt-3" onClick={() => openPlan(true)}>
+              <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-white transition active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(true)}>
                 Continuar entreno
               </button>
-              <button class="btn ghost mt-3" onClick={() => openPlan(false)}>
+              <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(false)}>
                 Ver plan completo
               </button>
             </>
@@ -134,7 +134,7 @@ export function Landing() {
         </div>
       )}
 
-      <div class="home-nav mt-3.5">
+      <div class="mt-3.5 grid grid-cols-3 gap-[9px] [&>button]:grid [&>button]:min-h-[72px] [&>button]:place-content-center [&>button]:gap-[5px] [&>button]:rounded-2xl [&>button]:border-0 [&>button]:bg-surface [&>button]:text-[.75rem] [&>button]:font-[680] [&>button]:text-ink [&>button]:shadow-card [&>button]:active:scale-95 [&>button>svg]:size-5 [&>button>svg]:justify-self-center [&>button>svg]:text-accent">
         <button onClick={() => app.push({ name: "history" })}>
           <svg
             viewBox="0 0 24 24"

@@ -29,51 +29,51 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
         <Empty icon="📈">Sin datos todavía.</Empty>
       ) : (
         <>
-          <div class="card">
-            <div class="grid stats">
-              <div class="stat">
+          <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+            <div class="grid grid-cols-3 gap-[9px]">
+              <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
                 <b>{usesWeight ? `${maxWeight} kg` : `${maxReps} reps`}</b>
                 <span>máximo</span>
               </div>
-              <div class="stat">
+              <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
                 <b>{points.length}</b>
                 <span>sesiones</span>
               </div>
-              <div class="stat">
+              <div class="rounded-control bg-surface-2 px-2 py-[14px] text-center">
                 <b>{usesWeight ? `${latestPoint.top_weight} kg` : `${latestPoint.top_reps} reps`}</b>
                 <span>última</span>
               </div>
             </div>
           </div>
           {points.length >= 2 && (
-            <div class="card">
+            <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
               <h3>Progresión</h3>
               <p class="text-xs">{usesWeight ? 'Peso máximo por sesión' : 'Repeticiones máximas por sesión'}</p>
               <ProgressChart points={points} />
             </div>
           )}
-          <div class="section-heading">
-            <p class="eyebrow">Historial</p>
-            <h2>{points.length} sesiones</h2>
+          <div class="px-[3px] pt-[22px] pb-[3px]">
+            <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Historial</p>
+            <h2 class="mt-1">{points.length} sesiones</h2>
           </div>
-          <div class="history-list">
+          <div class="mt-[14px] overflow-hidden rounded-card bg-surface [content-visibility:auto] [contain-intrinsic-size:auto_500px]">
             {[...points].reverse().map((point: any) => (
               <button
-                class="history-row"
+                class="grid min-h-[76px] w-full cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 border-b border-edge bg-transparent px-[15px] py-3 text-left text-ink last:border-b-0 hover:bg-surface-2 active:bg-surface-2"
                 key={point.session_id}
                 onClick={() => app.openSession(point.session_id)}
               >
-                <span class="history-date">{formatDate(point.date)}</span>
-                <span class="history-main">
-                  <b>
+                <span class="text-[.74rem] text-hint">{formatDate(point.date)}</span>
+                <span class="min-w-0">
+                  <b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">
                     {usesWeight ? `${point.top_weight} kg` : `${point.top_reps} reps`}
                     {point.sets > 1 ? ` · ${point.sets} series` : ' · 1 serie'}
                   </b>
-                  <small>
+                  <small class="mt-[3px] block text-[.72rem] text-hint">
                     {usesWeight ? `${Math.round(point.volume)} kg volumen` : `${point.sets} series`}
                   </small>
                 </span>
-                <span class="history-chevron">›</span>
+                <span class="text-[1.4rem] text-divider">›</span>
               </button>
             ))}
           </div>
