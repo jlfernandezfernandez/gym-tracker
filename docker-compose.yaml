@@ -62,7 +62,7 @@ services:
       dockerfile: Dockerfile.mcp
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${MCP_PORT:-8001}:8001"
+      - "${MCP_PORT:-8001}:8001"
     environment:
       MCP_PORT: 8001
       GYM_TRACKER_API_BASE: http://app:8000/api
