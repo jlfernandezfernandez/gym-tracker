@@ -37,8 +37,7 @@ S3_SECRET_KEY=...
 
 Usa contraseñas aleatorias. `S3_ACCESS_KEY` y `S3_SECRET_KEY` son también las
 credenciales root del MinIO incluido en este stack. Si una contraseña de
-PostgreSQL contiene `@`, `:`, `/` u otros caracteres reservados, codifícala en
-la URL o utiliza una contraseña sin esos caracteres.
+PostgreSQL debe ser URL-safe: usa letras, números, `-` y `_`.
 
 Arranca la release:
 
@@ -86,4 +85,3 @@ Para desarrollo con builds locales, variables cómodas y consola MinIO:
 cp .env.example .env
 docker compose up -d --build
 ```
-

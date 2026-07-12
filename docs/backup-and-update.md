@@ -8,11 +8,8 @@ MinIO, por lo que hay que respaldar ambos.
 Haz un dump lógico de PostgreSQL con las credenciales de tu `.env`:
 
 ```bash
-set -a
-. ./.env
-set +a
 docker compose -f compose.production.yml exec -T postgres \
-  pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB" > postgres-$(date +%F).sql
+  sh -c 'pg_dump -U "$POSTGRES_USER" "$POSTGRES_DB"' > postgres-$(date +%F).sql
 ```
 
 Para MinIO usa el cliente `mc` desde una máquina con acceso a `minio:9000` o a

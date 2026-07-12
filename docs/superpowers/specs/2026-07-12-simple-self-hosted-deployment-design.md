@@ -81,9 +81,7 @@ resource. Coolify provides the shared network, reverse proxy, TLS, environment
 variables, and persistent storage. The App receives the public domain; MCP,
 PostgreSQL, and MinIO stay internal.
 
-The current four-resource procedure is retained only as an advanced topology
-for operators who deliberately use managed PostgreSQL or shared object storage.
-It must not be the first path shown.
+The split-resource topology is not documented until a real operator needs it.
 
 ## Telegram setup contract
 

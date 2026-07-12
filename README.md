@@ -72,12 +72,12 @@ http://localhost:8001/mcp
 Coolify usa el mismo `compose.production.yml` como un único stack. La App
 recibe el dominio HTTPS; PostgreSQL, MinIO y MCP permanecen privados.
 
-Guía rápida: [`docs/install-coolify.md`](docs/install-coolify.md). La topología
-separada queda documentada en [`docs/deploy-coolify.md`](docs/deploy-coolify.md).
+Guía: [`docs/install-coolify.md`](docs/install-coolify.md).
 
-En cualquier despliegue real configura `ENVIRONMENT=production`. La aplicación
-fallará al arrancar si faltan PostgreSQL, S3, Telegram, la clave del coach o un
-origen CORS explícito; producción no admite `CORS_ORIGINS=*`.
+`compose.production.yml` fija `ENVIRONMENT=production`. En un despliegue manual
+configura el mismo valor. La aplicación fallará al arrancar si faltan
+PostgreSQL, S3, Telegram, la clave del coach o un origen CORS explícito;
+producción no admite `CORS_ORIGINS=*`.
 
 ## Configuración
 
@@ -95,9 +95,8 @@ origen CORS explícito; producción no admite `CORS_ORIGINS=*`.
 | `S3_BUCKET`, `S3_REGION` | bucket y región |
 | `EXERCISE_DATASET_REPOSITORY` | repositorio `owner/repo`; se consume su rama `main` |
 
-Docker Compose usa `development` únicamente como valor predeterminado local.
-Para producción, define `ENVIRONMENT=production` y sustituye todas las
-credenciales de ejemplo.
+Docker Compose local usa `development`; el Compose de producción fija
+`production` y exige sustituir las credenciales de ejemplo.
 
 ## Dominios y proxy inverso
 
@@ -123,16 +122,13 @@ Los datos de usuario no viven en los contenedores de la app ni del MCP:
 | Perfiles, sesiones, series y mediciones | PostgreSQL |
 | Imágenes y GIFs | MinIO |
 
-En Compose, los volúmenes persistentes son:
-
-```text
-gym-tracker-postgres-data
-gym-tracker-minio-data
-```
+Compose gestiona los volúmenes `postgres_data` y `minio_data` dentro de cada
+proyecto.
 
 Un reinicio o redeploy normal conserva los datos. `docker compose down -v` elimina los volúmenes y solo debe usarse para empezar desde cero. La persistencia no sustituye a los backups.
 
-En Coolify, configura persistent storage en PostgreSQL (`/var/lib/postgresql`) y MinIO (`/data`). Consulta [`docs/deploy-coolify.md`](docs/deploy-coolify.md).
+En Coolify, configura persistent storage en PostgreSQL (`/var/lib/postgresql`)
+y MinIO (`/data`). Consulta [`docs/install-coolify.md`](docs/install-coolify.md).
 
 ## Agentes y MCP
 
@@ -189,7 +185,6 @@ landing/              landing page estática (Astro + Tailwind)
 mcp/                  herramientas MCP agnósticas al agente
 Dockerfile             imagen de la API + Mini App
 Dockerfile.mcp        imagen del servidor MCP
-Dockerfile.minio      imagen/configuración de MinIO
 docker-compose.yml    stack local completo
 compose.production.yml stack de producción con imágenes GHCR
 docs/                 guías de despliegue, conexión y design system (DESIGN.md)

@@ -37,12 +37,6 @@ services:
       - "${MINIO_API_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_PORT:-9001}:9001"
     command: ["server", "/data", "--console-address", ":9001"]
-    healthcheck:
-      test: ["CMD-SHELL", "minio --version >/dev/null 2>&1"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-      start_period: 15s
 
   app:
     build:
@@ -69,8 +63,6 @@ services:
         condition: service_completed_successfully
       postgres:
         condition: service_healthy
-      minio:
-        condition: service_healthy
 
   app-init:
     build:
@@ -94,7 +86,7 @@ services:
       postgres:
         condition: service_healthy
       minio:
-        condition: service_healthy
+        condition: service_started
 
   # Agente-agnostic MCP endpoint. Hermes, Claude, Codex, etc. can connect to
   # http://localhost:8001/mcp from the host without being part of this stack.

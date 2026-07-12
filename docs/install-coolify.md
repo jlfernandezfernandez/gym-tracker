@@ -1,8 +1,6 @@
 # Instalar en Coolify
 
-Usa un único recurso Docker Compose. Es el camino recomendado para Coolify;
-la guía de [deploy-coolify.md](deploy-coolify.md) conserva la topología
-avanzada con recursos separados.
+Usa un único recurso Docker Compose.
 
 ## Crear el recurso
 
@@ -27,11 +25,12 @@ Coolify crea una red interna para los servicios del stack. La App puede usar
 Establece:
 
 ```env
-ENVIRONMENT=production
 GYM_TRACKER_VERSION=latest
 PUBLIC_APP_URL=https://gym.example.com
 CORS_ORIGINS=https://gym.example.com
-DATABASE_URL=postgresql+asyncpg://...
+POSTGRES_USER=gym_tracker
+POSTGRES_PASSWORD=replace-with-a-url-safe-password
+POSTGRES_DB=gym_tracker
 TELEGRAM_BOT_TOKEN=...
 COACH_API_KEY=...
 S3_ACCESS_KEY=...

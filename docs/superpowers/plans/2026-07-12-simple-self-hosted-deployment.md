@@ -23,7 +23,6 @@
 - Modify: `backend/app/api/routes/health.py`
 - Modify: `backend/tests/api/test_health.py`
 - Modify: `Dockerfile`
-- Modify: `docs/deploy-coolify.md`
 
 **Interfaces:**
 - Produce `GET /ready` and `/api/ready` with `{"status":"ready","version":"1.0.0"}`.
@@ -79,14 +78,13 @@
 - Create: `docs/setup-telegram.md`
 - Create: `docs/backup-and-update.md`
 - Modify: `docs/agent-setup.md`
-- Modify: `docs/deploy-coolify.md`
 - Modify: `README.md`
 
 **Interfaces:**
 - Every guide ends with concrete checks: App ready, MCP ready, tool discovery, Telegram identity/write, and persistence.
 
 - [ ] Write the Docker guide for an existing Hermes/OpenClaw host: release Compose, production env, `up -d`, HTTPS through the operator's proxy/tunnel, localhost MCP, and verification.
-- [ ] Write the Coolify guide for one Compose resource, App domain, internal services, persistent storage, `/ready`, and the advanced split-resource link.
+- [ ] Write the Coolify guide for one Compose resource, App domain, internal services, persistent storage, and `/ready`.
 - [ ] Write Telegram setup from BotFather and bot token through HTTPS URL, menu button, `web_app` action buttons, signed `initData`, and one end-to-end write test.
 - [ ] Add backup/update instructions for PostgreSQL, MinIO, image version pinning, redeploy, restore verification, and the danger of `down -v`.
 - [ ] Update agent setup to distinguish local/private MCP from unsupported public MCP and to avoid implying that `COACH_API_KEY` authenticates MCP clients.
