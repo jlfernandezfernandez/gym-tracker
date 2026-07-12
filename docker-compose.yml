@@ -1,19 +1,23 @@
-# =============================================================================
-# gym-tracker — Docker Compose (desarrollo local)
-# =============================================================================
-# Replica la topología de producción para desarrollo: PostgreSQL 18 + app + MCP.
-# Los datos sobreviven a `docker compose down` gracias a los volúmenes.
-# Para empezar de cero: `docker compose down -v`.
-# =============================================================================
+# Production stack for a Docker host or one Coolify Compose resource.
+# The App is public; MCP is bound to localhost and PostgreSQL stays private.
+
+x-app-environment: &app-environment
+  ENVIRONMENT: production
+  DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:?Set POSTGRES_USER}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:?Set POSTGRES_DB}
+  CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:?Set TELEGRAM_BOT_TOKEN}
+  COACH_API_KEY: ${COACH_API_KEY:?Set COACH_API_KEY}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  EXERCISE_DATASET_VERSION: ${EXERCISE_DATASET_VERSION:-v1.0.0}
 
 services:
   postgres:
     image: postgres:18-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-gym_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gym_pass}
-      POSTGRES_DB: ${POSTGRES_DB:-gym_tracker}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
@@ -23,21 +27,23 @@ services:
       retries: 10
       start_period: 10s
 
+  app-init:
+    image: ghcr.io/jlfernandezfernandez/gym-tracker:${GYM_TRACKER_VERSION:-latest}
+    command: ["python", "-m", "scripts.bootstrap"]
+    restart: "no"
+    environment: *app-environment
+    volumes:
+      - exercise_data:/data/exercise-datasets
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/jlfernandezfernandez/gym-tracker:${GYM_TRACKER_VERSION:-latest}
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8000}:8000"
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@postgres:5432/${POSTGRES_DB:-gym_tracker}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      COACH_API_KEY: ${COACH_API_KEY:-}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      EXERCISE_DATASET_VERSION: ${EXERCISE_DATASET_VERSION:-v1.0.0}
+    environment: *app-environment
     volumes:
       - exercise_data:/data/exercise-datasets
     depends_on:
@@ -46,39 +52,16 @@ services:
       postgres:
         condition: service_healthy
 
-  app-init:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["python", "-m", "scripts.bootstrap"]
-    restart: "no"
-    environment:
-      ENVIRONMENT: ${ENVIRONMENT:-development}
-      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-gym_user}:${POSTGRES_PASSWORD:-gym_pass}@postgres:5432/${POSTGRES_DB:-gym_tracker}
-      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8000}
-      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
-      COACH_API_KEY: ${COACH_API_KEY:-}
-      EXERCISE_DATASET_VERSION: ${EXERCISE_DATASET_VERSION:-v1.0.0}
-    volumes:
-      - exercise_data:/data/exercise-datasets
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # Agente-agnostic MCP endpoint. Hermes, Claude, Codex, etc. can connect to
-  # http://localhost:8001/mcp from the host without being part of this stack.
   mcp:
-    build:
-      context: .
-      dockerfile: Dockerfile.mcp
+    image: ghcr.io/jlfernandezfernandez/gym-tracker-mcp:${GYM_TRACKER_VERSION:-latest}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${MCP_PORT:-8001}:8001"
     environment:
       MCP_PORT: 8001
       GYM_TRACKER_API_BASE: http://app:8000/api
-      GYM_TRACKER_APP_BASE: ${PUBLIC_APP_URL:-http://localhost:8000}
-      GYM_TRACKER_COACH_KEY: ${COACH_API_KEY:-}
+      GYM_TRACKER_APP_BASE: ${PUBLIC_APP_URL:?Set PUBLIC_APP_URL}
+      GYM_TRACKER_COACH_KEY: ${COACH_API_KEY:?Set COACH_API_KEY}
     depends_on:
       app:
         condition: service_healthy
