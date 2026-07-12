@@ -3,7 +3,9 @@ name: Deploy landing to GitHub Pages
 on:
   push:
     branches: [main]
-    paths: ['landing/**']
+    paths:
+      - 'apps/site/**'
+      - '.github/workflows/landing.yml'
   workflow_dispatch:
 
 permissions:
@@ -24,14 +26,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: landing/package-lock.json
+          cache-dependency-path: apps/site/package-lock.json
       - run: npm ci
-        working-directory: landing
+        working-directory: apps/site
       - run: npm run build
-        working-directory: landing
+        working-directory: apps/site
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: landing/dist
+          path: apps/site/dist
 
   deploy:
     needs: build
