@@ -60,7 +60,7 @@ Agente ─MCP privado──────────────→ API
 | `COACH_API_KEY` | Permite que MCP actúe ante la API |
 | `PUBLIC_APP_URL` | URL HTTPS que reciben los enlaces de sesión |
 | `CORS_ORIGINS` | Origen HTTPS de la Mini App |
-| `GYM_TRACKER_VERSION` | Tag de imágenes GHCR en producción |
+| `GYM_TRACKER_VERSION` | Tag de imágenes GHCR; usa `latest` |
 
 Copia `.env.example`; contiene valores locales seguros y comentarios de cada
 variable. Para una Mini App real, `TELEGRAM_BOT_TOKEN` debe ser exactamente el
@@ -75,9 +75,8 @@ git pull --ff-only
 docker compose up -d --build
 ```
 
-Producción: fija un tag publicado en `GYM_TRACKER_VERSION` y sigue la guía de tu
-plataforma. Un volumen no sustituye un backup: exporta PostgreSQL antes de cambios
-mayores.
+Producción: descarga `latest` y redespliega siguiendo la guía de tu plataforma.
+Un volumen no sustituye un backup: exporta PostgreSQL antes de cambios mayores.
 
 ## Desarrollo
 

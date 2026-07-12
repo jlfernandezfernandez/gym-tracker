@@ -28,7 +28,6 @@ openssl rand -hex 32 # COACH_API_KEY
 Valores mínimos de producción:
 
 ```dotenv
-ENVIRONMENT=production
 POSTGRES_USER=gym_user
 POSTGRES_PASSWORD=<secreto-largo>
 POSTGRES_DB=gym_tracker
@@ -36,7 +35,7 @@ TELEGRAM_BOT_TOKEN=<token-del-mismo-bot-de-Telegram>
 COACH_API_KEY=<otro-secreto-largo>
 PUBLIC_APP_URL=https://gym.example.com
 CORS_ORIGINS=https://gym.example.com
-GYM_TRACKER_VERSION=1.0.0
+GYM_TRACKER_VERSION=latest
 ```
 
 No cambies `APP_BIND=127.0.0.1` ni `MCP_BIND=127.0.0.1` para una instalación
@@ -82,8 +81,7 @@ clave del coach protege MCP → API, no al cliente que conecta a MCP.
 ## Actualizar
 
 1. Exporta PostgreSQL antes de un cambio importante.
-2. Cambia `GYM_TRACKER_VERSION` a un tag publicado.
-3. Ejecuta:
+2. Ejecuta:
 
 ```bash
 docker compose -f compose.production.yml pull
