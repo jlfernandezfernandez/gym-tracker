@@ -51,7 +51,7 @@ services:
       - coolify
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.gym-tracker-app.rule=Host(`${SERVICE_FQDN_APP:?Set SERVICE_FQDN_APP}`)"
+      - "traefik.http.routers.gym-tracker-app.rule=Host(`${APP_PUBLIC_FQDN:?Set APP_PUBLIC_FQDN}`)"
       - "traefik.http.routers.gym-tracker-app.entrypoints=http"
       - "traefik.http.services.gym-tracker-app.loadbalancer.server.port=8000"
     depends_on:
