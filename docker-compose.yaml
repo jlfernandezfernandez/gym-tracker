@@ -28,7 +28,9 @@ services:
       start_period: 10s
 
   app-init:
-    image: ghcr.io/jlfernandezfernandez/gym-tracker:${GYM_TRACKER_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
     command: ["python", "-m", "scripts.bootstrap"]
     restart: "no"
     environment: *app-environment
@@ -39,7 +41,9 @@ services:
         condition: service_healthy
 
   app:
-    image: ghcr.io/jlfernandezfernandez/gym-tracker:${GYM_TRACKER_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     ports:
       - "${APP_PORT:-8000}:8000"
@@ -53,7 +57,9 @@ services:
         condition: service_healthy
 
   mcp:
-    image: ghcr.io/jlfernandezfernandez/gym-tracker-mcp:${GYM_TRACKER_VERSION:-latest}
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
     restart: unless-stopped
     ports:
       - "127.0.0.1:${MCP_PORT:-8001}:8001"
