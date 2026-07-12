@@ -54,7 +54,7 @@ def media_paths(entries: list[dict[str, Any]], existing_keys: set[str]) -> list[
 
 
 async def fetch_catalog(settings: Settings) -> list[dict[str, Any]]:
-    url = f"{settings.exercise_dataset_raw_base}/exercises.json"
+    url = f"{settings.exercise_dataset_raw_base}/data/exercises.json"
 
     def _fetch() -> list[dict[str, Any]]:
         with urllib.request.urlopen(url, timeout=30) as response:
