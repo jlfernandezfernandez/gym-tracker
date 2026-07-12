@@ -41,11 +41,19 @@ services:
   app:
     image: ghcr.io/jlfernandezfernandez/gym-tracker:${GYM_TRACKER_VERSION:-latest}
     restart: unless-stopped
-    ports:
-      - "${APP_PORT:-8000}:8000"
+    expose:
+      - "8000"
     environment: *app-environment
     volumes:
       - exercise_data:/data/exercise-datasets
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gym-tracker-app.rule=Host(`${SERVICE_FQDN_APP:?Set SERVICE_FQDN_APP}`)"
+      - "traefik.http.routers.gym-tracker-app.entrypoints=http"
+      - "traefik.http.services.gym-tracker-app.loadbalancer.server.port=8000"
     depends_on:
       app-init:
         condition: service_completed_successfully
@@ -55,13 +63,21 @@ services:
   mcp:
     image: ghcr.io/jlfernandezfernandez/gym-tracker-mcp:${GYM_TRACKER_VERSION:-latest}
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:${MCP_PORT:-8001}:8001"
+    expose:
+      - "8001"
     environment:
       MCP_PORT: 8001
       GYM_TRACKER_API_BASE: http://app:8000/api
       GYM_TRACKER_APP_BASE: ${PUBLIC_APP_URL:?Set PUBLIC_APP_URL}
       GYM_TRACKER_COACH_KEY: ${COACH_API_KEY:?Set COACH_API_KEY}
+    networks:
+      - default
+      - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.gym-tracker-mcp.rule=Host(`${SERVICE_FQDN_MCP:?Set SERVICE_FQDN_MCP}`)"
+      - "traefik.http.routers.gym-tracker-mcp.entrypoints=http"
+      - "traefik.http.services.gym-tracker-mcp.loadbalancer.server.port=8001"
     depends_on:
       app:
         condition: service_healthy
@@ -69,3 +85,7 @@ services:
 volumes:
   postgres_data:
   exercise_data:
+
+networks:
+  coolify:
+    external: true
