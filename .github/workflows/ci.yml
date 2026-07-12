@@ -34,7 +34,15 @@ jobs:
       - name: Compose smoke
         run: |
           docker compose up -d --build
-          for attempt in {1..30}; do curl -fsS http://localhost:8000/ready && curl -fsS http://localhost:8001/ready && break; sleep 2; done
+          ready=false
+          for attempt in {1..30}; do
+            if curl -fsS http://localhost:8000/ready && curl -fsS http://localhost:8001/ready; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = true
           curl -fsS http://localhost:8000/health
           curl -fsS http://localhost:8001/health
       - name: Stop Compose

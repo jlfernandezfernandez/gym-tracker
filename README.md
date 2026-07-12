@@ -26,20 +26,25 @@ Agente (Hermes, Claude, Codex, ...)
        Mini App de Telegram
 ```
 
-## Arranque rápido con Docker Compose
+## Elige tu instalación
 
-Requisitos: Docker Engine y Docker Compose v2.
+Si ya tienes Hermes, OpenClaw u otro agente en un mini PC o servidor, usa la
+instalación de producción con Docker Compose:
+
+[`docs/install-docker.md`](docs/install-docker.md)
+
+Si usas Coolify, despliega `compose.production.yml` como un único recurso:
+
+[`docs/install-coolify.md`](docs/install-coolify.md)
+
+Para desarrollo local con builds y auth desactivada:
 
 ```bash
-git clone https://github.com/jlfernandezfernandez/gym-tracker.git
-cd gym-tracker
 cp .env.example .env
-# Desarrollo local: ENVIRONMENT=development permite dejar auth vacía.
-# Para probar auth, establece TELEGRAM_BOT_TOKEN y COACH_API_KEY.
-docker compose up -d
+docker compose up -d --build
 ```
 
-Endpoints locales:
+Endpoints de desarrollo:
 
 | Servicio | URL |
 |---|---|
@@ -51,8 +56,8 @@ Endpoints locales:
 Comprueba el arranque:
 
 ```bash
-curl http://localhost:8000/health
-curl http://localhost:8001/health
+curl http://localhost:8000/ready
+curl http://localhost:8001/ready
 docker compose ps
 ```
 
@@ -64,18 +69,11 @@ http://localhost:8001/mcp
 
 ## Despliegue en Coolify
 
-La instalación recomendada en Coolify usa recursos independientes, igual que la instalación de producción del proyecto:
+Coolify usa el mismo `compose.production.yml` como un único stack. La App
+recibe el dominio HTTPS; PostgreSQL, MinIO y MCP permanecen privados.
 
-```text
-PostgreSQL persistente
-MinIO persistente
-App desde Dockerfile
-MCP desde Dockerfile.mcp
-```
-
-La Mini App puede funcionar con la URL que proporcione Coolify o con un dominio propio. El dominio es opcional.
-
-Guía completa: [`docs/deploy-coolify.md`](docs/deploy-coolify.md).
+Guía rápida: [`docs/install-coolify.md`](docs/install-coolify.md). La topología
+separada queda documentada en [`docs/deploy-coolify.md`](docs/deploy-coolify.md).
 
 En cualquier despliegue real configura `ENVIRONMENT=production`. La aplicación
 fallará al arrancar si faltan PostgreSQL, S3, Telegram, la clave del coach o un
@@ -90,7 +88,7 @@ origen CORS explícito; producción no admite `CORS_ORIGINS=*`.
 | `ENVIRONMENT` | `development` local o `production` en despliegues reales |
 | `DATABASE_URL` | conexión PostgreSQL asíncrona |
 | `TELEGRAM_BOT_TOKEN` | valida Telegram InitData |
-| `COACH_API_KEY` | autentica las llamadas del MCP |
+| `COACH_API_KEY` | autentica MCP → API; el endpoint MCP sigue siendo privado |
 | `CORS_ORIGINS` | orígenes permitidos, separados por comas |
 | `S3_ENDPOINT` | endpoint MinIO/S3 |
 | `S3_ACCESS_KEY`, `S3_SECRET_KEY` | credenciales de object storage |
@@ -112,13 +110,9 @@ CORS_ORIGINS=https://gym.example.com
 
 El proxy debe enviar el dominio al servicio **app**, puerto `8000`.
 
-El MCP puede permanecer privado si el agente corre en el mismo mini PC. Si un agente remoto necesita acceder a él, publícalo con un dominio separado, por ejemplo:
-
-```text
-https://gym-mcp.example.com/mcp
-```
-
-Usa HTTPS y `COACH_API_KEY`. No publiques PostgreSQL ni MinIO sin una razón específica.
+El MCP debe permanecer privado. `COACH_API_KEY` autentica MCP → API, pero no
+autentica clientes que lleguen al endpoint MCP. Para un agente remoto usa una
+VPN o túnel privado; no publiques PostgreSQL ni MinIO.
 
 ## Persistencia
 
@@ -144,7 +138,11 @@ En Coolify, configura persistent storage en PostgreSQL (`/var/lib/postgresql`) y
 
 El MCP expone las operaciones del producto: perfil, mediciones, catálogo, sesiones (crear, actualizar fecha/título/notas, finalizar, borrar), series y enlaces de la Mini App. El agente decide cómo conversar y cuándo usar cada herramienta.
 
-Guía: [`docs/agent-setup.md`](docs/agent-setup.md).
+Guía: [`docs/agent-setup.md`](docs/agent-setup.md). Telegram:
+[`docs/setup-telegram.md`](docs/setup-telegram.md).
+
+MCP Apps queda como una integración futura; la Mini App de Telegram y esta API
+son ahora las superficies canónicas.
 
 Los templates opcionales de personalidad y operación están en [`templates/`](templates/).
 
@@ -152,7 +150,7 @@ Los templates opcionales de personalidad y operación están en [`templates/`](t
 
 ```bash
 docker compose up -d --build
-curl http://localhost:8000/health
+curl http://localhost:8000/ready
 ```
 
 `app-init` ejecuta una vez `python -m scripts.bootstrap` antes de arrancar la
@@ -193,6 +191,7 @@ Dockerfile             imagen de la API + Mini App
 Dockerfile.mcp        imagen del servidor MCP
 Dockerfile.minio      imagen/configuración de MinIO
 docker-compose.yml    stack local completo
+compose.production.yml stack de producción con imágenes GHCR
 docs/                 guías de despliegue, conexión y design system (DESIGN.md)
 templates/            templates opcionales para agentes
 ```
@@ -203,12 +202,12 @@ La Mini App identifica al usuario mediante Telegram InitData. El MCP debe enviar
 
 - No compartas `TELEGRAM_BOT_TOKEN`, `COACH_API_KEY` ni credenciales S3.
 - No expongas PostgreSQL.
-- Usa HTTPS cuando la Mini App o el MCP sean accesibles desde Internet.
+- Usa HTTPS cuando la Mini App sea accesible desde Internet.
 - Usa enlaces con share token; no construyas URLs de sesiones manualmente.
 
 ## Contribuir
 
-Consulta [`CONTRIBUTING.md`](CONTRIBUTING.md). Los cambios de API deben mantener alineados el MCP y la Mini App. Antes de abrir un PR, verifica que el stack arranca con Docker Compose y que `/health` responde.
+Consulta [`CONTRIBUTING.md`](CONTRIBUTING.md). Los cambios de API deben mantener alineados el MCP y la Mini App. Antes de abrir un PR, verifica que el stack arranca con Docker Compose y que `/ready` responde.
 
 ## Licencia
 

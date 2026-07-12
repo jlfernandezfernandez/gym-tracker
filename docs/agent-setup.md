@@ -12,11 +12,10 @@ http://localhost:8001/mcp
 
 ### Coolify
 
-Usa el hostname interno si el agente está dentro de Coolify, o el dominio HTTPS del MCP si el agente es remoto:
+Usa el hostname interno si el agente está dentro de Coolify:
 
 ```text
 http://<mcp-host>:8001/mcp
-https://gym-mcp.example.com/mcp
 ```
 
 ## Configuración
@@ -68,7 +67,9 @@ No guardes series, sesiones ni datos corporales en la memoria del agente: Gym Tr
 ## Seguridad
 
 - Usa `COACH_API_KEY` fuerte.
-- Mantén el MCP privado cuando sea posible.
-- Si lo publicas, usa HTTPS y protección en el proxy inverso.
+- Mantén el MCP privado.
+- El endpoint MCP público no está soportado todavía: `COACH_API_KEY` autentica
+  MCP → API, no al cliente que se conecta al MCP. Para un agente remoto usa
+  una VPN o túnel privado.
 - No compartas tokens de Telegram, claves MCP ni credenciales S3.
 - Usa los enlaces generados por `session_web_url` y `share_web_url`; no construyas URLs de sesiones manualmente.

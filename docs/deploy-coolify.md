@@ -1,4 +1,9 @@
-# Desplegar en Coolify
+# Desplegar en Coolify (topología avanzada)
+
+La instalación recomendada está en [`install-coolify.md`](install-coolify.md):
+un único recurso Docker Compose usando `compose.production.yml`. Esta página
+describe la variante avanzada con PostgreSQL, MinIO, App y MCP como recursos
+separados, útil si ya administras esos servicios por separado.
 
 Esta guía reproduce el patrón de producción del proyecto: cuatro recursos independientes, con persistencia únicamente en PostgreSQL y MinIO.
 
@@ -58,7 +63,7 @@ Puerto: 8000
 Healthcheck de proceso:
 
 ```text
-GET /health
+GET /ready
 ```
 
 Si tienes dominio, asígnalo a esta aplicación:
@@ -87,7 +92,7 @@ El MCP usa Streamable HTTP:
 Healthcheck de Coolify:
 
 ```text
-GET /health
+GET /ready
 ```
 
 Debe devolver HTTP 200. El endpoint `/mcp` no sirve como healthcheck porque
@@ -185,13 +190,9 @@ http://<mcp-host>:8001/mcp
 
 ### Agente remoto
 
-Publica el MCP mediante un dominio separado:
-
-```text
-https://gym-mcp.example.com/mcp
-```
-
-Configura TLS, conserva `COACH_API_KEY` y limita el acceso en el proxy inverso. No publiques el MCP sin autenticación.
+El endpoint MCP público no está soportado todavía: `COACH_API_KEY` autentica
+MCP → API, no al cliente que se conecta al MCP. Usa una VPN o túnel privado que
+permita al agente alcanzar el hostname interno.
 
 ## 6. Verificación
 
@@ -207,7 +208,7 @@ queda como liveness del proceso.
 Comprueba también:
 
 - la Mini App carga desde el dominio configurado;
-- `GET /health` del MCP responde HTTP 200;
+- `GET /ready` del MCP responde HTTP 200;
 - el MCP descubre sus herramientas;
 - el MCP puede ejecutar `health`;
 - la API puede leer y escribir PostgreSQL;

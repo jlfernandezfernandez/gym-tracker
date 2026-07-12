@@ -11,7 +11,7 @@ cp .env.example .env
 docker compose up -d --build  # app:8000 + MCP:8001 + Postgres + MinIO
 ```
 
-La guía de despliegue en Coolify está en [`docs/deploy-coolify.md`](docs/deploy-coolify.md). La guía de conexión de agentes está en [`docs/agent-setup.md`](docs/agent-setup.md).
+Las guías de instalación están en [`docs/install-docker.md`](docs/install-docker.md) y [`docs/install-coolify.md`](docs/install-coolify.md). La guía de conexión de agentes está en [`docs/agent-setup.md`](docs/agent-setup.md).
 
 Sin Docker: levanta PostgreSQL y MinIO, ejecuta `cd backend && uv sync --locked`,
 `uv run python -m scripts.bootstrap` y `uv run uvicorn app.main:app --reload`.
@@ -40,7 +40,7 @@ que FastAPI sirva `frontend/dist/`.
 
 1. Fork + rama desde `main`.
 2. Cambios pequeños y enfocados. Un tema por PR.
-3. Verifica que `docker compose up --build` arranca y `/health` responde.
+3. Verifica que `docker compose up --build` arranca y `/ready` responde.
 4. Si tocas el MCP o la API, actualiza la tabla de tools del README.
 
 ## Issues

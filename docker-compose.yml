@@ -1,7 +1,7 @@
 # =============================================================================
 # gym-tracker — Docker Compose (desarrollo local)
 # =============================================================================
-# Replica la topología de producción: PostgreSQL 18 + MinIO + app + MCP.
+# Replica la topología de producción para desarrollo: PostgreSQL 18 + MinIO + app + MCP.
 # Los datos sobreviven a `docker compose down` gracias a los volúmenes.
 # Para empezar de cero: `docker compose down -v`.
 # =============================================================================
@@ -29,8 +29,8 @@ services:
     container_name: gym-tracker-minio
     restart: unless-stopped
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-gym-tracker-access-key}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-gym-tracker-secret-key-change-me}
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-gym-tracker-access-key}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-gym-tracker-secret-key-change-me}
     volumes:
       - minio_data:/data
     ports:
