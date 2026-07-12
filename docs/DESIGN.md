@@ -4,11 +4,11 @@ Two Astro apps share one token vocabulary with different palettes:
 
 | App | Path | Palette | Styling idiom |
 |-----|------|---------|---------------|
-| Mini App (Telegram) | `frontend/` | Light, iOS-like | Semantic classes (`.card`, `.btn`) in `global.css` |
-| Landing | `landing/` | Dark, green accent | Tailwind utilities inline in `.astro` files |
+| Mini App (Telegram) | `apps/miniapp/` | Native, iOS-like | Tailwind utilities in Preact components |
+| Landing | `apps/site/` | Product site | Tailwind utilities in Astro components |
 
 **Rule: don't mix idioms.** In the Mini App, style through semantic classes in
-`frontend/src/styles/global.css`; don't sprinkle Tailwind utilities in TSX
+`apps/miniapp/src/styles/global.css`; use Tailwind utilities in TSX
 (spacing utilities like `mt-2` are the one allowed exception). In the landing,
 use Tailwind utilities; component-specific CSS lives in the page's `<style>`.
 
@@ -51,7 +51,7 @@ Set globally in `@layer base` — headings and `<p>` need no classes:
 - `.eyebrow` — uppercase micro-label above headings.
 - Numbers get `tnum` via body `font-feature-settings`.
 
-## Mini App patterns (`frontend/src/styles/global.css`)
+## Mini App patterns (`apps/miniapp/src/styles/global.css`)
 
 - `.card` — surface + `radius-card` + `shadow-card`. Add `.tap` for pressable.
 - `.btn` — primary (ink bg). Variants `.secondary`, `.ghost`. `.row` lays buttons side by side.
@@ -62,7 +62,7 @@ Set globally in `@layer base` — headings and `<p>` need no classes:
 - `.toast`, `.loading`/`.spinner`, `.empty` — feedback states (`ui.tsx` components).
 - Media tiles (`.big-media`, `.exercise-media`, `.session-hero-media`) — always white bg (exercise GIFs have white canvases), `object-fit: contain`.
 
-Shared primitives live in `frontend/src/components/ui.tsx`: `Loading`,
+Shared primitives live in `apps/miniapp/src/components/ui.tsx`: `Loading`,
 `Empty`, `TopBar`, `BusyButton`, `ConfirmSheet`, `BodyMap`, charts. Reuse
 before writing new ones.
 
@@ -79,5 +79,5 @@ Non-negotiable, already wired — keep them when touching styles:
 
 ## Checks
 
-After style changes: `npm run build` in `frontend/` and `landing/` must pass.
+After style changes: `npm run build` in `apps/miniapp/` and `apps/site/` must pass.
 Visual check in Telegram webview for the Mini App (safe-area insets matter).

@@ -1,0 +1,39 @@
+/* ──────────────────────────────────────
+   Landing design tokens → Tailwind v4 @theme
+   Same token vocabulary as the Mini App
+   (apps/miniapp/src/styles/theme.css) but its
+   own dark palette — the landing has its
+   own identity, inherited from the legacy
+   docs/index.html page.
+   ────────────────────────────────────── */
+@theme {
+  /* Surfaces */
+  --color-canvas: #09090b;
+  --color-surface: #131315;
+  --color-hover: #1c1c1f;
+
+  /* Text */
+  --color-ink: #fafafa;
+  --color-hint: #a1a1aa;
+
+  /* Brand */
+  --color-accent: #4ade80;
+
+  /* Status */
+  --color-ok: #4ade80;
+  --color-ok-bg: rgba(74, 222, 128, .12);
+
+  /* Structure */
+  --color-edge: rgba(255, 255, 255, .09);
+
+  /* Radius */
+  --radius-card: 22px;
+  --radius-control: 14px;
+  --radius-pill: 999px;
+
+  /* Shadows */
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, .3);
+
+  /* Font */
+  --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+}

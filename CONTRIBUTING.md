@@ -17,16 +17,17 @@ Sin Docker: levanta PostgreSQL y MinIO, ejecuta `cd backend && uv sync --locked`
 `uv run python -m scripts.bootstrap` y `uv run uvicorn app.main:app --reload`.
 Frontend: `cd frontend && npm install`
 y `npm run dev` (dev server de Astro con proxy a la API) o `npm run build` para
-que FastAPI sirva `frontend/dist/`.
+que FastAPI sirva `apps/miniapp/dist/`.
 
 ## Estructura
 
-- `backend/app/` — FastAPI + SQLModel; rutas HTTP en `app/api/routes/` y lógica en `app/services/`.
-- `backend/alembic/` — migraciones de PostgreSQL.
-- `backend/scripts/bootstrap.py` — migraciones y seed remoto hacia PostgreSQL + S3.
+- `apps/api/app/` — FastAPI + SQLModel.
+- `apps/api/alembic/` — migraciones de PostgreSQL.
+- `apps/api/scripts/bootstrap.py` — migraciones y catálogo de ejercicios.
 - Para crear migraciones: `cd backend && uv run alembic revision --autogenerate -m "desc"`.
-- `frontend/` — Mini App en Astro + Preact: `src/pages/index.astro` (shell), `src/components/App.tsx` (island + router), `src/components/screens/*` (pantallas), `src/lib/*` (api, helpers, chart, bodymap).
-- `mcp/gym_tracker_mcp.py` — servidor MCP (23 tools) que habla con la API pública.
+- `apps/miniapp/` — Mini App en Astro + Preact.
+- `apps/site/` — landing pública en Astro + Tailwind.
+- `apps/mcp/gym_tracker_mcp.py` — servidor MCP que habla con la API pública.
 - `templates/` — SOUL.md y SKILL.md para el perfil del agente coach.
 - `docs/` — GitHub Pages + guía de setup.
 

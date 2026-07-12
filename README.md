@@ -175,13 +175,14 @@ uv run pytest
 ## Estructura
 
 ```text
-backend/app/          API, modelos, rutas, servicios y acceso S3
-backend/alembic/      migraciones de PostgreSQL
-backend/scripts/      bootstrap de migraciones + seed remoto
-backend/tests/        tests de backend
-backend/pyproject.toml + uv.lock  dependencias y herramientas bloqueadas
-frontend/             Mini App Astro + Preact
-landing/              landing page estática (Astro + Tailwind)
+apps/api/app/          API, modelos, rutas y servicios
+apps/api/alembic/      migraciones de PostgreSQL
+apps/api/scripts/      bootstrap de migraciones y catálogo
+apps/api/tests/        tests de backend
+apps/api/pyproject.toml + uv.lock  dependencias y herramientas bloqueadas
+apps/miniapp/          Mini App Astro + Preact
+apps/site/             landing page estática (Astro + Tailwind)
+apps/mcp/              servidor MCP y entrypoint HTTP
 mcp/                  herramientas MCP agnósticas al agente
 Dockerfile             imagen de la API + Mini App
 Dockerfile.mcp        imagen del servidor MCP

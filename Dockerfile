@@ -4,9 +4,9 @@
 # Stage 0: Build the Astro Mini App
 FROM node:22-slim AS frontend
 WORKDIR /fe
-COPY frontend/package.json frontend/package-lock.json ./
+COPY apps/miniapp/package.json apps/miniapp/package-lock.json ./
 RUN npm ci
-COPY frontend/ ./
+COPY apps/miniapp/ ./
 RUN npm run build
 
 # Stage 1: Build the locked Python environment
@@ -16,7 +16,7 @@ WORKDIR /app
 
 COPY --from=ghcr.io/astral-sh/uv:0.11.21 /uv /bin/uv
 
-COPY backend/pyproject.toml backend/uv.lock ./
+COPY apps/api/pyproject.toml apps/api/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project
 
 # Stage 2: Runtime image
@@ -24,12 +24,16 @@ FROM python:3.13-slim
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy the exact environment resolved by uv.lock.
 COPY --from=builder /app/.venv /app/.venv
 ENV PATH=/app/.venv/bin:$PATH
 
 # Copy application code + built Mini App
-COPY backend/ /app/
+COPY apps/api/ /app/
 COPY --from=frontend /fe/dist/ /app/static/
 
 EXPOSE 8000

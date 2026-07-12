@@ -8,8 +8,7 @@ WORKDIR /app
 
 RUN pip install --no-cache-dir "mcp>=1.28,<2"
 
-COPY mcp/ ./mcp/
-COPY run_mcp.py .
+COPY apps/mcp/ ./
 
 ENV MCP_PORT=8001
 EXPOSE 8001

@@ -1,0 +1,7 @@
+---
+import AppLayout from '../layouts/AppLayout.astro';
+import App from '../app/App.tsx';
+---
+<AppLayout>
+	<App client:only="preact" />
+</AppLayout>
