@@ -50,7 +50,7 @@ Section reveals are limited to the first appearance of major demonstrations. No 
 
 ## Content
 
-Use plain Spanish from the operator's perspective. Lead with outcomes, then implementation. Explain that Telegram is the conversation surface, MCP is the tool bridge, PostgreSQL owns structured history, and S3/MinIO owns media. Do not claim setup is “two commands” unless the documented path truly is.
+Use plain Spanish from the operator's perspective. Lead with outcomes, then implementation. Explain that Telegram is the conversation surface, MCP is the tool bridge, PostgreSQL owns structured history, and the pinned dataset volume owns reproducible media. Do not claim setup is “two commands” unless the documented path truly is.
 
 The deployment block links directly to Docker, Coolify, Telegram setup, backups, and agent setup. Show pinned dataset behavior as a reliability feature, not an internal detail.
 

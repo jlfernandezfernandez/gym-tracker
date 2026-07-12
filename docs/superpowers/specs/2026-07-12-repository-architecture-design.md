@@ -51,13 +51,11 @@ apps/api/app/
       routes.py
       schemas.py
       service.py
-  storage/
-    s3.py
   models.py
   main.py
 ```
 
-Keep `models.py` together. Its six SQLModel tables are short and relationally coupled; splitting them would create import cycles without reducing complexity. Feature folders may import models and `core`, but features must not import another feature's routes.
+Keep `models.py` together. Its relational tables are short and coupled; splitting them would create import cycles without reducing complexity. Feature folders may import models and `core`, but features must not import another feature's routes. Dataset media is served from a local versioned volume, so no storage abstraction survives the refactor.
 
 Move route business logic into a feature service only where it is reused, requires its own tests, or obscures the HTTP boundary. Small endpoint-specific queries stay in `routes.py`. Preserve every path, payload, status code, and OpenAPI shape.
 
@@ -125,4 +123,3 @@ Documentation uses the product names “API”, “Mini App”, “site”, and 
 - No API or database behavior change.
 - No new build system, package workspace, dependency, or reusable design-system package.
 - No speculative plugin architecture.
-
