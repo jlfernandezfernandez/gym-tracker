@@ -12,10 +12,10 @@ jobs:
       - uses: astral-sh/setup-uv@v6
         with: {enable-cache: true}
       - name: Install locked backend
-        working-directory: backend
+        working-directory: apps/api
         run: uv sync --locked
       - name: Backend checks
-        working-directory: backend
+        working-directory: apps/api
         run: |
           uv run ruff format --check .
           uv run ruff check .
@@ -23,15 +23,15 @@ jobs:
           uv run pytest -q
           ENVIRONMENT=development DATABASE_URL=postgresql+asyncpg://x:x@localhost/x uv run alembic heads
       - name: Compile MCP
-        run: python -m compileall -q mcp run_mcp.py
+        run: python -m compileall -q apps/mcp
       - name: Frontend build
-        run: cd frontend && npm ci && npm run build
+        run: cd apps/miniapp && npm ci && npm run build
       - name: Docker builds
         run: docker build -t gym-tracker .
       - run: docker build -f Dockerfile.mcp -t gym-tracker-mcp .
       - name: Compose smoke
         run: |
-          docker compose up -d --build
+          docker compose --env-file .env.example up -d --build
           ready=false
           for attempt in {1..30}; do
             if curl -fsS http://localhost:8000/ready && curl -fsS http://localhost:8001/ready; then
@@ -45,4 +45,4 @@ jobs:
           curl -fsS http://localhost:8001/health
       - name: Stop Compose
         if: always()
-        run: docker compose down -v
+        run: docker compose --env-file .env.example down -v
