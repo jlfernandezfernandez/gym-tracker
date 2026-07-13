@@ -245,6 +245,12 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
     exercises: native MCP array of the exercises you picked from list_exercises, e.g.
     [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
       "suggested_weight": 40.0, "notes": "controla la bajada"}]
+    Optional per-set targets (ramping/variable sets):
+    [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
+      "suggested_weight": 40.0,
+      "set_targets": [{"set_number": 1, "weight": 40, "reps": 12},
+                      {"set_number": 2, "weight": 45, "reps": 10},
+                      {"set_number": 3, "weight": 50, "reps": 8}]}]
     Required: pick the exercises yourself from list_exercises; the API rejects empty plans.
     """
     if telegram_user_id is None:

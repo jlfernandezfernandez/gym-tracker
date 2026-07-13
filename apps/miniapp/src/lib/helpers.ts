@@ -38,6 +38,7 @@ export function normalizeSession(session: any) {
       notes: plannedExercise.notes || '',
       status: plannedExercise.status || 'pending',
       performed_sets: plannedExercise.performed_sets || [],
+      set_targets: plannedExercise.set_targets || null,
       ...(plannedExercise.exercise || {}),
     })),
   };

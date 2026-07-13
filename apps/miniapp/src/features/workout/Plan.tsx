@@ -120,7 +120,12 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
         </p>
         <div class="mt-[9px] flex flex-wrap gap-1.5">
           <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
-            {exercise.sets}×{exercise.reps}
+            {exercise.set_targets
+              ? [...exercise.set_targets]
+                  .sort((a: any, b: any) => a.set_number - b.set_number)
+                  .map((t: any) => `${formatWeight(t.weight, exercise.weight_mode)}×${t.reps}`)
+                  .join(' · ')
+              : `${exercise.sets}×${exercise.reps}`}
           </span>
           <span class={`rounded-pill px-2 py-1 text-[.68rem] font-[650] ${exercise.status === 'completed' ? 'bg-ok-bg text-ok' : exercise.status === 'skipped' ? 'bg-warn-bg text-warn' : exercise.status === 'in_progress' ? 'bg-accent-bg text-accent' : 'bg-surface-2 text-hint'}`}>{formatStatus(exercise.status)}</span>
         </div>

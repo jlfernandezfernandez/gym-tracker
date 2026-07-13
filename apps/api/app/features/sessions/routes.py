@@ -130,6 +130,18 @@ async def update_planned_exercise(
         planned_exercise.target_sets = body.target_sets
     if body.notes is not None:
         planned_exercise.notes = body.notes
+    if body.set_targets is not None:
+        set_targets_data = [t.model_dump() for t in body.set_targets]
+        # Coerce bodyweight exercises to BODYWEIGHT_WEIGHT sentinel
+        if planned_exercise.exercise.is_bodyweight:
+            for t in set_targets_data:
+                t["weight"] = BODYWEIGHT_WEIGHT
+        planned_exercise.set_targets = set_targets_data
+    # Trim set_targets when target_sets is lowered (avoid orphan targets)
+    if planned_exercise.set_targets and planned_exercise.target_sets:
+        planned_exercise.set_targets = [
+            t for t in planned_exercise.set_targets if t.get("set_number", 0) <= planned_exercise.target_sets
+        ]
 
     # Recompute completion from logged sets (issue #9): swapping or changing an
     # exercise must not strand it in in_progress/changed when all target sets
