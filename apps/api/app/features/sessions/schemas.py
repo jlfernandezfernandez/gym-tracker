@@ -4,6 +4,12 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 
+class SetTarget(BaseModel):
+    set_number: int = Field(ge=1)
+    weight: float = Field(default=0.0, ge=-1)
+    reps: int = Field(default=10, ge=1)
+
+
 class PlannedExerciseCreate(BaseModel):
     exercise_id: int = Field(gt=0)
     order: int = Field(default=0, ge=0)
@@ -11,6 +17,7 @@ class PlannedExerciseCreate(BaseModel):
     target_reps: int = Field(default=10, ge=1)
     suggested_weight: float = Field(default=0.0, ge=-1)
     notes: str = ""
+    set_targets: list[SetTarget] | None = None
 
 
 class PerformedSetCreate(BaseModel):
@@ -27,6 +34,7 @@ class PlannedExerciseUpdate(BaseModel):
     new_exercise_id: int | None = None
     target_sets: int | None = Field(default=None, ge=1, le=20)
     notes: str | None = None
+    set_targets: list[SetTarget] | None = None
 
 
 class SessionUpdate(BaseModel):
@@ -131,6 +139,7 @@ class PlannedExerciseOut(BaseModel):
     weight_mode: Literal["bodyweight", "unloaded", "weighted"]
     notes: str
     status: str
+    set_targets: list[SetTarget] | None = None
     exercise: ExerciseOut | None = None
     performed_sets: list[PerformedSetOut] = Field(default_factory=list)
 

@@ -196,6 +196,9 @@ async def coach_plan(
                 if exercise.is_bodyweight
                 else exercise_spec.suggested_weight,
                 notes=exercise_spec.notes,
+                set_targets=[t.model_dump() for t in exercise_spec.set_targets]
+                if exercise_spec.set_targets
+                else None,
             )
         )
 

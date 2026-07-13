@@ -101,6 +101,7 @@ class PlannedExercise(SQLModel, table=True):
     suggested_weight: float = Field(default=0.0)
     notes: str = Field(default="")
     status: str = Field(default="pending")
+    set_targets: list | None = Field(default=None, sa_type=sa.JSON)
 
     session: "WorkoutSession" = Relationship(back_populates="planned_exercises")
     exercise: "Exercise" = Relationship(back_populates="planned_exercises")

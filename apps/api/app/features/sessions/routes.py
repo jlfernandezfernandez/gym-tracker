@@ -130,6 +130,8 @@ async def update_planned_exercise(
         planned_exercise.target_sets = body.target_sets
     if body.notes is not None:
         planned_exercise.notes = body.notes
+    if body.set_targets is not None:
+        planned_exercise.set_targets = [t.model_dump() for t in body.set_targets]
 
     # Recompute completion from logged sets (issue #9): swapping or changing an
     # exercise must not strand it in in_progress/changed when all target sets

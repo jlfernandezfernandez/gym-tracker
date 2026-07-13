@@ -102,6 +102,12 @@ def current_state(workout: WorkoutSession) -> dict:
         }
     current_set_count = len(current.performed_sets or [])
     next_set_number = min(current_set_count + 1, current.target_sets)
+    next_set_target = None
+    if current.set_targets:
+        for target in current.set_targets:
+            if target.get("set_number") == next_set_number:
+                next_set_target = target
+                break
     return {
         "session_id": workout.id,
         "session_status": workout.status,
@@ -113,6 +119,7 @@ def current_state(workout: WorkoutSession) -> dict:
         "target_reps": current.target_reps,
         "suggested_weight": current.suggested_weight,
         "weight_mode": current.weight_mode,
+        "next_set_target": next_set_target,
         "exercise_order": current.order,
         "exercise_count": len(planned),
         "completed_exercises": completed_exercises,

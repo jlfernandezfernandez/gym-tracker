@@ -217,12 +217,14 @@ function LogSetForm({
 }) {
   const app = useApp();
   const queryClient = useQueryClient();
-  // Prefill: repeat what the athlete just lifted (ramping sets), else the coach prescription.
+  // Prefill priority: per-set target > previous performed set > global prescription.
+  const nextSetNumber = loggedSetCount + 1;
+  const setTarget = exercise.set_targets?.find((t: any) => t.set_number === nextSetNumber);
   const previousSet = exercise.performed_sets?.at(-1);
   // The backend gives bodyweight exercises their fixed sentinel value.
   const isBodyweight = exercise.weight_mode === 'bodyweight';
-  const [weight, setWeight] = useState(String(previousSet?.weight ?? exercise.weight ?? 0));
-  const [reps, setReps] = useState(String(previousSet?.reps ?? exercise.reps ?? 10));
+  const [weight, setWeight] = useState(String(setTarget?.weight ?? previousSet?.weight ?? exercise.weight ?? 0));
+  const [reps, setReps] = useState(String(setTarget?.reps ?? previousSet?.reps ?? exercise.reps ?? 10));
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
   const isLastSet = loggedSetCount + 1 >= (exercise.sets || 1);
 
@@ -282,6 +284,11 @@ function LogSetForm({
 
   return (
     <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+      {setTarget && (
+        <p class="mb-2 text-[.72rem] font-[650] text-accent">
+          Objetivo: {isBodyweight ? 'Peso corporal' : `${setTarget.weight} kg`} × {setTarget.reps} reps
+        </p>
+      )}
       <div class="flex items-stretch gap-[9px]">
         <div class="min-w-0 flex-1">
           <label for="set-weight">{isBodyweight ? 'Peso corporal' : 'Peso (kg)'}</label>
