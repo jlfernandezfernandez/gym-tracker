@@ -10,6 +10,15 @@ class SetTarget(BaseModel):
     reps: int = Field(default=10, ge=1)
 
 
+# ponytail: set_targets are sparse overrides — sets without a target fall back to
+# target_reps/suggested_weight, so only uniqueness needs validating.
+def _reject_duplicate_set_numbers(set_targets: list[SetTarget] | None) -> None:
+    if set_targets is not None:
+        set_numbers = [t.set_number for t in set_targets]
+        if len(set_numbers) != len(set(set_numbers)):
+            raise ValueError("set_targets contains duplicate set_number values")
+
+
 class PlannedExerciseCreate(BaseModel):
     exercise_id: int = Field(gt=0)
     order: int = Field(default=0, ge=0)
@@ -18,6 +27,11 @@ class PlannedExerciseCreate(BaseModel):
     suggested_weight: float = Field(default=0.0, ge=-1)
     notes: str = ""
     set_targets: list[SetTarget] | None = None
+
+    @model_validator(mode="after")
+    def validate_set_targets(self) -> "PlannedExerciseCreate":
+        _reject_duplicate_set_numbers(self.set_targets)
+        return self
 
 
 class PerformedSetCreate(BaseModel):
@@ -35,6 +49,11 @@ class PlannedExerciseUpdate(BaseModel):
     target_sets: int | None = Field(default=None, ge=1, le=20)
     notes: str | None = None
     set_targets: list[SetTarget] | None = None
+
+    @model_validator(mode="after")
+    def validate_set_targets(self) -> "PlannedExerciseUpdate":
+        _reject_duplicate_set_numbers(self.set_targets)
+        return self
 
 
 class SessionUpdate(BaseModel):

@@ -185,6 +185,12 @@ async def coach_plan(
             raise HTTPException(
                 status_code=422, detail="-1 weight is reserved for bodyweight exercises"
             )
+        set_targets_data = None
+        if exercise_spec.set_targets:
+            set_targets_data = [t.model_dump() for t in exercise_spec.set_targets]
+            if exercise.is_bodyweight:
+                for t in set_targets_data:
+                    t["weight"] = BODYWEIGHT_WEIGHT
         db.add(
             PlannedExercise(
                 session_id=workout.id,
@@ -196,9 +202,7 @@ async def coach_plan(
                 if exercise.is_bodyweight
                 else exercise_spec.suggested_weight,
                 notes=exercise_spec.notes,
-                set_targets=[t.model_dump() for t in exercise_spec.set_targets]
-                if exercise_spec.set_targets
-                else None,
+                set_targets=set_targets_data,
             )
         )
 

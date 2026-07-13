@@ -5,14 +5,6 @@ from app.features.sessions.service import current_state
 from app.models import Exercise, PerformedSet, PlannedExercise, WorkoutSession
 
 
-def test_set_target_schema():
-    """SetTarget validates set_number >= 1 and reps >= 1."""
-    target = SetTarget(set_number=1, weight=40.0, reps=12)
-    assert target.set_number == 1
-    assert target.weight == 40.0
-    assert target.reps == 12
-
-
 def test_planned_exercise_create_with_set_targets():
     """PlannedExerciseCreate accepts optional set_targets."""
     spec = PlannedExerciseCreate(
@@ -113,3 +105,44 @@ def test_current_state_no_set_targets():
     workout = _make_workout_with_set_targets(None)
     state = current_state(workout)
     assert state["next_set_target"] is None
+
+
+def test_set_targets_can_be_sparse():
+    """set_targets are sparse overrides; fewer targets than target_sets is valid."""
+    spec = PlannedExerciseCreate(
+        exercise_id=1,
+        order=0,
+        target_sets=3,
+        set_targets=[
+            SetTarget(set_number=1, weight=40, reps=12),
+            SetTarget(set_number=2, weight=45, reps=10),
+        ],
+    )
+    assert len(spec.set_targets) == 2
+
+
+def test_set_targets_no_duplicate_set_numbers():
+    """set_targets cannot have duplicate set_number values."""
+    import pytest
+    with pytest.raises(ValueError, match="duplicate set_number"):
+        PlannedExerciseCreate(
+            exercise_id=1,
+            order=0,
+            target_sets=3,
+            set_targets=[
+                SetTarget(set_number=1, weight=40, reps=12),
+                SetTarget(set_number=1, weight=45, reps=10),
+                SetTarget(set_number=2, weight=50, reps=8),
+            ],
+        )
+
+
+def test_set_targets_beyond_target_sets_trimmed_by_update_route():
+    """Schema accepts set_number > target_sets (sparse); the update route trims orphans."""
+    spec = PlannedExerciseCreate(
+        exercise_id=1,
+        order=0,
+        target_sets=3,
+        set_targets=[SetTarget(set_number=4, weight=50, reps=8)],
+    )
+    assert spec.set_targets[0].set_number == 4

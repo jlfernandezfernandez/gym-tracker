@@ -226,7 +226,7 @@ function LogSetForm({
   const [weight, setWeight] = useState(String(setTarget?.weight ?? previousSet?.weight ?? exercise.weight ?? 0));
   const [reps, setReps] = useState(String(setTarget?.reps ?? previousSet?.reps ?? exercise.reps ?? 10));
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
-  const isLastSet = loggedSetCount + 1 >= (exercise.sets || 1);
+  const isLastSet = nextSetNumber >= (exercise.sets || 1);
 
   const refreshAfterMutation = (updatedSession: any) => {
     queryClient.setQueryData(['session', sessionId], updatedSession);

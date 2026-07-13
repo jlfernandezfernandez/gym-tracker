@@ -102,12 +102,9 @@ def current_state(workout: WorkoutSession) -> dict:
         }
     current_set_count = len(current.performed_sets or [])
     next_set_number = min(current_set_count + 1, current.target_sets)
-    next_set_target = None
-    if current.set_targets:
-        for target in current.set_targets:
-            if target.get("set_number") == next_set_number:
-                next_set_target = target
-                break
+    next_set_target = next(
+        (t for t in current.set_targets or [] if t.get("set_number") == next_set_number), None
+    )
     return {
         "session_id": workout.id,
         "session_status": workout.status,
