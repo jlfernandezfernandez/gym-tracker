@@ -281,9 +281,7 @@ async def delete_planned_exercise(
     check_session_owner(workout, user_id)
     planned_exercise = find_planned_exercise(workout, planned_id)
     if planned_exercise.performed_sets:
-        raise HTTPException(
-            status_code=422, detail="Cannot delete an exercise with logged sets"
-        )
+        raise HTTPException(status_code=422, detail="Cannot delete an exercise with logged sets")
     await db.delete(planned_exercise)
     await db.commit()
     db.expire_all()

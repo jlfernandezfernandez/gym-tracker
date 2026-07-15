@@ -28,8 +28,14 @@ def _build_planned(
 ) -> PlannedExercise:
     exercise = Exercise(id=10, name=exercise_name, muscle_group="chest")
     planned = PlannedExercise(
-        id=planned_id, session_id=1, exercise_id=10, order=0,
-        target_sets=3, target_reps=10, suggested_weight=40.0, status=status,
+        id=planned_id,
+        session_id=1,
+        exercise_id=10,
+        order=0,
+        target_sets=3,
+        target_reps=10,
+        suggested_weight=40.0,
+        status=status,
     )
     planned.exercise = exercise
     planned.performed_sets = performed or []
@@ -65,6 +71,7 @@ def _make_client(
     app.dependency_overrides[current_user_id] = lambda: user_id_override
 
     import app.features.sessions.routes as routes_mod
+
     original_load = routes_mod.load_session
     routes_mod.load_session = fake_load_session
 
