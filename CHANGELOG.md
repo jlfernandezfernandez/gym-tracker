@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.2.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.1.0...v1.2.0) (2026-07-15)
+
+
+### Features
+
+* delete planned exercises with no logged sets ([ab71819](https://github.com/jlfernandezfernandez/gym-tracker/commit/ab7181914d2f6c2f95285843bb4ac2df6f986687))
+* delete planned exercises with no logged sets ([e4c2564](https://github.com/jlfernandezfernandez/gym-tracker/commit/e4c256401ef932753709a5a0db7bac64e7df0b40))
+
+
+### Bug Fixes
+
+* always pull production latest images ([5b15f73](https://github.com/jlfernandezfernandez/gym-tracker/commit/5b15f737eb6576a222847b064214fdb0c95fe255))
+* restore release validation and image publishing ([ac52fa1](https://github.com/jlfernandezfernandez/gym-tracker/commit/ac52fa1455f061ada073e2a989a2358ad084434b))
+
 ## [1.1.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.0.0...v1.1.0) (2026-07-15)
 
 
