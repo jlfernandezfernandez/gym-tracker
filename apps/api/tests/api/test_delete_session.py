@@ -35,7 +35,7 @@ def _build_workout(status: str, with_logged_set: bool = False) -> WorkoutSession
     return workout
 
 
-def _delete(workout: WorkoutSession):
+def _delete(workout: WorkoutSession, user_id: int | None = 42):
     fake_db = AsyncMock()
     fake_db.delete = AsyncMock()
     fake_db.commit = AsyncMock()
@@ -45,7 +45,7 @@ def _delete(workout: WorkoutSession):
 
     app = create_app()
     app.dependency_overrides[get_db_session] = fake_get_session
-    app.dependency_overrides[current_user_id] = lambda: 42
+    app.dependency_overrides[current_user_id] = lambda: user_id
 
     import app.features.sessions.routes as routes_mod
 
@@ -84,5 +84,13 @@ def test_owner_cannot_delete_in_progress_session_with_logged_sets() -> None:
     assert response.json() == {
         "detail": "Only planned sessions or empty in-progress sessions can be deleted"
     }
+    fake_db.delete.assert_not_awaited()
+    fake_db.commit.assert_not_awaited()
+
+
+def test_other_user_cannot_delete_empty_in_progress_session() -> None:
+    response, fake_db = _delete(_build_workout("in_progress"), user_id=99)
+
+    assert response.status_code == 403
     fake_db.delete.assert_not_awaited()
     fake_db.commit.assert_not_awaited()
