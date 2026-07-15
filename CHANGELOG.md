@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.2.0...v1.2.1) (2026-07-15)
+
+
+### Bug Fixes
+
+* add checkout step before triggering release workflow ([#41](https://github.com/jlfernandezfernandez/gym-tracker/issues/41)) ([aff0413](https://github.com/jlfernandezfernandez/gym-tracker/commit/aff04136467dc2ebd0889f49d23e2dac9a70a7d6))
+* make MCP session mutations safe ([#48](https://github.com/jlfernandezfernandez/gym-tracker/issues/48)) ([cbbc07e](https://github.com/jlfernandezfernandez/gym-tracker/commit/cbbc07eed49721722b9571298689278c345beac3))
+
 ## [1.2.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.1.0...v1.2.0) (2026-07-15)
 
 
