@@ -3,6 +3,15 @@ name: Release images
 on:
   push:
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release tag to publish (for example v1.1.0)
+        required: true
+        type: string
+
+env:
+  RELEASE_VERSION: ${{ inputs.version || github.ref_name }}
 
 permissions:
   contents: read
@@ -33,9 +42,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=semver,value=${{ env.RELEASE_VERSION }},pattern={{version}}
+            type=semver,value=${{ env.RELEASE_VERSION }},pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(env.RELEASE_VERSION, '-') }}
 
       - name: Build and push App
         uses: docker/build-push-action@v6
@@ -53,9 +62,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}-mcp
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ !contains(github.ref_name, '-') }}
+            type=semver,value=${{ env.RELEASE_VERSION }},pattern={{version}}
+            type=semver,value=${{ env.RELEASE_VERSION }},pattern={{major}}.{{minor}}
+            type=raw,value=latest,enable=${{ !contains(env.RELEASE_VERSION, '-') }}
 
       - name: Build and push MCP
         uses: docker/build-push-action@v6

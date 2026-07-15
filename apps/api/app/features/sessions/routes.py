@@ -140,7 +140,9 @@ async def update_planned_exercise(
     # Trim set_targets when target_sets is lowered (avoid orphan targets)
     if planned_exercise.set_targets and planned_exercise.target_sets:
         planned_exercise.set_targets = [
-            t for t in planned_exercise.set_targets if t.get("set_number", 0) <= planned_exercise.target_sets
+            t
+            for t in planned_exercise.set_targets
+            if t.get("set_number", 0) <= planned_exercise.target_sets
         ]
 
     # Recompute completion from logged sets (issue #9): swapping or changing an

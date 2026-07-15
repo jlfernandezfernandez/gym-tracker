@@ -124,6 +124,7 @@ def test_set_targets_can_be_sparse():
 def test_set_targets_no_duplicate_set_numbers():
     """set_targets cannot have duplicate set_number values."""
     import pytest
+
     with pytest.raises(ValueError, match="duplicate set_number"):
         PlannedExerciseCreate(
             exercise_id=1,
