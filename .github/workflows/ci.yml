@@ -28,7 +28,14 @@ jobs:
         run: cd apps/miniapp && npm ci && npm run build
       - name: Docker builds
         run: docker build -t gym-tracker .
-      - run: docker build -f Dockerfile.mcp -t gym-tracker-mcp .
+      - name: Build MCP image
+        run: docker build -f Dockerfile.mcp -t gym-tracker-mcp .
+      - name: MCP tests
+        run: >-
+          docker run --rm
+          -v "$PWD/apps/mcp/tests:/tests:ro"
+          gym-tracker-mcp
+          python -m unittest discover -s /tests -v
       - name: Compose smoke
         run: |
           docker compose --env-file .env.example up -d --build
