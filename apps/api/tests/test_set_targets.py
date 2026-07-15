@@ -19,6 +19,7 @@ def test_planned_exercise_create_with_set_targets():
             SetTarget(set_number=3, weight=50, reps=8),
         ],
     )
+    assert spec.set_targets is not None
     assert len(spec.set_targets) == 3
     assert spec.set_targets[2].weight == 50
 
@@ -144,4 +145,5 @@ def test_set_targets_beyond_target_sets_trimmed_by_update_route():
         target_sets=3,
         set_targets=[SetTarget(set_number=4, weight=50, reps=8)],
     )
+    assert spec.set_targets is not None
     assert spec.set_targets[0].set_number == 4
