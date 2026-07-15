@@ -366,7 +366,7 @@ async def delete_session(
     ):
         raise HTTPException(
             status_code=422,
-            detail="Only uncompleted sessions without logged sets can be deleted",
+            detail="Only planned sessions or empty in-progress sessions can be deleted",
         )
     for planned_exercise in workout.planned_exercises or []:
         await db.delete(planned_exercise)
