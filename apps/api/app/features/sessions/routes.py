@@ -269,6 +269,27 @@ async def log_set(
     return await load_session(session_id, db)
 
 
+@router.delete("/{session_id}/exercises/{planned_id}", response_model=SessionOut)
+async def delete_planned_exercise(
+    session_id: int,
+    planned_id: int,
+    db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
+):
+    """Delete a planned exercise that has no performed sets."""
+    workout = await load_session(session_id, db)
+    check_session_owner(workout, user_id)
+    planned_exercise = find_planned_exercise(workout, planned_id)
+    if planned_exercise.performed_sets:
+        raise HTTPException(
+            status_code=422, detail="Cannot delete an exercise with logged sets"
+        )
+    await db.delete(planned_exercise)
+    await db.commit()
+    db.expire_all()
+    return await load_session(session_id, db)
+
+
 @router.delete("/{session_id}/exercises/{planned_id}/sets/{set_id}", response_model=SessionOut)
 async def delete_set(
     session_id: int,

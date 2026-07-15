@@ -333,6 +333,12 @@ def delete_set(session_id: int, planned_exercise_id: int, set_id: int, telegram_
 
 
 @mcp.tool()
+def delete_planned_exercise(session_id: int, planned_exercise_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Remove a planned exercise from a session completely. Only works when no sets have been logged for it."""
+    return _request("DELETE", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", user_id=telegram_user_id)
+
+
+@mcp.tool()
 def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] = "completed", new_exercise_id: int | None = None, target_sets: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
     """Mark an exercise completed/skipped; optionally replace it before any set is logged, or adjust target_sets (1–20)."""
     payload: dict[str, Any] = {"status": status, "notes": notes}
