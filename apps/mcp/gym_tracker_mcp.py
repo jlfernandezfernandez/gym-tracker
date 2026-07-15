@@ -339,9 +339,17 @@ def delete_planned_exercise(session_id: int, planned_exercise_id: int, telegram_
 
 
 @mcp.tool()
-def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] = "completed", new_exercise_id: int | None = None, target_sets: int | None = None, notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Mark an exercise completed/skipped; optionally replace it before any set is logged, or adjust target_sets (1–20)."""
-    payload: dict[str, Any] = {"status": status, "notes": notes}
+def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] | None = None, new_exercise_id: int | None = None, target_sets: int | None = None, notes: str | None = None, telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Update only the supplied exercise fields.
+
+    Omit status and notes to preserve their current values. Completion and
+    skipping must always be explicit.
+    """
+    payload: dict[str, Any] = {}
+    if status is not None:
+        payload["status"] = status
+    if notes is not None:
+        payload["notes"] = notes
     if new_exercise_id is not None:
         payload["new_exercise_id"] = int(new_exercise_id)
     if target_sets is not None:
