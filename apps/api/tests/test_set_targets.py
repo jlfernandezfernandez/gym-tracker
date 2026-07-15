@@ -84,8 +84,6 @@ def test_current_state_includes_next_set_target():
 
 def test_current_state_next_set_target_after_logged():
     """After logging set 1, next_set_target points to set 2."""
-    from datetime import UTC, datetime
-
     targets = [
         {"set_number": 1, "weight": 40, "reps": 12},
         {"set_number": 2, "weight": 45, "reps": 10},
