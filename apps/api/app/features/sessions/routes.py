@@ -358,7 +358,7 @@ async def delete_session(
     db: AsyncSession = Depends(get_db_session),
     user_id: int | None = Depends(current_user_id),
 ):
-    """Delete a session (e.g. discard a plan preview the athlete rejected)."""
+    """Delete a planned session or an in-progress session with no logged sets."""
     workout = await load_session(session_id, db)
     check_session_owner(workout, user_id)
     if workout.status not in ("planned", "in_progress") or any(
