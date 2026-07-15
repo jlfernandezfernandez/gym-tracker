@@ -361,10 +361,13 @@ async def delete_session(
     """Delete a session (e.g. discard a plan preview the athlete rejected)."""
     workout = await load_session(session_id, db)
     check_session_owner(workout, user_id)
-    if workout.status != "planned" or any(
+    if workout.status not in ("planned", "in_progress") or any(
         planned.performed_sets for planned in workout.planned_exercises or []
     ):
-        raise HTTPException(status_code=422, detail="Only unstarted plan previews can be deleted")
+        raise HTTPException(
+            status_code=422,
+            detail="Only uncompleted sessions without logged sets can be deleted",
+        )
     for planned_exercise in workout.planned_exercises or []:
         await db.delete(planned_exercise)
     await db.delete(workout)
