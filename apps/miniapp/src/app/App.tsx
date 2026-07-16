@@ -31,6 +31,7 @@ type View =
 interface AppContextValue {
   push: (view: View) => void;
   pop: () => void;
+  replace: (view: View) => void;
   /** Point the plan/exercise screens at a session and navigate to the plan. */
   openSession: (sessionId: number) => void;
   sessionId?: number;
@@ -95,6 +96,7 @@ function Router() {
   const appContext: AppContextValue = {
     push: (view) => setViewStack((stack) => [...stack, view]),
     pop: () => setViewStack((stack) => (stack.length > 1 ? stack.slice(0, -1) : stack)),
+    replace: (view) => setViewStack((stack) => [...stack.slice(0, -1), view]),
     openSession: (id) => {
       setSessionId(id);
       setViewStack((stack) => [...stack, { name: 'plan' }]);
