@@ -75,3 +75,10 @@ jobs:
           push: true
           tags: ${{ steps.mcp-meta.outputs.tags }}
           labels: ${{ steps.mcp-meta.outputs.labels }}
+
+  deploy:
+    name: Deploy stable release to production
+    needs: images
+    if: ${{ !contains(inputs.version || github.ref_name, '-') }}
+    uses: ./.github/workflows/deploy-production.yml
+    secrets: inherit
