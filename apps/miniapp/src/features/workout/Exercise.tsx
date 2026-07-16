@@ -1,6 +1,6 @@
 /** Exercise: detail, set logging and completion. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
 import { chartUsesWeight, type ProgressPoint } from '../../lib/chart';
 import { completedSetCount, formatMuscle, formatWeight, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
@@ -49,6 +49,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
   const sessionQuery = useSession();
   const plan = sessionQuery.data;
   const exercise = plan?.exercises?.find((candidate: any) => String(candidate.planned_id) === String(plannedId));
+  const [showPicker, setShowPicker] = useState(false);
 
   if (sessionQuery.isLoading) return <Loading />;
   if (!exercise)
@@ -89,7 +90,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
       {/* Primary action first: log the set right under the exercise, history below. */}
       {/* key={loggedSetCount}: remount per set so inputs re-prefill from the last logged set. */}
       {!app.readOnly && exercise.status !== 'completed' && (
-        <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} />
+        <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} onShowPicker={() => setShowPicker(true)} />
       )}
       {loggedSetCount > 0 && (
         <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
@@ -127,6 +128,13 @@ export function Exercise({ plannedId }: { plannedId: number }) {
           <h3>Músculos trabajados</h3>
           <BodyMap muscles={muscles} />
         </div>
+      )}
+      {showPicker && (
+        <NextExercisePicker
+          exercises={plan?.exercises?.filter((e: any) => e.planned_id !== exercise.planned_id && ['pending', 'in_progress'].includes(e.status)) || []}
+          onPick={(id) => app.replace({ name: 'exercise', plannedId: id })}
+          onDismiss={() => app.pop()}
+        />
       )}
     </>
   );
@@ -210,10 +218,12 @@ function LogSetForm({
   sessionId,
   exercise,
   loggedSetCount,
+  onShowPicker,
 }: {
   sessionId: number;
   exercise: any;
   loggedSetCount: number;
+  onShowPicker: () => void;
 }) {
   const app = useApp();
   const queryClient = useQueryClient();
@@ -260,11 +270,15 @@ function LogSetForm({
 
   const completeExercise = useMutation({
     mutationFn: () => apiFetch('POST', `/sessions/${sessionId}/exercises/${exercise.planned_id}/complete`),
-    onSuccess: (updatedSession) => {
+    onSuccess: (updatedSession: any) => {
       refreshAfterMutation(updatedSession);
       haptic('ok');
       showToast('Ejercicio completado', 'ok');
-      app.pop();
+      const pending = (updatedSession.planned_exercises || []).filter(
+        (e: any) => e.id !== exercise.planned_id && ['pending', 'in_progress'].includes(e.status)
+      );
+      if (pending.length > 0) onShowPicker();
+      else app.pop();
     },
     onError: (error: any) => {
       haptic('bad');
@@ -325,5 +339,40 @@ function LogSetForm({
         onCancel={() => setConfirmFinishOpen(false)}
       />
     </div>
+  );
+}
+
+function NextExercisePicker({ exercises, onPick, onDismiss }: { exercises: any[]; onPick: (plannedId: number) => void; onDismiss: () => void }) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    dialogRef.current?.showModal();
+  }, []);
+  return (
+    <dialog ref={dialogRef} class="native-sheet m-auto mb-2.5 w-[min(100%-20px,430px)] rounded-[26px] border border-white/50 bg-surface/94 pb-3 text-ink shadow-sheet backdrop-blur-3xl backdrop-saturate-150 [&::backdrop]:bg-black/35" onClose={onDismiss}>
+      <div class="mx-auto mb-3 mt-2 h-1 w-9 rounded-pill bg-track" />
+      <div class="px-5">
+        <h2>Siguiente ejercicio</h2>
+        <p class="mt-1 text-hint">Elige el que tengas a mano.</p>
+      </div>
+      <div class="mt-3 grid gap-2 px-3">
+        {exercises.map((exercise: any) => {
+          const src = mediaUrl(exercise.image_url || exercise.gif_url);
+          return (
+            <button key={exercise.planned_id} class="flex cursor-pointer items-center gap-3 rounded-2xl border-0 bg-surface-2 p-3 text-left transition active:scale-[.98]" onClick={() => onPick(exercise.planned_id)}>
+              <div class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white text-lg shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
+                {src ? <img class="size-full object-contain" src={src} alt="" loading="lazy" /> : '🏋️'}
+              </div>
+              <div class="min-w-0 flex-1">
+                <h3 class="truncate text-[.88rem]">{exercise.name}</h3>
+                <p class="text-[.72rem] text-hint">{formatMuscle(exercise.target || '')} · {exercise.sets}×{exercise.reps}</p>
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div class="mt-3 px-5">
+        <button class="min-h-[46px] w-full cursor-pointer rounded-2xl border-0 bg-transparent font-[680] text-accent transition active:scale-[.975]" onClick={onDismiss}>Ver plan completo</button>
+      </div>
+    </dialog>
   );
 }
