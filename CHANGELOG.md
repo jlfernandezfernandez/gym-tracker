@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.2.1...v1.2.2) (2026-07-16)
+
+
+### Bug Fixes
+
+* **mcp:** expose set_targets in update_planned_exercise ([abfdc16](https://github.com/jlfernandezfernandez/gym-tracker/commit/abfdc161ced1620d54fade9c5320b28836894a6c))
+* **mcp:** expose set_targets in update_planned_exercise ([b88caba](https://github.com/jlfernandezfernandez/gym-tracker/commit/b88caba172df552d6b5330150fc4459c347997da))
+
 ## [1.2.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.2.0...v1.2.1) (2026-07-15)
 
 
