@@ -19,6 +19,7 @@ jobs:
       - name: Trigger deployment
         id: trigger
         env:
+          COOLIFY_ORIGIN_IP: ${{ secrets.COOLIFY_ORIGIN_IP }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
         run: |
@@ -32,6 +33,7 @@ jobs:
             --show-error \
             --retry 3 \
             --request GET \
+            --resolve "coolify.jordixlab.com:443:${COOLIFY_ORIGIN_IP}" \
             --user-agent "gym-tracker-deploy/1.0" \
             --oauth2-bearer "$COOLIFY_TOKEN" \
             --output "$response_file" \
@@ -88,6 +90,7 @@ jobs:
 
       - name: Wait for Coolify
         env:
+          COOLIFY_ORIGIN_IP: ${{ secrets.COOLIFY_ORIGIN_IP }}
           COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
           API_BASE: ${{ steps.trigger.outputs.api_base }}
           DEPLOYMENT_UUID: ${{ steps.trigger.outputs.deployment_uuid }}
@@ -98,6 +101,7 @@ jobs:
               --silent \
               --show-error \
               --fail-with-body \
+              --resolve "coolify.jordixlab.com:443:${COOLIFY_ORIGIN_IP}" \
               --oauth2-bearer "$COOLIFY_TOKEN" \
               "${API_BASE}/deployments/${DEPLOYMENT_UUID}" \
               | python -c 'import json, sys; print(json.load(sys.stdin)["status"])')
