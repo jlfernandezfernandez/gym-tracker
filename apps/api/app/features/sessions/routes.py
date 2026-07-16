@@ -9,6 +9,7 @@ from sqlalchemy.orm import selectinload
 from app.core.auth import current_user_id
 from app.core.database import get_session as get_db_session
 from app.features.sessions.schemas import (
+    AddExerciseRequest,
     PerformedSetCreate,
     PlannedExerciseUpdate,
     SessionFinish,
@@ -159,6 +160,69 @@ async def update_planned_exercise(
     if planned_exercise.status in {"in_progress", "completed", "skipped"}:
         start_session(workout)
     auto_finish_if_done(workout)
+    await db.commit()
+    db.expire_all()
+    return await load_session(session_id, db)
+
+
+@router.post("/{session_id}/exercises", response_model=SessionOut)
+async def add_planned_exercise(
+    session_id: int,
+    body: AddExerciseRequest,
+    db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
+):
+    """Add a catalog exercise to an existing planned or in-progress session."""
+    workout = await load_session(session_id, db)
+    check_session_owner(workout, user_id)
+    if workout.status not in ("planned", "in_progress"):
+        raise HTTPException(
+            status_code=422,
+            detail="Can only add exercises to planned or in-progress sessions",
+        )
+
+    exercise = await db.get(Exercise, body.exercise_id)
+    if not exercise:
+        raise HTTPException(status_code=422, detail=f"Exercise {body.exercise_id} not found")
+
+    existing = workout.planned_exercises or []
+    if body.order is None:
+        order = max((pe.order for pe in existing), default=-1) + 1
+    else:
+        order = body.order
+        for pe in existing:
+            if pe.order >= order:
+                pe.order += 1
+
+    if exercise.is_bodyweight:
+        suggested_weight = BODYWEIGHT_WEIGHT
+    elif body.suggested_weight == BODYWEIGHT_WEIGHT:
+        raise HTTPException(
+            status_code=422,
+            detail="-1 weight is reserved for bodyweight exercises",
+        )
+    else:
+        suggested_weight = body.suggested_weight
+
+    set_targets_data = None
+    if body.set_targets:
+        set_targets_data = [t.model_dump() for t in body.set_targets]
+        if exercise.is_bodyweight:
+            for t in set_targets_data:
+                t["weight"] = BODYWEIGHT_WEIGHT
+
+    db.add(
+        PlannedExercise(
+            session_id=workout.id,
+            exercise_id=body.exercise_id,
+            order=order,
+            target_sets=body.target_sets,
+            target_reps=body.target_reps,
+            suggested_weight=suggested_weight,
+            notes=body.notes,
+            set_targets=set_targets_data,
+        )
+    )
     await db.commit()
     db.expire_all()
     return await load_session(session_id, db)
