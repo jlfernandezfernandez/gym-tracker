@@ -124,7 +124,9 @@ jobs:
           curl
           --silent
           --show-error
-          --fail-with-body
+          --fail
+          --output /dev/null
+          --user-agent "gym-tracker-deploy/1.0"
           --retry 12
           --retry-all-errors
           --retry-delay 5
