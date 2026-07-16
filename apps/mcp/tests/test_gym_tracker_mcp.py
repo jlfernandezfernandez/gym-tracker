@@ -21,6 +21,26 @@ class UpdatePlannedExerciseTests(unittest.TestCase):
             user_id=42,
         )
 
+    def test_set_targets_forwarded_to_api(self) -> None:
+        targets = [
+            {"set_number": 1, "weight": 40, "reps": 12},
+            {"set_number": 2, "weight": 45, "reps": 10},
+        ]
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.update_planned_exercise(
+                session_id=8,
+                planned_exercise_id=34,
+                set_targets=targets,
+                telegram_user_id=42,
+            )
+
+        request.assert_called_once_with(
+            "PUT",
+            "/sessions/8/exercises/34",
+            {"set_targets": targets},
+            user_id=42,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
