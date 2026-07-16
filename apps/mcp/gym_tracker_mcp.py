@@ -339,11 +339,14 @@ def delete_planned_exercise(session_id: int, planned_exercise_id: int, telegram_
 
 
 @mcp.tool()
-def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] | None = None, new_exercise_id: int | None = None, target_sets: int | None = None, notes: str | None = None, telegram_user_id: int | None = None) -> dict[str, Any]:
+def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] | None = None, new_exercise_id: int | None = None, target_sets: int | None = None, notes: str | None = None, set_targets: list[dict[str, Any]] | None = None, telegram_user_id: int | None = None) -> dict[str, Any]:
     """Update only the supplied exercise fields.
 
     Omit status and notes to preserve their current values. Completion and
     skipping must always be explicit.
+    set_targets: per-set weight/reps overrides, e.g.
+    [{"set_number": 1, "weight": 40, "reps": 12},
+     {"set_number": 2, "weight": 45, "reps": 10}]
     """
     payload: dict[str, Any] = {}
     if status is not None:
@@ -354,6 +357,8 @@ def update_planned_exercise(session_id: int, planned_exercise_id: int, status: L
         payload["new_exercise_id"] = int(new_exercise_id)
     if target_sets is not None:
         payload["target_sets"] = int(target_sets)
+    if set_targets is not None:
+        payload["set_targets"] = set_targets
     return _request("PUT", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", payload, user_id=telegram_user_id)
 
 
