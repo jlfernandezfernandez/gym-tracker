@@ -23,14 +23,46 @@ jobs:
           COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
         run: |
           set -Eeuo pipefail
-          response=$(curl \
+          response_file=$(mktemp)
+          headers_file=$(mktemp)
+          trap 'rm -f "$response_file" "$headers_file"' EXIT
+
+          http_status=$(curl \
             --silent \
             --show-error \
-            --fail-with-body \
             --retry 3 \
             --request GET \
-            --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
+            --user-agent "gym-tracker-deploy/1.0" \
+            --oauth2-bearer "$COOLIFY_TOKEN" \
+            --output "$response_file" \
+            --dump-header "$headers_file" \
+            --write-out "%{http_code}" \
             "${COOLIFY_WEBHOOK}")
+
+          if [[ ! "$http_status" =~ ^2 ]]; then
+            RESPONSE_FILE="$response_file" HEADERS_FILE="$headers_file" python -c '
+          import json, os
+          from pathlib import Path
+          headers = Path(os.environ["HEADERS_FILE"]).read_text()
+          body = Path(os.environ["RESPONSE_FILE"]).read_text()
+          parsed_headers = {}
+          for line in headers.splitlines():
+              if ":" in line:
+                  key, value = line.split(":", 1)
+                  parsed_headers[key.lower()] = value.strip()
+          try:
+              message = json.loads(body).get("message", "JSON response without message")
+          except (json.JSONDecodeError, AttributeError):
+              message = "non-JSON response"
+          print("server={} cf-ray={} content-type={} message={}".format(parsed_headers.get("server", "unknown"), parsed_headers.get("cf-ray", "none"), parsed_headers.get("content-type", "unknown"), str(message)[:200]))
+          '
+            echo "Coolify deploy request failed with HTTP ${http_status}" >&2
+            exit 1
+          fi
+
+          response=$(RESPONSE_FILE="$response_file" python -c 'import os; from pathlib import Path; print(Path(os.environ["RESPONSE_FILE"]).read_text())')
+          rm -f "$response_file" "$headers_file"
+          trap - EXIT
 
           deployment_uuid=$(RESPONSE="$response" python -c '
           import json, os
@@ -66,7 +98,7 @@ jobs:
               --silent \
               --show-error \
               --fail-with-body \
-              --header "Authorization: Bearer ${COOLIFY_TOKEN}" \
+              --oauth2-bearer "$COOLIFY_TOKEN" \
               "${API_BASE}/deployments/${DEPLOYMENT_UUID}" \
               | python -c 'import json, sys; print(json.load(sys.stdin)["status"])')
 
