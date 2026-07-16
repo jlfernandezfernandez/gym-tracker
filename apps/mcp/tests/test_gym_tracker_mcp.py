@@ -42,5 +42,34 @@ class UpdatePlannedExerciseTests(unittest.TestCase):
         )
 
 
+class DeletePlannedExerciseTests(unittest.TestCase):
+    def test_delete_calls_correct_endpoint(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.delete_planned_exercise(
+                session_id=7,
+                planned_exercise_id=50,
+                telegram_user_id=42,
+            )
+
+        request.assert_called_once_with(
+            "DELETE",
+            "/sessions/7/exercises/50",
+            user_id=42,
+        )
+
+    def test_delete_without_user_id(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.delete_planned_exercise(
+                session_id=7,
+                planned_exercise_id=50,
+            )
+
+        request.assert_called_once_with(
+            "DELETE",
+            "/sessions/7/exercises/50",
+            user_id=None,
+        )
+
+
 if __name__ == "__main__":
     unittest.main()
