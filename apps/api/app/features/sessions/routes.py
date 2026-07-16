@@ -18,6 +18,7 @@ from app.features.sessions.schemas import (
     SessionUpdate,
 )
 from app.features.sessions.service import (
+    auto_finish_if_done,
     check_session_owner,
     current_state,
     find_planned_exercise,
@@ -96,6 +97,7 @@ async def complete_planned_exercise(
 
     planned_exercise.status = "completed"
     start_session(workout)
+    auto_finish_if_done(workout)
     await db.commit()
     return await load_session(session_id, db)
 
@@ -157,6 +159,7 @@ async def update_planned_exercise(
 
     if planned_exercise.status in {"in_progress", "completed", "skipped"}:
         start_session(workout)
+    auto_finish_if_done(workout)
     await db.commit()
     db.expire_all()
     return await load_session(session_id, db)
@@ -323,6 +326,8 @@ async def log_set(
         planned_exercise.status = "completed"
     elif planned_exercise.status == "pending":
         planned_exercise.status = "in_progress"
+
+    auto_finish_if_done(workout)
 
     try:
         await db.commit()
