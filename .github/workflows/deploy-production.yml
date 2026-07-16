@@ -98,6 +98,7 @@ jobs:
               --silent \
               --show-error \
               --fail-with-body \
+              --user-agent "gym-tracker-deploy/1.0" \
               --oauth2-bearer "$COOLIFY_TOKEN" \
               "${API_BASE}/deployments/${DEPLOYMENT_UUID}" \
               | python -c 'import json, sys; print(json.load(sys.stdin)["status"])')
