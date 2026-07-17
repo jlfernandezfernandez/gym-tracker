@@ -122,7 +122,7 @@ export function Catalog() {
           ))}
         </div>
       )}
-      {!showDisliked && <div ref={sentinelRef} />}
+      <div ref={sentinelRef} class={showDisliked ? 'hidden' : ''} />
       {listQuery.isFetchingNextPage && <p class="my-3 text-center text-xs">Cargando más...</p>}
     </>
   );
