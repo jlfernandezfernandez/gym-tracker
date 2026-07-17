@@ -152,6 +152,18 @@ class AthleteMeasurement(SQLModel, table=True):
     notes: str = Field(default="")
 
 
+class AthleteDislikedExercise(SQLModel, table=True):
+    __tablename__ = "athlete_disliked_exercises"
+    __table_args__ = (
+        UniqueConstraint("athlete_id", "exercise_id", name="uq_disliked_athlete_exercise"),
+    )
+
+    id: int = Field(default=None, primary_key=True)
+    athlete_id: int = Field(foreign_key="athlete_profiles.id", index=True)
+    exercise_id: int = Field(foreign_key="exercises.id")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+
+
 class AthleteProfile(SQLModel, table=True):
     __tablename__ = "athlete_profiles"
     __table_args__ = (
@@ -172,7 +184,6 @@ class AthleteProfile(SQLModel, table=True):
     goal: str = Field(default="")
     experience_level: str = Field(default="")
     preferred_exercises: str = Field(default="")
-    disliked_exercises: str = Field(default="")
     notes: str = Field(default="")
     onboarding_complete: bool = Field(default=False)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))

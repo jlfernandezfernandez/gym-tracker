@@ -321,7 +321,7 @@ function LogSetForm({
           </div>
         </div>
       </div>
-      <BusyButton busy={isBusy} busyLabel="Guardando..." class="mt-5 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-white transition active:scale-[.975] active:opacity-[.82] disabled:pointer-events-none disabled:opacity-35" onClick={saveSet}>
+      <BusyButton busy={isBusy} busyLabel="Guardando..." class="mt-5 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82] disabled:pointer-events-none disabled:opacity-35" onClick={saveSet}>
         {isLastSet ? 'Registrar' : 'Continuar'}
       </BusyButton>
       {!isLastSet && (

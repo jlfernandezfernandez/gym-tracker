@@ -127,6 +127,7 @@ def list_exercises(
     muscle_group: str = "",
     body_part: str = "",
     equipment: str = "",
+    exclude_disliked: bool = False,
     limit: int = 10,
     offset: int = 0,
 ) -> list[dict[str, Any]]:
@@ -134,6 +135,7 @@ def list_exercises(
 
     Call list_exercise_facets first instead of guessing muscle_group, body_part,
     or equipment. Use offset to inspect more than the first page.
+    Pass exclude_disliked=true to filter out the athlete's disliked exercises.
     """
     params: dict[str, Any] = {
         "limit": max(1, min(int(limit), 50)),
@@ -147,6 +149,8 @@ def list_exercises(
         params["body_part"] = body_part
     if equipment:
         params["equipment"] = equipment
+    if exclude_disliked:
+        params["exclude_disliked"] = "true"
     qs = urllib.parse.urlencode(params)
     return _request("GET", f"/exercises?{qs}")
 
@@ -481,6 +485,24 @@ def share_web_url(share_token: str) -> str:
     """Return a read-only share URL for a companion."""
     token = urllib.parse.quote(str(share_token), safe="")
     return f"{APP_BASE}/session/share/{token}"
+
+
+@mcp.tool()
+def dislike_exercise(exercise_id: int, telegram_user_id: int) -> dict[str, Any]:
+    """Mark an exercise as disliked so it won't appear in future plans."""
+    return _request("POST", "/disliked-exercises", {"exercise_id": int(exercise_id)}, user_id=telegram_user_id)
+
+
+@mcp.tool()
+def undislike_exercise(exercise_id: int, telegram_user_id: int) -> dict[str, Any]:
+    """Remove an exercise from the athlete's disliked list."""
+    return _request("DELETE", f"/disliked-exercises/{int(exercise_id)}", user_id=telegram_user_id)
+
+
+@mcp.tool()
+def list_disliked_exercises(telegram_user_id: int) -> list[dict[str, Any]]:
+    """List all exercises the athlete has marked as disliked."""
+    return _request("GET", "/disliked-exercises", user_id=telegram_user_id)
 
 
 if __name__ == "__main__":
