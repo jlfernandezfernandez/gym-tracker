@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.0.0...v2.1.0) (2026-07-17)
+
+
+### Features
+
+* **miniapp:** show app version in profile, linked to releases ([e6174ad](https://github.com/jlfernandezfernandez/gym-tracker/commit/e6174aded69b5e1b31e69c7dbb15ca1695764be0))
+
 ## [2.0.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.2.2...v2.0.0) (2026-07-17)
 
 
