@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.2.0...v2.2.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **miniapp:** hide set deletion in completed sessions ([#63](https://github.com/jlfernandezfernandez/gym-tracker/issues/63)) ([5630687](https://github.com/jlfernandezfernandez/gym-tracker/commit/56306877366c53f05c34f9fb073b99859aa1e12c))
+
 ## [2.2.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.1.1...v2.2.0) (2026-07-17)
 
 
