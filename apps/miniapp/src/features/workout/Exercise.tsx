@@ -311,11 +311,6 @@ function LogSetForm({
 
   return (
     <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
-      {setTarget && (
-        <p class="mb-2 text-[.72rem] font-[650] text-accent">
-          Objetivo: {isBodyweight ? `Peso corporal × ${setTarget.reps} reps` : setTarget.weight != null ? `${setTarget.weight} kg × ${setTarget.reps} reps` : `${setTarget.reps} reps`}
-        </p>
-      )}
       <div class="flex items-stretch gap-[9px]">
         <div class="min-w-0 flex-1">
           <label for="set-weight">{isBodyweight ? 'Peso corporal' : 'Peso (kg)'}</label>

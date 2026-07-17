@@ -15,6 +15,14 @@ export const formatMuscle = (muscle: string) => {
 export const formatWeight = (weight: number | null | undefined, mode: string) =>
   mode === 'bodyweight' ? 'Peso corporal' : weight != null ? `${weight} kg` : '';
 
+export const formatSetTarget = (
+  target: { set_number: number; weight: number | null; reps: number },
+  mode: string,
+) => {
+  const weight = formatWeight(target.weight, mode);
+  return `S${target.set_number} · ${weight ? `${weight} × ${target.reps}` : `${target.reps} reps`}`;
+};
+
 export const formatEquipment = (equipment: string) =>
   EQUIPMENT_ES[String(equipment || '').toLowerCase()] || equipment;
 
