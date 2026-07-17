@@ -47,10 +47,6 @@ def _make_client(
     fake_db.commit = AsyncMock()
     fake_db.expire_all = MagicMock()
 
-    disliked_result = MagicMock()
-    disliked_result.scalar_one_or_none.return_value = MagicMock() if exercise_is_disliked else None
-    fake_db.execute = AsyncMock(return_value=disliked_result)
-
     exercise_to_return = catalog_exercise or Exercise(id=20, name="Squat", muscle_group="legs")
 
     async def fake_get(model, pk):
@@ -75,10 +71,15 @@ def _make_client(
     async def fake_get_or_create_profile(db, user_id):
         return MagicMock(id=1)
 
+    async def fake_disliked_exercise_ids(db, athlete_id, exercise_ids):
+        return set(exercise_ids) if exercise_is_disliked else set()
+
     original_load = routes_mod.load_session
     original_profile = routes_mod._get_or_create_profile
+    original_disliked = routes_mod.disliked_exercise_ids
     routes_mod.load_session = fake_load_session
     routes_mod._get_or_create_profile = fake_get_or_create_profile
+    routes_mod.disliked_exercise_ids = fake_disliked_exercise_ids
 
     try:
         client = TestClient(app)
@@ -86,6 +87,7 @@ def _make_client(
     finally:
         routes_mod.load_session = original_load
         routes_mod._get_or_create_profile = original_profile
+        routes_mod.disliked_exercise_ids = original_disliked
         app.dependency_overrides.clear()
 
 

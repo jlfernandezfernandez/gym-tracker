@@ -12,6 +12,19 @@ from app.models import AthleteDislikedExercise, Exercise
 router = APIRouter(prefix="/disliked-exercises", tags=["disliked"])
 
 
+async def disliked_exercise_ids(
+    db: AsyncSession, athlete_id: int, exercise_ids: list[int]
+) -> set[int]:
+    """Subset of exercise_ids the athlete has marked as disliked."""
+    result = await db.execute(
+        select(col(AthleteDislikedExercise.exercise_id)).where(
+            AthleteDislikedExercise.athlete_id == athlete_id,
+            col(AthleteDislikedExercise.exercise_id).in_(exercise_ids),
+        )
+    )
+    return set(result.scalars().all())
+
+
 @router.get("", response_model=list[DislikedExerciseOut])
 async def list_disliked(
     db: AsyncSession = Depends(get_session),
@@ -36,20 +49,7 @@ async def list_disliked(
         .order_by(AthleteDislikedExercise.created_at.desc())
     )
     rows = (await db.execute(statement)).all()
-    return [
-        DislikedExerciseOut(
-            id=row.id,
-            athlete_id=row.athlete_id,
-            exercise_id=row.exercise_id,
-            created_at=row.created_at,
-            name=row.name,
-            name_en=row.name_en,
-            muscle_group=row.muscle_group,
-            equipment=row.equipment,
-            image_url=row.image_url,
-        )
-        for row in rows
-    ]
+    return [DislikedExerciseOut(**row._mapping) for row in rows]
 
 
 @router.post("", response_model=DislikedExerciseOut, status_code=201)
@@ -79,15 +79,10 @@ async def add_disliked(
     await db.commit()
     await db.refresh(disliked)
     return DislikedExerciseOut(
-        id=disliked.id,
-        athlete_id=disliked.athlete_id,
-        exercise_id=disliked.exercise_id,
-        created_at=disliked.created_at,
-        name=exercise.name,
-        name_en=exercise.name_en,
-        muscle_group=exercise.muscle_group,
-        equipment=exercise.equipment,
-        image_url=exercise.image_url,
+        **disliked.model_dump(),
+        **exercise.model_dump(
+            include={"name", "name_en", "muscle_group", "equipment", "image_url"}
+        ),
     )
 
 

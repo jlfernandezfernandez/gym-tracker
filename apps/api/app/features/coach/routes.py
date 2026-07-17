@@ -11,10 +11,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from sqlmodel import col
 
 from app.core.auth import current_user_id
 from app.core.database import get_session
+from app.features.disliked.routes import disliked_exercise_ids
 from app.features.profile.routes import _get_or_create_profile
 from app.features.sessions.schemas import (
     CoachImportRequest,
@@ -25,7 +25,6 @@ from app.features.sessions.schemas import (
 from app.features.sessions.service import current_state, load_session
 from app.models import (
     BODYWEIGHT_WEIGHT,
-    AthleteDislikedExercise,
     AthleteMeasurement,
     Exercise,
     PerformedSet,
@@ -165,13 +164,7 @@ async def coach_plan(
         )
     profile = await _get_or_create_profile(db, user_id)
     requested_ids = [ex.exercise_id for ex in body.exercises]
-    disliked_result = await db.execute(
-        select(col(AthleteDislikedExercise.exercise_id)).where(
-            AthleteDislikedExercise.athlete_id == profile.id,
-            AthleteDislikedExercise.exercise_id.in_(requested_ids),
-        )
-    )
-    disliked_ids = set(row[0] for row in disliked_result.all())
+    disliked_ids = await disliked_exercise_ids(db, profile.id, requested_ids)
     if disliked_ids:
         raise HTTPException(
             status_code=422,

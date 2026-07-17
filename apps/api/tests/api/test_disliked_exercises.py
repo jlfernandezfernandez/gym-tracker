@@ -232,7 +232,7 @@ def test_coach_plan_rejects_disliked_exercises() -> None:
         if call_count == 2:
             # disliked check
             mock_result = AsyncMock()
-            mock_result.all = lambda: [(10,)]
+            mock_result.scalars = lambda: AsyncMock(all=lambda: [10])
             return mock_result
         return AsyncMock()
 

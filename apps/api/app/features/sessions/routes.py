@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.auth import current_user_id
 from app.core.database import get_session as get_db_session
+from app.features.disliked.routes import disliked_exercise_ids
 from app.features.profile.routes import _get_or_create_profile
 from app.features.sessions.schemas import (
     AddExerciseRequest,
@@ -29,7 +30,6 @@ from app.features.sessions.service import (
 )
 from app.models import (
     BODYWEIGHT_WEIGHT,
-    AthleteDislikedExercise,
     Exercise,
     PerformedSet,
     PlannedExercise,
@@ -194,13 +194,7 @@ async def add_planned_exercise(
         raise HTTPException(status_code=422, detail=f"Exercise {body.exercise_id} not found")
 
     profile = await _get_or_create_profile(db, user_id)
-    disliked = await db.execute(
-        select(AthleteDislikedExercise).where(
-            AthleteDislikedExercise.athlete_id == profile.id,
-            AthleteDislikedExercise.exercise_id == body.exercise_id,
-        )
-    )
-    if disliked.scalar_one_or_none():
+    if await disliked_exercise_ids(db, profile.id, [body.exercise_id]):
         raise HTTPException(
             status_code=422,
             detail=f"Exercise {body.exercise_id} is disliked by the athlete. Pick an alternative.",
