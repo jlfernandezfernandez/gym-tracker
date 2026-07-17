@@ -160,6 +160,7 @@ def test_set_targets_can_be_nullable():
         ],
     )
     assert spec.suggested_weight is None
+    assert spec.set_targets is not None
     assert spec.set_targets[0].weight is None
 
     pe = PlannedExercise(

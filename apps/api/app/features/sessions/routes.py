@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.auth import current_user_id
 from app.core.database import get_session as get_db_session
+from app.features.profile.routes import _get_or_create_profile
 from app.features.sessions.schemas import (
     AddExerciseRequest,
     PerformedSetCreate,
@@ -26,7 +27,14 @@ from app.features.sessions.service import (
     set_conflict_error,
     start_session,
 )
-from app.models import BODYWEIGHT_WEIGHT, Exercise, PerformedSet, PlannedExercise, WorkoutSession
+from app.models import (
+    BODYWEIGHT_WEIGHT,
+    AthleteDislikedExercise,
+    Exercise,
+    PerformedSet,
+    PlannedExercise,
+    WorkoutSession,
+)
 
 router = APIRouter(prefix="/sessions", tags=["sessions"])
 
@@ -184,6 +192,19 @@ async def add_planned_exercise(
     exercise = await db.get(Exercise, body.exercise_id)
     if not exercise:
         raise HTTPException(status_code=422, detail=f"Exercise {body.exercise_id} not found")
+
+    profile = await _get_or_create_profile(db, user_id)
+    disliked = await db.execute(
+        select(AthleteDislikedExercise).where(
+            AthleteDislikedExercise.athlete_id == profile.id,
+            AthleteDislikedExercise.exercise_id == body.exercise_id,
+        )
+    )
+    if disliked.scalar_one_or_none():
+        raise HTTPException(
+            status_code=422,
+            detail=f"Exercise {body.exercise_id} is disliked by the athlete. Pick an alternative.",
+        )
 
     existing = workout.planned_exercises or []
     if body.order is None:

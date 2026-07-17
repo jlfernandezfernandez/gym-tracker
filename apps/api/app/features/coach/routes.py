@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlmodel import col
 
 from app.core.auth import current_user_id
 from app.core.database import get_session
@@ -165,7 +166,7 @@ async def coach_plan(
     profile = await _get_or_create_profile(db, user_id)
     requested_ids = [ex.exercise_id for ex in body.exercises]
     disliked_result = await db.execute(
-        select(AthleteDislikedExercise.exercise_id).where(
+        select(col(AthleteDislikedExercise.exercise_id)).where(
             AthleteDislikedExercise.athlete_id == profile.id,
             AthleteDislikedExercise.exercise_id.in_(requested_ids),
         )

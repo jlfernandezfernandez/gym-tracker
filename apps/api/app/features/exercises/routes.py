@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.core.auth import current_user_id
 from app.core.database import get_session as get_db_session
@@ -54,7 +55,7 @@ async def list_exercises(
 
     if exclude_disliked:
         profile = await _get_or_create_profile(db, user_id)
-        disliked_subq = select(AthleteDislikedExercise.exercise_id).where(
+        disliked_subq = select(col(AthleteDislikedExercise.exercise_id)).where(
             AthleteDislikedExercise.athlete_id == profile.id
         )
         statement = statement.where(Exercise.id.notin_(disliked_subq))

@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import col
 
 from app.core.auth import current_user_id
 from app.core.database import get_session
@@ -20,15 +21,15 @@ async def list_disliked(
     profile = await _get_or_create_profile(db, user_id)
     statement = (
         select(
-            AthleteDislikedExercise.id,
-            AthleteDislikedExercise.athlete_id,
-            AthleteDislikedExercise.exercise_id,
-            AthleteDislikedExercise.created_at,
-            Exercise.name,
-            Exercise.name_en,
-            Exercise.muscle_group,
-            Exercise.equipment,
-            Exercise.image_url,
+            col(AthleteDislikedExercise.id),
+            col(AthleteDislikedExercise.athlete_id),
+            col(AthleteDislikedExercise.exercise_id),
+            col(AthleteDislikedExercise.created_at),
+            col(Exercise.name),
+            col(Exercise.name_en),
+            col(Exercise.muscle_group),
+            col(Exercise.equipment),
+            col(Exercise.image_url),
         )
         .join(Exercise, AthleteDislikedExercise.exercise_id == Exercise.id)
         .where(AthleteDislikedExercise.athlete_id == profile.id)

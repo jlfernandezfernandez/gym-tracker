@@ -61,7 +61,7 @@ class AddExerciseRequest(BaseModel):
     order: int | None = Field(default=None, ge=0)
     target_sets: int = Field(default=3, ge=1)
     target_reps: int = Field(default=10, ge=1)
-    suggested_weight: float = Field(default=0.0, ge=-1)
+    suggested_weight: float | None = Field(default=None, ge=-1)
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 

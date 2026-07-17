@@ -40,11 +40,16 @@ def _make_client(
     workout: WorkoutSession,
     user_id_override: int | None = 42,
     catalog_exercise: Exercise | None = None,
+    exercise_is_disliked: bool = False,
 ):
     fake_db = AsyncMock()
     fake_db.add = MagicMock()
     fake_db.commit = AsyncMock()
     fake_db.expire_all = MagicMock()
+
+    disliked_result = MagicMock()
+    disliked_result.scalar_one_or_none.return_value = MagicMock() if exercise_is_disliked else None
+    fake_db.execute = AsyncMock(return_value=disliked_result)
 
     exercise_to_return = catalog_exercise or Exercise(id=20, name="Squat", muscle_group="legs")
 
@@ -67,14 +72,20 @@ def _make_client(
 
     import app.features.sessions.routes as routes_mod
 
+    async def fake_get_or_create_profile(db, user_id):
+        return MagicMock(id=1)
+
     original_load = routes_mod.load_session
+    original_profile = routes_mod._get_or_create_profile
     routes_mod.load_session = fake_load_session
+    routes_mod._get_or_create_profile = fake_get_or_create_profile
 
     try:
         client = TestClient(app)
         yield client, fake_db
     finally:
         routes_mod.load_session = original_load
+        routes_mod._get_or_create_profile = original_profile
         app.dependency_overrides.clear()
 
 
@@ -241,3 +252,20 @@ def test_add_exercise_empty_session_order_zero() -> None:
     assert response.status_code == 200
     added = fake_db.add.call_args[0][0]
     assert added.order == 0
+
+
+def test_add_disliked_exercise_rejected() -> None:
+    workout = _build_workout("planned", exercises=[])
+    gen = _make_client(workout, exercise_is_disliked=True)
+    client, fake_db = next(gen)
+    response = client.post(
+        "/api/sessions/1/exercises",
+        json={
+            "exercise_id": 20,
+            "target_sets": 3,
+            "target_reps": 10,
+        },
+    )
+    assert response.status_code == 422
+    assert "disliked" in response.json()["detail"]
+    fake_db.add.assert_not_called()

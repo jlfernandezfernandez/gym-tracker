@@ -349,7 +349,7 @@ def add_planned_exercise(
     order: int | None = None,
     target_sets: int = 3,
     target_reps: int = 10,
-    suggested_weight: float = 0.0,
+    suggested_weight: float | None = None,
     set_targets: list[dict[str, Any]] | None = None,
     notes: str = "",
     telegram_user_id: int | None = None,
@@ -366,9 +366,10 @@ def add_planned_exercise(
         "exercise_id": int(exercise_id),
         "target_sets": int(target_sets),
         "target_reps": int(target_reps),
-        "suggested_weight": float(suggested_weight),
         "notes": notes,
     }
+    if suggested_weight is not None:
+        payload["suggested_weight"] = float(suggested_weight)
     if order is not None:
         payload["order"] = int(order)
     if set_targets is not None:

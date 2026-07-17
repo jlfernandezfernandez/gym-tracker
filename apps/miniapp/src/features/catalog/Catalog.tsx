@@ -128,9 +128,9 @@ export function Catalog() {
                   <small class="mt-[2px] block text-[.72rem] text-hint">{formatMuscle(exercise.muscle_group)}{exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}</small>
                 </span>
                 <button
-                  class="shrink-0 cursor-pointer rounded-pill border-0 bg-err/10 px-3 py-1.5 text-[.72rem] font-[650] text-err transition active:scale-95"
+                  class="min-h-11 shrink-0 cursor-pointer rounded-pill border-0 bg-err/10 px-3 py-1.5 text-[.72rem] font-[650] text-err transition active:scale-95"
                   onClick={() => undislikeMutation.mutate(exercise.exercise_id)}
-                  disabled={undislikeMutation.isPending}
+                  disabled={undislikeMutation.isPending && undislikeMutation.variables === exercise.exercise_id}
                 >
                   Quitar
                 </button>
@@ -165,9 +165,9 @@ export function Catalog() {
                 <small class="mt-[2px] block text-[.72rem] text-hint">{formatMuscle(exercise.target || exercise.muscle_group)}{exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}</small>
               </button>
               <button
-                class="shrink-0 cursor-pointer rounded-pill border-0 bg-err/10 px-2.5 py-1.5 text-[.72rem] font-[650] text-err transition active:scale-95"
+                class="min-h-11 min-w-11 shrink-0 cursor-pointer rounded-pill border-0 bg-err/10 px-2.5 py-1.5 text-[.72rem] font-[650] text-err transition active:scale-95"
                 onClick={() => dislikeMutation.mutate(exercise.id)}
-                disabled={dislikeMutation.isPending}
+                disabled={dislikeMutation.isPending && dislikeMutation.variables === exercise.id}
                 aria-label={`Marcar ${exercise.name} como no me gusta`}
               >
                 👎
