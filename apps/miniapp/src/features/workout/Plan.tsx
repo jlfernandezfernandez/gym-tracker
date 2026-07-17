@@ -92,7 +92,7 @@ export function Plan() {
 
       {!app.readOnly && plan.status !== 'completed' && (
         <div class="mt-3 flex items-center gap-[9px] [&>button]:min-w-0 [&>button]:flex-1">
-          <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-white transition active:scale-[.975] active:opacity-[.82]" onClick={() => openExercise(currentExercise(plan, currentQuery.data)?.planned_id)}>
+          <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82]" onClick={() => openExercise(currentExercise(plan, currentQuery.data)?.planned_id)}>
             Continuar
           </button>
           <FinishButton sessionId={plan.id} energy={plan.energy} discomfort={plan.discomfort} />

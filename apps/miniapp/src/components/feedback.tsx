@@ -31,7 +31,7 @@ export function Stat({ label, value, surface = false }: { label: string; value: 
 export function BusyButton({
   busy,
   busyLabel,
-  class: cssClass = 'min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-white transition-[transform,opacity] duration-150 ease-[cubic-bezier(.23,1,.32,1)] active:scale-[.97] active:opacity-85 disabled:pointer-events-none disabled:opacity-35',
+  class: cssClass = 'min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition-[transform,opacity] duration-150 ease-[cubic-bezier(.23,1,.32,1)] active:scale-[.97] active:opacity-85 disabled:pointer-events-none disabled:opacity-35',
   onClick,
   children,
 }: {

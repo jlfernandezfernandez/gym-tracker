@@ -116,7 +116,7 @@ export function Home() {
                   <Stat surface label="Reps" value={activeExercise?.reps || "-"} />
                 </div>
               </div>
-              <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-white transition active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(true)}>
+              <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(true)}>
                 Continuar entreno
               </button>
               <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(false)}>
