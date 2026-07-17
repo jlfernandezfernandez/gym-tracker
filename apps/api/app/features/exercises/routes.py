@@ -5,8 +5,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.auth import current_user_id
 from app.core.database import get_session as get_db_session
 from app.features.exercises.schemas import ExerciseFacets
+from app.features.profile.routes import _get_or_create_profile
 from app.features.sessions.schemas import ExerciseOut
-from app.models import BODYWEIGHT_WEIGHT, Exercise, PerformedSet, PlannedExercise, WorkoutSession
+from app.models import (
+    BODYWEIGHT_WEIGHT,
+    AthleteDislikedExercise,
+    Exercise,
+    PerformedSet,
+    PlannedExercise,
+    WorkoutSession,
+)
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
 
@@ -23,9 +31,11 @@ async def list_exercises(
     body_part: str | None = Query(None, description="Filter by body part"),
     equipment: str | None = Query(None, description="Filter by equipment type"),
     search: str | None = Query(None, description="Search by name"),
+    exclude_disliked: bool = Query(False, description="Exclude athlete's disliked exercises"),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
 ):
     """List exercise catalog, optionally filtered by muscle group, equipment or name."""
     statement = select(Exercise)
@@ -37,11 +47,17 @@ async def list_exercises(
     if equipment:
         statement = statement.where(Exercise.equipment == equipment)
     if search:
-        # Word-wise match so "press banca" finds "Press de banca ancho con barra".
         for term in search.split():
             statement = statement.where(
                 Exercise.name.ilike(f"%{term}%") | Exercise.name_en.ilike(f"%{term}%")
             )
+
+    if exclude_disliked:
+        profile = await _get_or_create_profile(db, user_id)
+        disliked_subq = select(AthleteDislikedExercise.exercise_id).where(
+            AthleteDislikedExercise.athlete_id == profile.id
+        )
+        statement = statement.where(Exercise.id.notin_(disliked_subq))
 
     statement = statement.order_by(Exercise.name).offset(offset).limit(limit)
     result = await db.execute(statement)

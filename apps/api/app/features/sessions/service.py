@@ -58,6 +58,18 @@ def start_session(workout: WorkoutSession) -> None:
         workout.started_at = datetime.now(UTC).replace(tzinfo=None)
 
 
+def auto_finish_if_done(workout: WorkoutSession) -> None:
+    planned = workout.planned_exercises or []
+    if not planned or workout.status != "in_progress":
+        return
+    if not all(pe.status in {"completed", "skipped"} for pe in planned):
+        return
+    workout.status = "completed"
+    if workout.started_at and not workout.duration_actual:
+        now = datetime.now(UTC).replace(tzinfo=None)
+        workout.duration_actual = max(1, int((now - workout.started_at).total_seconds() / 60))
+
+
 def current_state(workout: WorkoutSession) -> dict:
     planned = sorted(workout.planned_exercises or [], key=lambda pe: pe.order)
     if workout.status in {"completed", "cancelled"}:

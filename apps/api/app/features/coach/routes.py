@@ -24,6 +24,7 @@ from app.features.sessions.schemas import (
 from app.features.sessions.service import current_state, load_session
 from app.models import (
     BODYWEIGHT_WEIGHT,
+    AthleteDislikedExercise,
     AthleteMeasurement,
     Exercise,
     PerformedSet,
@@ -159,6 +160,22 @@ async def coach_plan(
             detail=(
                 "exercises is required: pick exercises from list_exercises"
                 " and send them in the plan."
+            ),
+        )
+    profile = await _get_or_create_profile(db, user_id)
+    requested_ids = [ex.exercise_id for ex in body.exercises]
+    disliked_result = await db.execute(
+        select(AthleteDislikedExercise.exercise_id).where(
+            AthleteDislikedExercise.athlete_id == profile.id,
+            AthleteDislikedExercise.exercise_id.in_(requested_ids),
+        )
+    )
+    disliked_ids = set(row[0] for row in disliked_result.all())
+    if disliked_ids:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Exercises {sorted(disliked_ids)} are disliked by the athlete. Pick alternatives."
             ),
         )
     workout = WorkoutSession(

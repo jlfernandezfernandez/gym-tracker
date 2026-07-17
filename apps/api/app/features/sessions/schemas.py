@@ -56,6 +56,21 @@ class PlannedExerciseUpdate(BaseModel):
         return self
 
 
+class AddExerciseRequest(BaseModel):
+    exercise_id: int = Field(gt=0)
+    order: int | None = Field(default=None, ge=0)
+    target_sets: int = Field(default=3, ge=1)
+    target_reps: int = Field(default=10, ge=1)
+    suggested_weight: float = Field(default=0.0, ge=-1)
+    notes: str = ""
+    set_targets: list[SetTarget] | None = None
+
+    @model_validator(mode="after")
+    def validate_set_targets(self) -> "AddExerciseRequest":
+        _reject_duplicate_set_numbers(self.set_targets)
+        return self
+
+
 class SessionUpdate(BaseModel):
     session_date: date | None = None
     title: str | None = Field(default=None, min_length=1, max_length=200)

@@ -11,7 +11,6 @@ class AthleteProfileIn(BaseModel):
     goal: str = ""
     experience_level: str = ""
     preferred_exercises: str = ""
-    disliked_exercises: str = ""
     notes: str = ""
     onboarding_complete: bool = False
 
@@ -24,7 +23,6 @@ class AthleteProfilePatch(BaseModel):
     goal: str | None = None
     experience_level: str | None = None
     preferred_exercises: str | None = None
-    disliked_exercises: str | None = None
     notes: str | None = None
     onboarding_complete: bool | None = None
 
