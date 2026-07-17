@@ -1,5 +1,30 @@
 # Changelog
 
+## [2.0.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.2.2...v2.0.0) (2026-07-17)
+
+
+### ⚠ BREAKING CHANGES
+
+* weight is NULL or > 0 — drop the -1 bodyweight sentinel
+
+### Features
+
+* **api,mcp:** add exercise to existing session ([#56](https://github.com/jlfernandezfernandez/gym-tracker/issues/56)) ([f949dad](https://github.com/jlfernandezfernandez/gym-tracker/commit/f949dad6f9056d23be640e71e32fe8a7f345e03e)), closes [#46](https://github.com/jlfernandezfernandez/gym-tracker/issues/46)
+* **api,miniapp,mcp:** support marking and filtering disliked exercises ([004c6d2](https://github.com/jlfernandezfernandez/gym-tracker/commit/004c6d2270ce3d3627cc52d137ef0b6e0076349a))
+* **api,miniapp,mcp:** support marking and filtering disliked exercises ([f3b2cc8](https://github.com/jlfernandezfernandez/gym-tracker/commit/f3b2cc82a99f01a6c0b4ab2ddad3fd73659b665e))
+* **miniapp:** show exercise picker after completing one ([67d99a8](https://github.com/jlfernandezfernandez/gym-tracker/commit/67d99a812fca0ddf7c6930ec4d252ad75f51f232))
+* **miniapp:** show exercise picker after completing one ([83a62c5](https://github.com/jlfernandezfernandez/gym-tracker/commit/83a62c56a4642b76c306110b1d7ef8fe275baf81))
+* support optional/nullable weight for unloaded exercises ([9e0bfa4](https://github.com/jlfernandezfernandez/gym-tracker/commit/9e0bfa4b0fbbe20554fc9257e1814ae60356f52a))
+* weight is NULL or &gt; 0 — drop the -1 bodyweight sentinel ([4fd2372](https://github.com/jlfernandezfernandez/gym-tracker/commit/4fd2372f45c85ecc10ed41c9ff5766ce4a13fe65))
+
+
+### Bug Fixes
+
+* **api:** resolve duplicate alembic revision j0e1f2a3b4c5 ([5cabd7c](https://github.com/jlfernandezfernandez/gym-tracker/commit/5cabd7c1ca94e935340f547802fd4b21e7d12d85))
+* auto-finish session when all exercises done ([#54](https://github.com/jlfernandezfernandez/gym-tracker/issues/54)) ([6d04c9d](https://github.com/jlfernandezfernandez/gym-tracker/commit/6d04c9d87fdec7f63ca2550d5d675955c092ec9e))
+* green CI and harden yesterday's features ([dd13ac9](https://github.com/jlfernandezfernandez/gym-tracker/commit/dd13ac93fadb3114ac1c85d0d4f8d1a3caa71c6d))
+* **miniapp:** resolve TypeScript and build errors on main ([c0cea24](https://github.com/jlfernandezfernandez/gym-tracker/commit/c0cea242e12c40c2a707c1d0982f0b968b3d79b5))
+
 ## [1.2.2](https://github.com/jlfernandezfernandez/gym-tracker/compare/v1.2.1...v1.2.2) (2026-07-16)
 
 
