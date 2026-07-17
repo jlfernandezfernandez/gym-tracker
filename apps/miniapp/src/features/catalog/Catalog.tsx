@@ -1,8 +1,8 @@
 /** Catalog: browse the full exercise library with search, filter and pagination. */
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
-import { formatEquipment, formatMuscle, mediaUrl, showToast } from '../../lib/helpers';
+import { formatEquipment, formatMuscle, mediaUrl } from '../../lib/helpers';
 import { useApp } from '../../app/App';
 import { Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
@@ -11,7 +11,6 @@ const DISLIKED_KEY = '__disliked__';
 
 export function Catalog() {
   const app = useApp();
-  const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [bodyPart, setBodyPart] = useState('');
   const showDisliked = bodyPart === DISLIKED_KEY;
@@ -61,26 +60,12 @@ export function Catalog() {
     return () => observer.disconnect();
   }, []);
 
-  const dislikeMutation = useMutation({
-    mutationFn: (exerciseId: number) => apiFetch('POST', '/disliked-exercises', { exercise_id: exerciseId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['disliked-exercises'] });
-      showToast('Marcado como no me gusta');
-    },
-    onError: () => showToast('Error al marcar', 'err'),
-  });
-
-  const undislikeMutation = useMutation({
-    mutationFn: (exerciseId: number) => apiFetch('DELETE', `/disliked-exercises/${exerciseId}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['disliked-exercises'] });
-      showToast('Eliminado de no me gusta');
-    },
-    onError: () => showToast('Error al eliminar', 'err'),
-  });
-
   const bodyParts: string[] = facetsQuery.data?.body_parts || [];
   const dislikedExercises: any[] = (dislikedQuery.data as any[]) || [];
+  const visibleExercises = showDisliked
+    ? dislikedExercises.map(({ exercise_id, ...exercise }) => ({ ...exercise, id: exercise_id }))
+    : exercises;
+  const isLoading = showDisliked ? dislikedQuery.isLoading : listQuery.isLoading;
 
   return (
     <>
@@ -108,76 +93,36 @@ export function Catalog() {
           </button>
         ))}
       </div>
-      {showDisliked ? (
-        dislikedQuery.isLoading ? (
-          <Loading />
-        ) : !dislikedExercises.length ? (
-          <Empty icon="👍">No tienes ejercicios marcados como "no me gusta".</Empty>
-        ) : (
-          <div class="mt-3 overflow-hidden rounded-card bg-surface [content-visibility:auto] [contain-intrinsic-size:auto_600px]">
-            {dislikedExercises.map((exercise) => (
-              <div
-                key={exercise.exercise_id}
-                class="grid min-h-[68px] w-full grid-cols-[52px_1fr_auto] items-center gap-3 border-b border-edge px-[15px] py-2.5 last:border-b-0"
-              >
-                <span class="grid size-[52px] place-items-center overflow-hidden rounded-xl bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
-                  {exercise.image_url ? <img src={mediaUrl(exercise.image_url)} alt="" loading="lazy" class="size-full object-contain" /> : '🏋️'}
-                </span>
-                <span class="min-w-0">
-                  <b class="block overflow-hidden text-[.88rem] text-ellipsis whitespace-nowrap">{exercise.name}</b>
-                  <small class="mt-[2px] block text-[.72rem] text-hint">{formatMuscle(exercise.muscle_group)}{exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}</small>
-                </span>
-                <button
-                  class="min-h-11 shrink-0 cursor-pointer rounded-pill border-0 bg-err/10 px-3 py-1.5 text-[.72rem] font-[650] text-err transition active:scale-95"
-                  onClick={() => undislikeMutation.mutate(exercise.exercise_id)}
-                  disabled={undislikeMutation.isPending && undislikeMutation.variables === exercise.exercise_id}
-                >
-                  Quitar
-                </button>
-              </div>
-            ))}
-          </div>
-        )
-      ) : listQuery.isLoading ? (
+      {isLoading ? (
         <Loading />
-      ) : !exercises.length ? (
-        <Empty icon="🔍">Nada con ese filtro. Prueba otro nombre.</Empty>
+      ) : !visibleExercises.length ? (
+        <Empty icon={showDisliked ? '👍' : '🔍'}>
+          {showDisliked ? 'No tienes ejercicios marcados como "no me gusta".' : 'Nada con ese filtro. Prueba otro nombre.'}
+        </Empty>
       ) : (
         <div class="mt-3 overflow-hidden rounded-card bg-surface [content-visibility:auto] [contain-intrinsic-size:auto_600px]">
-          {exercises.map((exercise) => (
-            <div
+          {visibleExercises.map((exercise) => (
+            <button
               key={exercise.id}
-              class="grid min-h-[68px] w-full grid-cols-[52px_1fr_auto_auto] items-center gap-3 border-b border-edge px-[15px] py-2.5 last:border-b-0"
+              class="grid min-h-[68px] w-full cursor-pointer grid-cols-[52px_1fr_auto] items-center gap-3 border-0 border-b border-edge bg-transparent px-[15px] py-2.5 text-left last:border-b-0"
+              onClick={() => app.push({ name: 'catalogExercise', exerciseId: exercise.id })}
             >
-              <button
-                class="col-span-1 cursor-pointer border-0 bg-transparent p-0"
-                onClick={() => app.push({ name: 'catalogExercise', exerciseId: exercise.id })}
-              >
-                <span class="grid size-[52px] place-items-center overflow-hidden rounded-xl bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
-                  {exercise.image_url ? <img src={mediaUrl(exercise.image_url)} alt="" loading="lazy" class="size-full object-contain" /> : '🏋️'}
-                </span>
-              </button>
-              <button
-                class="col-span-1 min-w-0 cursor-pointer border-0 bg-transparent p-0 text-left"
-                onClick={() => app.push({ name: 'catalogExercise', exerciseId: exercise.id })}
-              >
+              <span class="grid size-[52px] place-items-center overflow-hidden rounded-xl bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
+                {exercise.image_url ? <img src={mediaUrl(exercise.image_url)} alt="" loading="lazy" class="size-full object-contain" /> : '🏋️'}
+              </span>
+              <span class="min-w-0">
                 <b class="block overflow-hidden text-[.88rem] text-ellipsis whitespace-nowrap text-ink">{exercise.name}</b>
-                <small class="mt-[2px] block text-[.72rem] text-hint">{formatMuscle(exercise.target || exercise.muscle_group)}{exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}</small>
-              </button>
-              <button
-                class="min-h-11 min-w-11 shrink-0 cursor-pointer rounded-pill border-0 bg-err/10 px-2.5 py-1.5 text-[.72rem] font-[650] text-err transition active:scale-95"
-                onClick={() => dislikeMutation.mutate(exercise.id)}
-                disabled={dislikeMutation.isPending && dislikeMutation.variables === exercise.id}
-                aria-label={`Marcar ${exercise.name} como no me gusta`}
-              >
-                👎
-              </button>
+                <small class="mt-[2px] block text-[.72rem] text-hint">
+                  {formatMuscle(exercise.target || exercise.muscle_group)}
+                  {exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}
+                </small>
+              </span>
               <span class="text-[1.4rem] text-divider">›</span>
-            </div>
+            </button>
           ))}
         </div>
       )}
-      {!showDisliked && <div ref={sentinelRef} />}
+      <div ref={sentinelRef} class={showDisliked ? 'hidden' : ''} />
       {listQuery.isFetchingNextPage && <p class="my-3 text-center text-xs">Cargando más...</p>}
     </>
   );

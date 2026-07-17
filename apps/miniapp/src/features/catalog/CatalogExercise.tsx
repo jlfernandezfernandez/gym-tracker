@@ -1,7 +1,7 @@
 /** Catalog detail: demonstration, muscles and technique — no logging. */
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
-import { formatEquipment, formatMuscle, mediaUrl, sessionMuscles } from '../../lib/helpers';
+import { formatEquipment, formatMuscle, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
 import { useApp } from '../../app/App';
 import { Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
@@ -9,9 +9,28 @@ import { BodyMap } from '../../components/visualizations';
 
 export function CatalogExercise({ exerciseId }: { exerciseId: number }) {
   const app = useApp();
+  const queryClient = useQueryClient();
   const exerciseQuery = useQuery({
     queryKey: ['exercise', exerciseId],
     queryFn: () => apiFetch('GET', `/exercises/${exerciseId}`),
+  });
+  const dislikedQuery = useQuery({
+    queryKey: ['disliked-exercises'],
+    queryFn: () => apiFetch('GET', '/disliked-exercises'),
+  });
+  const isDisliked = ((dislikedQuery.data as any[]) || []).some(
+    (exercise) => exercise.exercise_id === exerciseId,
+  );
+  const preferenceMutation = useMutation({
+    mutationFn: () =>
+      isDisliked
+        ? apiFetch('DELETE', `/disliked-exercises/${exerciseId}`)
+        : apiFetch('POST', '/disliked-exercises', { exercise_id: exerciseId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['disliked-exercises'] });
+      showToast(isDisliked ? 'Eliminado de no me gusta' : 'Marcado como no me gusta');
+    },
+    onError: () => showToast('No pude cambiar la preferencia', 'err'),
   });
   const exercise = exerciseQuery.data;
 
@@ -44,6 +63,13 @@ export function CatalogExercise({ exerciseId }: { exerciseId: number }) {
           </p>
         </div>
       </div>
+      <button
+        class={`min-h-[50px] w-full cursor-pointer rounded-2xl border-0 px-[17px] py-[13px] text-[.94rem] font-[720] transition active:scale-[.975] disabled:pointer-events-none disabled:opacity-35 ${isDisliked ? 'bg-surface text-err shadow-[inset_0_0_0_1px_var(--color-edge)]' : 'bg-err/10 text-err'}`}
+        disabled={dislikedQuery.isLoading || preferenceMutation.isPending}
+        onClick={() => preferenceMutation.mutate()}
+      >
+        {isDisliked ? 'Quitar de no me gusta' : '👎 No me gusta'}
+      </button>
       {instructions && (
         <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
           <h3>Técnica</h3>
