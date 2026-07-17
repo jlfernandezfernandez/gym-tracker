@@ -147,3 +147,27 @@ def test_set_targets_beyond_target_sets_trimmed_by_update_route():
     )
     assert spec.set_targets is not None
     assert spec.set_targets[0].set_number == 4
+
+
+def test_set_targets_can_be_nullable():
+    """Schemas and models allow None for weights."""
+    spec = PlannedExerciseCreate(
+        exercise_id=1,
+        order=0,
+        suggested_weight=None,
+        set_targets=[
+            SetTarget(set_number=1, weight=None, reps=10),
+        ],
+    )
+    assert spec.suggested_weight is None
+    assert spec.set_targets[0].weight is None
+
+    pe = PlannedExercise(
+        session_id=1,
+        exercise_id=1,
+        order=0,
+        suggested_weight=None,
+        set_targets=[{"set_number": 1, "weight": None, "reps": 10}],
+    )
+    assert pe.suggested_weight is None
+    assert pe.weight_mode == "unloaded"

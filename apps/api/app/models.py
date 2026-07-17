@@ -8,8 +8,12 @@ from sqlmodel import Field, Relationship, SQLModel
 BODYWEIGHT_WEIGHT = -1.0
 
 
-def weight_mode(weight: float) -> str:
-    return "bodyweight" if weight == BODYWEIGHT_WEIGHT else "weighted" if weight > 0 else "unloaded"
+def weight_mode(weight: float | None) -> str:
+    if weight == BODYWEIGHT_WEIGHT:
+        return "bodyweight"
+    if weight is not None and weight > 0:
+        return "weighted"
+    return "unloaded"
 
 
 class Exercise(SQLModel, table=True):
@@ -75,7 +79,7 @@ class WorkoutSession(SQLModel, table=True):
     @property
     def total_volume(self) -> float:
         return sum(
-            max(performed_set.weight, 0) * performed_set.reps
+            max(performed_set.weight or 0, 0) * performed_set.reps
             for planned_exercise in self.planned_exercises or []
             for performed_set in planned_exercise.performed_sets or []
         )
@@ -98,7 +102,7 @@ class PlannedExercise(SQLModel, table=True):
     order: int = Field(default=0)
     target_sets: int = Field(default=3)
     target_reps: int = Field(default=10)
-    suggested_weight: float = Field(default=0.0)
+    suggested_weight: float | None = Field(default=None)
     notes: str = Field(default="")
     status: str = Field(default="pending")
     set_targets: list | None = Field(default=None, sa_type=sa.JSON)
@@ -121,7 +125,7 @@ class PerformedSet(SQLModel, table=True):
     id: int = Field(default=None, primary_key=True)
     planned_exercise_id: int = Field(foreign_key="planned_exercises.id")
     set_number: int = Field(default=1)
-    weight: float = Field(default=0.0)
+    weight: float | None = Field(default=None)
     reps: int = Field(default=0)
     rpe: float | None = Field(default=None, ge=1.0, le=10.0)
     sensation: str = Field(default="")

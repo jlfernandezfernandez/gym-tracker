@@ -12,8 +12,8 @@ export const formatMuscle = (muscle: string) => {
   return EXERCISE_TAXONOMY[value.toLowerCase()]?.es || (value ? value[0].toUpperCase() + value.slice(1) : '');
 };
 
-export const formatWeight = (weight: number, mode: string) =>
-  mode === 'bodyweight' ? 'Peso corporal' : mode === 'unloaded' ? 'Sin carga' : `${weight} kg`;
+export const formatWeight = (weight: number | null | undefined, mode: string) =>
+  mode === 'bodyweight' ? 'Peso corporal' : weight != null ? `${weight} kg` : '';
 
 export const formatEquipment = (equipment: string) =>
   EQUIPMENT_ES[String(equipment || '').toLowerCase()] || equipment;
@@ -33,7 +33,7 @@ export function normalizeSession(session: any) {
       order: plannedExercise.order,
       sets: plannedExercise.target_sets || 3,
       reps: plannedExercise.target_reps || 10,
-      weight: plannedExercise.suggested_weight || 0,
+      weight: plannedExercise.suggested_weight,
       weight_mode: plannedExercise.weight_mode,
       notes: plannedExercise.notes || '',
       status: plannedExercise.status || 'pending',
@@ -72,6 +72,10 @@ export function sessionMuscles(exercises: any[]) {
 }
 
 export const completedSetCount = (exercise: any) => exercise.performed_sets?.length || 0;
+
+export function parseWeight(raw: string): number {
+  return Number((raw || '0').replace(',', '.'));
+}
 export function currentExercise(plan: any, currentState: any) {
   const currentPlannedId = currentState?.current_planned_exercise_id;
   return (

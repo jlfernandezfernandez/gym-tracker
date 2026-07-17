@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
 import { chartUsesWeight, type ProgressPoint } from '../../lib/chart';
-import { completedSetCount, formatMuscle, formatWeight, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
+import { completedSetCount, formatMuscle, formatWeight, mediaUrl, parseWeight, sessionMuscles, showToast } from '../../lib/helpers';
 import { haptic } from '../../lib/telegram';
 import { useApp, useSession } from '../../app/App';
 import { BusyButton, Empty, Loading } from '../../components/feedback';
@@ -33,7 +33,7 @@ function SetRow({ set, sessionId, plannedId, exerciseId, readOnly }: { set: any;
     <div class="flex items-center justify-between gap-2.5 rounded-control bg-surface-2 px-[13px] py-3" key={set.id}>
       <span class="text-[.78rem] text-hint">Serie {set.set_number}</span>
       <span class="flex items-center gap-[9px] text-[.83rem] font-bold">
-        {set.reps} reps · {formatWeight(set.weight, set.weight_mode)}
+        {set.reps} reps{formatWeight(set.weight, set.weight_mode) ? ` · ${formatWeight(set.weight, set.weight_mode)}` : ''}
         {!readOnly && (
           <button class="min-h-9 min-w-9 cursor-pointer rounded-pill border-0 bg-transparent text-err disabled:opacity-30" disabled={del.isPending} onClick={() => del.mutate()} aria-label="Borrar serie">
             ✕
@@ -145,7 +145,7 @@ function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
     ? Math.max(...points.map((point) => point.top_weight || 0))
     : Math.max(...points.map((point) => point.top_reps || 0));
   const last = points[points.length - 1];
-  const lastValue = usesWeight ? last.top_weight : last.top_reps || 0;
+  const lastValue = usesWeight ? (last.top_weight || 0) : (last.top_reps || 0);
 
   return (
     <>
@@ -223,7 +223,7 @@ function LogSetForm({
   const previousSet = exercise.performed_sets?.at(-1);
   // The backend gives bodyweight exercises their fixed sentinel value.
   const isBodyweight = exercise.weight_mode === 'bodyweight';
-  const [weight, setWeight] = useState(String(setTarget?.weight ?? previousSet?.weight ?? exercise.weight ?? 0));
+  const [weight, setWeight] = useState(String(setTarget?.weight ?? previousSet?.weight ?? exercise.weight ?? ''));
   const [reps, setReps] = useState(String(setTarget?.reps ?? previousSet?.reps ?? exercise.reps ?? 10));
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
   const isLastSet = nextSetNumber >= (exercise.sets || 1);
@@ -237,10 +237,10 @@ function LogSetForm({
   };
 
   const logSet = useMutation({
-    mutationFn: () =>
+    mutationFn: (normalizedWeight: number | null) =>
       apiFetch('POST', `/sessions/${sessionId}/exercises/${exercise.planned_id}/sets`, {
         set_number: loggedSetCount + 1,
-        weight: parseFloat(weight || '0'),
+        weight: normalizedWeight,
         reps: parseInt(reps || '0'),
         sensation: 'ok',
         notes: '',
@@ -277,7 +277,20 @@ function LogSetForm({
       showToast('Pon las reps', 'err');
       return;
     }
-    logSet.mutate();
+    if (isBodyweight) {
+      logSet.mutate(null);
+      return;
+    }
+    if (weight.trim() === '') {
+      logSet.mutate(null);
+      return;
+    }
+    const normalizedWeight = parseWeight(weight);
+    if (isNaN(normalizedWeight)) {
+      showToast('Peso no válido', 'err');
+      return;
+    }
+    logSet.mutate(normalizedWeight);
   };
 
   const isBusy = logSet.isPending || completeExercise.isPending;
@@ -286,7 +299,7 @@ function LogSetForm({
     <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
       {setTarget && (
         <p class="mb-2 text-[.72rem] font-[650] text-accent">
-          Objetivo: {isBodyweight ? 'Peso corporal' : `${setTarget.weight} kg`} × {setTarget.reps} reps
+          Objetivo: {isBodyweight ? `Peso corporal × ${setTarget.reps} reps` : setTarget.weight != null ? `${setTarget.weight} kg × ${setTarget.reps} reps` : `${setTarget.reps} reps`}
         </p>
       )}
       <div class="flex items-stretch gap-[9px]">

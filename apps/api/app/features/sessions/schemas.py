@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class SetTarget(BaseModel):
     set_number: int = Field(ge=1)
-    weight: float = Field(default=0.0, ge=-1)
+    weight: float | None = Field(default=None, ge=-1)
     reps: int = Field(default=10, ge=1)
 
 
@@ -24,7 +24,7 @@ class PlannedExerciseCreate(BaseModel):
     order: int = Field(default=0, ge=0)
     target_sets: int = Field(default=3, ge=1)
     target_reps: int = Field(default=10, ge=1)
-    suggested_weight: float = Field(default=0.0, ge=-1)
+    suggested_weight: float | None = Field(default=None, ge=-1)
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
@@ -36,7 +36,7 @@ class PlannedExerciseCreate(BaseModel):
 
 class PerformedSetCreate(BaseModel):
     set_number: int = Field(ge=1)
-    weight: float = Field(default=0.0, ge=-1)
+    weight: float | None = Field(default=None, ge=-1)
     reps: int = Field(ge=1)
     rpe: float | None = None
     sensation: str = ""
@@ -91,7 +91,7 @@ class CoachPlanRequest(BaseModel):
 
 
 class ImportSet(BaseModel):
-    weight: float = Field(default=0.0, ge=-1)
+    weight: float | None = Field(default=None, ge=-1)
     reps: int = Field(ge=1)
     rpe: float | None = Field(default=None, ge=1, le=10)
     notes: str = ""
@@ -139,7 +139,7 @@ class ExerciseOut(BaseModel):
 class PerformedSetOut(BaseModel):
     id: int
     set_number: int
-    weight: float
+    weight: float | None
     weight_mode: Literal["bodyweight", "unloaded", "weighted"]
     reps: int
     rpe: float | None = None
@@ -154,7 +154,7 @@ class PlannedExerciseOut(BaseModel):
     order: int
     target_sets: int
     target_reps: int
-    suggested_weight: float
+    suggested_weight: float | None
     weight_mode: Literal["bodyweight", "unloaded", "weighted"]
     notes: str
     status: str

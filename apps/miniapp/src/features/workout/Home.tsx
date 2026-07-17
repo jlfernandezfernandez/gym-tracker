@@ -49,7 +49,7 @@ export function Home() {
     : "";
   const lastSet =
     activeExercise?.performed_sets?.[activeExercise.performed_sets.length - 1];
-  const nextWeight = lastSet?.weight ?? activeExercise?.weight ?? 0;
+  const nextWeight = lastSet?.weight ?? activeExercise?.weight ?? null;
   const doneSetCount = activeExercise?.performed_sets?.length || 0;
   const totalSetCount = activeExercise?.sets || currentState?.target_sets || 0;
 
@@ -112,7 +112,7 @@ export function Home() {
                   ))}
                 </div>
                 <div class="grid grid-cols-2 gap-[9px]">
-                  <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode)} />
+                  <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode) || '—'} />
                   <Stat surface label="Reps" value={activeExercise?.reps || "-"} />
                 </div>
               </div>

@@ -89,7 +89,7 @@ async def personal_records(
         statement = statement.where(WorkoutSession.telegram_user_id == user_id)
     statement = statement.order_by(
         Exercise.id,
-        PerformedSet.weight.desc(),
+        PerformedSet.weight.desc().nulls_last(),  # pyright: ignore[reportOptionalMemberAccess]
         PerformedSet.reps.desc(),
         WorkoutSession.session_date.desc(),
         PerformedSet.id.desc(),
@@ -118,7 +118,7 @@ async def personal_records(
                 # The first row is one real best set, never a synthetic weight/reps pair.
                 "max_weight": BODYWEIGHT_WEIGHT
                 if equipment == "body weight"
-                else float(weight or 0),
+                else (float(weight) if weight is not None else None),
                 "max_reps": int(reps or 0),
                 "weight_mode": weight_mode(equipment == "body weight", weight),
                 "last_date": session_date,
@@ -155,7 +155,7 @@ async def exercise_progress(
             func.max(PerformedSet.weight),
             func.max(PerformedSet.reps),
             func.sum(
-                case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)
+                case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)  # pyright: ignore[reportOptionalOperand]
             ),
             func.count(PerformedSet.id),
         )
@@ -175,9 +175,9 @@ async def exercise_progress(
         {
             "session_id": session_id,
             "date": session_date.isoformat(),
-            "top_weight": float(top_weight or 0)
-            if not exercise.is_bodyweight
-            else BODYWEIGHT_WEIGHT,
+            "top_weight": BODYWEIGHT_WEIGHT
+            if exercise.is_bodyweight
+            else (float(top_weight) if top_weight is not None else None),
             "top_reps": int(top_reps or 0),
             "volume": float(volume or 0) if not exercise.is_bodyweight else 0,
             "weight_mode": weight_mode(exercise.is_bodyweight, top_weight),

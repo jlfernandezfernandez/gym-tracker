@@ -123,7 +123,10 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
             {exercise.set_targets
               ? [...exercise.set_targets]
                   .sort((a: any, b: any) => a.set_number - b.set_number)
-                  .map((t: any) => `${formatWeight(t.weight, exercise.weight_mode)}×${t.reps}`)
+                  .map((t: any) => {
+                    const w = formatWeight(t.weight, exercise.weight_mode);
+                    return w ? `${w}×${t.reps}` : `${t.reps} reps`;
+                  })
                   .join(' · ')
               : `${exercise.sets}×${exercise.reps}`}
           </span>

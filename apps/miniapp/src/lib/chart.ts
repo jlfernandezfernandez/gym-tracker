@@ -8,7 +8,7 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryS
 
 export interface ProgressPoint {
   date: string;
-  top_weight: number;
+  top_weight: number | null;
   weight_mode: 'bodyweight' | 'unloaded' | 'weighted';
   top_reps?: number;
   volume: number;
@@ -35,7 +35,7 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
   const accentColor = COLORS.accent();
   const hintColor = COLORS.hint();
   const usesWeight = chartUsesWeight(points);
-  const values = points.map((point) => (usesWeight ? point.top_weight : point.top_reps || 0));
+  const values = points.map((point) => (usesWeight ? point.top_weight || 0 : point.top_reps || 0));
 
   return new Chart(canvas, {
     type: 'line',
@@ -65,7 +65,7 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
             label: (tooltipContext) => {
               const point = points[tooltipContext.dataIndex];
               return usesWeight
-                ? [`máx ${point.top_weight} kg`, `${point.sets} series · ${Math.round(point.volume)} kg vol`]
+                ? [`máx ${point.top_weight || 0} kg`, `${point.sets} series · ${Math.round(point.volume)} kg vol`]
                 : [`máx ${point.top_reps || 0} reps`, `${point.sets} series`];
             },
           },
