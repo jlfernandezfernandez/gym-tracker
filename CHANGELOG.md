@@ -1,5 +1,13 @@
 # Changelog
 
+## [2.1.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.1.0...v2.1.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* **api:** make weight column nullable before writing NULLs ([9f16e35](https://github.com/jlfernandezfernandez/gym-tracker/commit/9f16e359d3566dab337f0201107a6bc41555e6f7))
+* **api:** weight migration crashed on scalar-null set_targets ([e93af69](https://github.com/jlfernandezfernandez/gym-tracker/commit/e93af69b37300b7314fb57e4e772a7452c6890d7))
+
 ## [2.1.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.0.0...v2.1.0) (2026-07-17)
 
 
