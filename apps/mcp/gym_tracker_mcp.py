@@ -256,6 +256,8 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
                       {"set_number": 2, "weight": 45, "reps": 10},
                       {"set_number": 3, "weight": 50, "reps": 8}]}]
     Required: pick the exercises yourself from list_exercises; the API rejects empty plans.
+    Always give suggested_weight for loaded (non-bodyweight) exercises, based on the
+    athlete's history (get_snapshot); omit it only for bodyweight movements.
     """
     if telegram_user_id is None:
         raise ValueError(
@@ -361,6 +363,8 @@ def add_planned_exercise(
     set_targets: per-set weight/reps overrides, e.g.
     [{"set_number": 1, "weight": 40, "reps": 12},
      {"set_number": 2, "weight": 45, "reps": 10}]
+    Always give suggested_weight for loaded (non-bodyweight) exercises, based on the
+    athlete's history; omit it only for bodyweight movements.
     """
     payload: dict[str, Any] = {
         "exercise_id": int(exercise_id),
