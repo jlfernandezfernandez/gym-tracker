@@ -8,6 +8,7 @@ import {
   formatEquipment,
   formatMuscle,
   formatStatus,
+  formatWeight,
   mediaUrl,
   sessionMuscles,
   showToast,

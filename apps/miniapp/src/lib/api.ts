@@ -4,7 +4,7 @@ import { tg } from './telegram';
 
 const API_BASE = location.origin + '/api';
 
-export async function apiFetch<T = unknown>(method: string, path: string, body?: unknown): Promise<T> {
+export async function apiFetch<T = any>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (tg?.initData && tg.initData.length > 10) headers['X-Telegram-Init-Data'] = tg.initData;
 

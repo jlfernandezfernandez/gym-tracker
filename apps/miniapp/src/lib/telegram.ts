@@ -9,7 +9,7 @@ if (tg) {
 
 export const inTelegram = () => !!(tg?.initData && tg.initData.length > 10);
 
-export function haptic(feedback?: 'ok' | 'bad') {
+export function haptic(feedback?: 'ok' | 'bad' | 'light') {
   try {
     if (!tg) return;
     feedback === 'ok'
