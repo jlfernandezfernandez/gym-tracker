@@ -1,7 +1,7 @@
 """Nullable weight for unloaded exercises.
 
-Revision ID: j0e1f2a3b4c5
-Revises: i9d0e1f2a3b4
+Revision ID: k1f2a3b4c5d6
+Revises: j0e1f2a3b4c5
 Create Date: 2026-07-16
 """
 
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "j0e1f2a3b4c5"
-down_revision: str | None = "i9d0e1f2a3b4"
+revision: str = "k1f2a3b4c5d6"
+down_revision: str | None = "j0e1f2a3b4c5"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
