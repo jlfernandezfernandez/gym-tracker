@@ -103,7 +103,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
                 sessionId={plan.id}
                 plannedId={exercise.planned_id}
                 exerciseId={exercise.exercise_id}
-                readOnly={app.readOnly}
+                readOnly={app.readOnly || plan.status === 'completed'}
               />
             ))}
           </div>
