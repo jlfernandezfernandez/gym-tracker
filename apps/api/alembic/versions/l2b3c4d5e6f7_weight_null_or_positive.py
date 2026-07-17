@@ -18,6 +18,14 @@ depends_on: str | Sequence[str] | None = None
 def upgrade() -> None:
     op.execute("UPDATE performed_sets SET weight = NULL WHERE weight <= 0")
     op.execute("UPDATE planned_exercises SET suggested_weight = NULL WHERE suggested_weight <= 0")
+    # Legacy rows may hold a JSON scalar null instead of an array; normalize
+    # them first — jsonb_array_elements refuses scalars.
+    op.execute(
+        """
+        UPDATE planned_exercises SET set_targets = NULL
+        WHERE set_targets IS NOT NULL AND jsonb_typeof(set_targets::jsonb) <> 'array'
+        """
+    )
     op.execute(
         """
         UPDATE planned_exercises SET set_targets = (
@@ -27,7 +35,7 @@ def upgrade() -> None:
             )
             FROM jsonb_array_elements(set_targets::jsonb) AS t
         )
-        WHERE set_targets IS NOT NULL
+        WHERE set_targets IS NOT NULL AND set_targets::jsonb <> '[]'::jsonb
         """
     )
     op.create_check_constraint(
