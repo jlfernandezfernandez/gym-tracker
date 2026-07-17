@@ -187,7 +187,7 @@ async def exercise_progress(
             "date": session_date.isoformat(),
             "top_weight": float(top_weight) if top_weight is not None else None,
             "top_reps": int(top_reps or 0),
-            "volume": float(volume or 0) if not exercise.is_unloaded else 0,
+            "volume": float(volume or 0),
             "weight_mode": weight_mode(exercise.is_unloaded, top_weight),
             "sets": set_count,
         }
