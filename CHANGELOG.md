@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.2.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.1.1...v2.2.0) (2026-07-17)
+
+
+### Features
+
+* **miniapp:** simplify exercise actions ([#61](https://github.com/jlfernandezfernandez/gym-tracker/issues/61)) ([2a1ee61](https://github.com/jlfernandezfernandez/gym-tracker/commit/2a1ee61c446ebf628c665ca57f529c7de6da716f))
+
 ## [2.1.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.1.0...v2.1.1) (2026-07-17)
 
 
