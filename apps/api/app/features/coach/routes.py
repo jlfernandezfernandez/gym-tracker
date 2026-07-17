@@ -22,9 +22,8 @@ from app.features.sessions.schemas import (
     SessionOut,
     SessionSummary,
 )
-from app.features.sessions.service import current_state, load_session
+from app.features.sessions.service import current_state, load_session, validate_exercise_weight
 from app.models import (
-    BODYWEIGHT_WEIGHT,
     AthleteMeasurement,
     Exercise,
     PerformedSet,
@@ -190,18 +189,12 @@ async def coach_plan(
             raise HTTPException(
                 status_code=422, detail=f"Exercise {exercise_spec.exercise_id} not found"
             )
-        if exercise.is_bodyweight:
-            suggested_weight = BODYWEIGHT_WEIGHT
-        elif exercise_spec.suggested_weight == BODYWEIGHT_WEIGHT:
-            raise HTTPException(
-                status_code=422, detail="-1 weight is reserved for bodyweight exercises"
-            )
+        validate_exercise_weight(exercise, exercise_spec.suggested_weight)
         set_targets_data = None
         if exercise_spec.set_targets:
             set_targets_data = [t.model_dump() for t in exercise_spec.set_targets]
-            if exercise.is_bodyweight:
-                for t in set_targets_data:
-                    t["weight"] = BODYWEIGHT_WEIGHT
+            for t in set_targets_data:
+                validate_exercise_weight(exercise, t.get("weight"))
         db.add(
             PlannedExercise(
                 session_id=workout.id,
@@ -209,9 +202,7 @@ async def coach_plan(
                 order=exercise_spec.order,
                 target_sets=exercise_spec.target_sets,
                 target_reps=exercise_spec.target_reps,
-                suggested_weight=suggested_weight
-                if exercise.is_bodyweight
-                else exercise_spec.suggested_weight,
+                suggested_weight=exercise_spec.suggested_weight,
                 notes=exercise_spec.notes,
                 set_targets=set_targets_data,
             )
@@ -257,24 +248,19 @@ async def coach_import(
             order=exercise_spec.order,
             target_sets=len(exercise_spec.sets),
             target_reps=exercise_spec.sets[0].reps,
-            suggested_weight=BODYWEIGHT_WEIGHT
-            if exercise.is_bodyweight
-            else exercise_spec.sets[0].weight,
+            suggested_weight=exercise_spec.sets[0].weight,
             notes=exercise_spec.notes,
             status="completed",
         )
         db.add(planned)
         await db.flush()
         for set_number, set_spec in enumerate(exercise_spec.sets, start=1):
-            if not exercise.is_bodyweight and set_spec.weight == BODYWEIGHT_WEIGHT:
-                raise HTTPException(
-                    status_code=422, detail="-1 weight is reserved for bodyweight exercises"
-                )
+            validate_exercise_weight(exercise, set_spec.weight)
             db.add(
                 PerformedSet(
                     planned_exercise_id=planned.id,
                     set_number=set_number,
-                    weight=BODYWEIGHT_WEIGHT if exercise.is_bodyweight else set_spec.weight,
+                    weight=set_spec.weight,
                     reps=set_spec.reps,
                     rpe=set_spec.rpe,
                     notes=set_spec.notes,

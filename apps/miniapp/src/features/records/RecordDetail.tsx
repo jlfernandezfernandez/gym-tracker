@@ -35,7 +35,7 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
             <div class="grid grid-cols-3 gap-[9px]">
               <Stat label="Máximo" value={usesWeight ? `${maxWeight} kg` : `${maxReps} reps`} />
               <Stat label="Sesiones" value={points.length} />
-              <Stat label="Última" value={usesWeight ? `${latestPoint.top_weight || 0} kg` : `${latestPoint.top_reps} reps`} />
+              <Stat label="Última" value={usesWeight && latestPoint.top_weight ? `${latestPoint.top_weight} kg` : `${latestPoint.top_reps} reps`} />
             </div>
           </div>
           {points.length >= 2 && (
@@ -59,7 +59,7 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
                 <span class="text-[.74rem] text-hint">{formatDate(point.date)}</span>
                 <span class="min-w-0">
                   <b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">
-                    {usesWeight ? `${point.top_weight || 0} kg` : `${point.top_reps} reps`}
+                    {usesWeight && point.top_weight ? `${point.top_weight} kg` : `${point.top_reps} reps`}
                     {point.sets > 1 ? ` · ${point.sets} series` : ' · 1 serie'}
                   </b>
                   <small class="mt-[3px] block text-[.72rem] text-hint">

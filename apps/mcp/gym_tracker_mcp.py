@@ -296,7 +296,8 @@ def import_completed_session(
     never invent catalog ids. exercises is a native MCP array:
     [{"exercise_id": 12, "order": 0, "notes": "",
       "sets": [{"weight": 40.0, "reps": 10, "rpe": 8.0}, {"weight": 40.0, "reps": 8}]}]
-    Bodyweight exercises: send weight 0; the backend stores -1 itself.
+    Unloaded exercises (bodyweight, bands, cardio): omit weight entirely —
+    weight is either absent/null or a number > 0, never 0 or -1.
     telegram_user_id is required so the session belongs to the athlete.
     """
     if telegram_user_id is None:
@@ -318,15 +319,20 @@ def training_snapshot(telegram_user_id: int, session_limit: int = 5) -> dict[str
 
 
 @mcp.tool()
-def log_set(session_id: int, planned_exercise_id: int, set_number: int, reps: int, weight: float = 0.0, rpe: float | None = None, sensation: str = "", notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Log one performed set. The backend assigns -1 to bodyweight exercises."""
+def log_set(session_id: int, planned_exercise_id: int, set_number: int, reps: int, weight: float | None = None, rpe: float | None = None, sensation: str = "", notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Log one performed set.
+
+    weight: kg > 0 for loaded exercises; omit for unloaded ones (bodyweight,
+    bands, cardio) — 0 and -1 are rejected by the API.
+    """
     payload: dict[str, Any] = {
         "set_number": int(set_number),
-        "weight": float(weight),
         "reps": int(reps),
         "sensation": sensation,
         "notes": notes,
     }
+    if weight is not None:
+        payload["weight"] = float(weight)
     if rpe is not None:
         payload["rpe"] = float(rpe)
     return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets", payload, user_id=telegram_user_id)

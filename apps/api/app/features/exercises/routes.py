@@ -9,21 +9,16 @@ from app.features.exercises.schemas import ExerciseFacets
 from app.features.profile.routes import _get_or_create_profile
 from app.features.sessions.schemas import ExerciseOut
 from app.models import (
-    BODYWEIGHT_WEIGHT,
+    UNLOADED_EQUIPMENT,
     AthleteDislikedExercise,
     Exercise,
     PerformedSet,
     PlannedExercise,
     WorkoutSession,
+    weight_mode,
 )
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
-
-
-def weight_mode(is_bodyweight: bool, top_weight) -> str:
-    if is_bodyweight:
-        return "bodyweight"
-    return "weighted" if top_weight and top_weight > 0 else "unloaded"
 
 
 @router.get("", response_model=list[ExerciseOut])
@@ -133,11 +128,9 @@ async def personal_records(
                 "equipment": equipment,
                 "image_url": image_url,
                 # The first row is one real best set, never a synthetic weight/reps pair.
-                "max_weight": BODYWEIGHT_WEIGHT
-                if equipment == "body weight"
-                else (float(weight) if weight is not None else None),
+                "max_weight": float(weight) if weight is not None else None,
                 "max_reps": int(reps or 0),
-                "weight_mode": weight_mode(equipment == "body weight", weight),
+                "weight_mode": weight_mode(equipment in UNLOADED_EQUIPMENT, weight),
                 "last_date": session_date,
                 "sessions": {session_id},
             }
@@ -192,12 +185,10 @@ async def exercise_progress(
         {
             "session_id": session_id,
             "date": session_date.isoformat(),
-            "top_weight": BODYWEIGHT_WEIGHT
-            if exercise.is_bodyweight
-            else (float(top_weight) if top_weight is not None else None),
+            "top_weight": float(top_weight) if top_weight is not None else None,
             "top_reps": int(top_reps or 0),
-            "volume": float(volume or 0) if not exercise.is_bodyweight else 0,
-            "weight_mode": weight_mode(exercise.is_bodyweight, top_weight),
+            "volume": float(volume or 0) if not exercise.is_unloaded else 0,
+            "weight_mode": weight_mode(exercise.is_unloaded, top_weight),
             "sets": set_count,
         }
         for session_id, session_date, top_weight, top_reps, volume, set_count in reversed(rows)

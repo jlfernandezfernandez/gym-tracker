@@ -27,9 +27,9 @@ from app.features.sessions.service import (
     load_session,
     set_conflict_error,
     start_session,
+    validate_exercise_weight,
 )
 from app.models import (
-    BODYWEIGHT_WEIGHT,
     Exercise,
     PerformedSet,
     PlannedExercise,
@@ -143,10 +143,8 @@ async def update_planned_exercise(
         planned_exercise.notes = body.notes
     if body.set_targets is not None:
         set_targets_data = [t.model_dump() for t in body.set_targets]
-        # Coerce bodyweight exercises to BODYWEIGHT_WEIGHT sentinel
-        if planned_exercise.exercise.is_bodyweight:
-            for t in set_targets_data:
-                t["weight"] = BODYWEIGHT_WEIGHT
+        for t in set_targets_data:
+            validate_exercise_weight(planned_exercise.exercise, t.get("weight"))
         planned_exercise.set_targets = set_targets_data
     # Trim set_targets when target_sets is lowered (avoid orphan targets)
     if planned_exercise.set_targets and planned_exercise.target_sets:
@@ -209,22 +207,13 @@ async def add_planned_exercise(
             if pe.order >= order:
                 pe.order += 1
 
-    if exercise.is_bodyweight:
-        suggested_weight = BODYWEIGHT_WEIGHT
-    elif body.suggested_weight == BODYWEIGHT_WEIGHT:
-        raise HTTPException(
-            status_code=422,
-            detail="-1 weight is reserved for bodyweight exercises",
-        )
-    else:
-        suggested_weight = body.suggested_weight
+    validate_exercise_weight(exercise, body.suggested_weight)
 
     set_targets_data = None
     if body.set_targets:
         set_targets_data = [t.model_dump() for t in body.set_targets]
-        if exercise.is_bodyweight:
-            for t in set_targets_data:
-                t["weight"] = BODYWEIGHT_WEIGHT
+        for t in set_targets_data:
+            validate_exercise_weight(exercise, t.get("weight"))
 
     db.add(
         PlannedExercise(
@@ -233,7 +222,7 @@ async def add_planned_exercise(
             order=order,
             target_sets=body.target_sets,
             target_reps=body.target_reps,
-            suggested_weight=suggested_weight,
+            suggested_weight=body.suggested_weight,
             notes=body.notes,
             set_targets=set_targets_data,
         )
@@ -308,14 +297,7 @@ async def log_set(
     check_session_owner(workout, user_id)
     planned_exercise = find_planned_exercise(workout, planned_id)
 
-    if planned_exercise.exercise.is_bodyweight:
-        weight = BODYWEIGHT_WEIGHT
-    elif body.weight == BODYWEIGHT_WEIGHT:
-        raise HTTPException(
-            status_code=422, detail="-1 weight is reserved for bodyweight exercises"
-        )
-    else:
-        weight = body.weight
+    validate_exercise_weight(planned_exercise.exercise, body.weight)
 
     logged_set_count = len(planned_exercise.performed_sets or [])
     if body.set_number != logged_set_count + 1 or logged_set_count >= planned_exercise.target_sets:
@@ -326,7 +308,7 @@ async def log_set(
     performed_set = PerformedSet(
         planned_exercise_id=planned_id,
         set_number=body.set_number,
-        weight=weight,
+        weight=body.weight,
         reps=body.reps,
         rpe=body.rpe,
         sensation=body.sensation,

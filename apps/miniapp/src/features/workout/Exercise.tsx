@@ -300,8 +300,8 @@ function LogSetForm({
       return;
     }
     const normalizedWeight = parseWeight(weight);
-    if (isNaN(normalizedWeight)) {
-      showToast('Peso no válido', 'err');
+    if (isNaN(normalizedWeight) || normalizedWeight <= 0) {
+      showToast('El peso debe ser mayor que 0; déjalo vacío si no hay carga', 'err');
       return;
     }
     logSet.mutate(normalizedWeight);

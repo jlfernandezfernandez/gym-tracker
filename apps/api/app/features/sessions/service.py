@@ -6,7 +6,16 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import PlannedExercise, WorkoutSession
+from app.models import Exercise, PlannedExercise, WorkoutSession
+
+
+def validate_exercise_weight(exercise: Exercise, weight: float | None) -> None:
+    """Weight is NULL or > 0; unloaded equipment (bodyweight, bands, cardio) takes none."""
+    if exercise.is_unloaded and weight is not None:
+        raise HTTPException(
+            status_code=422,
+            detail=f"'{exercise.equipment}' exercises take no weight; omit it",
+        )
 
 
 def set_conflict_error(error: IntegrityError) -> HTTPException:

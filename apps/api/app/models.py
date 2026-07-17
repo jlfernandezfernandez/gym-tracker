@@ -5,11 +5,28 @@ import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-BODYWEIGHT_WEIGHT = -1.0
+# Equipment whose load cannot be expressed in kg: own body, elastics, balance
+# tools and cardio machines. Sets for these exercises must have weight NULL;
+# everything else takes an optional weight > 0. Neither 0 nor -1 exist.
+UNLOADED_EQUIPMENT = {
+    "body weight",
+    "band",
+    "resistance band",
+    "rope",
+    "roller",
+    "wheel roller",
+    "stability ball",
+    "bosu ball",
+    "stationary bike",
+    "elliptical machine",
+    "stepmill machine",
+    "skierg machine",
+    "upper body ergometer",
+}
 
 
-def weight_mode(weight: float | None) -> str:
-    if weight == BODYWEIGHT_WEIGHT:
+def weight_mode(is_unloaded: bool, weight: float | None) -> str:
+    if is_unloaded:
         return "bodyweight"
     if weight is not None and weight > 0:
         return "weighted"
@@ -37,8 +54,8 @@ class Exercise(SQLModel, table=True):
     planned_exercises: list["PlannedExercise"] = Relationship(back_populates="exercise")
 
     @property
-    def is_bodyweight(self) -> bool:
-        return self.equipment == "body weight"
+    def is_unloaded(self) -> bool:
+        return self.equipment in UNLOADED_EQUIPMENT
 
 
 class CatalogState(SQLModel, table=True):
@@ -94,6 +111,9 @@ class PlannedExercise(SQLModel, table=True):
         CheckConstraint(
             "status IN ('pending', 'in_progress', 'completed', 'skipped')", name="ck_planned_status"
         ),
+        CheckConstraint(
+            "suggested_weight IS NULL OR suggested_weight > 0", name="ck_planned_weight_positive"
+        ),
     )
 
     id: int = Field(default=None, primary_key=True)
@@ -113,13 +133,16 @@ class PlannedExercise(SQLModel, table=True):
 
     @property
     def weight_mode(self) -> str:
-        return weight_mode(self.suggested_weight)
+        return weight_mode(
+            self.exercise.is_unloaded if self.exercise else False, self.suggested_weight
+        )
 
 
 class PerformedSet(SQLModel, table=True):
     __tablename__ = "performed_sets"
     __table_args__ = (
         UniqueConstraint("planned_exercise_id", "set_number", name="uq_performed_set_number"),
+        CheckConstraint("weight IS NULL OR weight > 0", name="ck_set_weight_positive"),
     )
 
     id: int = Field(default=None, primary_key=True)
@@ -136,7 +159,8 @@ class PerformedSet(SQLModel, table=True):
 
     @property
     def weight_mode(self) -> str:
-        return weight_mode(self.weight)
+        exercise = self.planned_exercise.exercise if self.planned_exercise else None
+        return weight_mode(exercise.is_unloaded if exercise else False, self.weight)
 
 
 class AthleteMeasurement(SQLModel, table=True):

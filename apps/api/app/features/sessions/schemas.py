@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field, model_validator
 
 class SetTarget(BaseModel):
     set_number: int = Field(ge=1)
-    weight: float | None = Field(default=None, ge=-1)
+    weight: float | None = Field(default=None, gt=0)
     reps: int = Field(default=10, ge=1)
 
 
@@ -24,7 +24,7 @@ class PlannedExerciseCreate(BaseModel):
     order: int = Field(default=0, ge=0)
     target_sets: int = Field(default=3, ge=1)
     target_reps: int = Field(default=10, ge=1)
-    suggested_weight: float | None = Field(default=None, ge=-1)
+    suggested_weight: float | None = Field(default=None, gt=0)
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
@@ -36,7 +36,7 @@ class PlannedExerciseCreate(BaseModel):
 
 class PerformedSetCreate(BaseModel):
     set_number: int = Field(ge=1)
-    weight: float | None = Field(default=None, ge=-1)
+    weight: float | None = Field(default=None, gt=0)
     reps: int = Field(ge=1)
     rpe: float | None = None
     sensation: str = ""
@@ -61,7 +61,7 @@ class AddExerciseRequest(BaseModel):
     order: int | None = Field(default=None, ge=0)
     target_sets: int = Field(default=3, ge=1)
     target_reps: int = Field(default=10, ge=1)
-    suggested_weight: float | None = Field(default=None, ge=-1)
+    suggested_weight: float | None = Field(default=None, gt=0)
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
@@ -106,7 +106,7 @@ class CoachPlanRequest(BaseModel):
 
 
 class ImportSet(BaseModel):
-    weight: float | None = Field(default=None, ge=-1)
+    weight: float | None = Field(default=None, gt=0)
     reps: int = Field(ge=1)
     rpe: float | None = Field(default=None, ge=1, le=10)
     notes: str = ""
