@@ -175,6 +175,16 @@ export function Profile() {
           </div>
         )}
       </div>
+
+      {/* App version, linked to the release changelog */}
+      <a
+        href="https://github.com/jlfernandezfernandez/gym-tracker/releases"
+        target="_blank"
+        rel="noreferrer"
+        class="mt-5 mb-3 block text-center text-[.72rem] text-hint"
+      >
+        gym-tracker v{__APP_VERSION__}
+      </a>
     </>
   );
 }

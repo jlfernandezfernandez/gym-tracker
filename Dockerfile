@@ -7,6 +7,8 @@ WORKDIR /fe
 COPY apps/miniapp/package.json apps/miniapp/package-lock.json ./
 RUN npm ci
 COPY apps/miniapp/ ./
+# astro.config reads the version from ../../.release-please-manifest.json (= / here)
+COPY .release-please-manifest.json /
 RUN npm run build
 
 # Stage 1: Build the locked Python environment
