@@ -18,13 +18,14 @@ depends_on: str | Sequence[str] | None = None
 
 
 def upgrade() -> None:
-    op.execute("UPDATE performed_sets SET weight = NULL WHERE weight = 0.0")
+    # Drop NOT NULL before writing NULLs, or the UPDATE itself is rejected.
     op.alter_column("performed_sets", "weight", existing_type=sa.Float(), nullable=True)
+    op.execute("UPDATE performed_sets SET weight = NULL WHERE weight = 0.0")
 
-    op.execute("UPDATE planned_exercises SET suggested_weight = NULL WHERE suggested_weight = 0.0")
     op.alter_column(
         "planned_exercises", "suggested_weight", existing_type=sa.Float(), nullable=True
     )
+    op.execute("UPDATE planned_exercises SET suggested_weight = NULL WHERE suggested_weight = 0.0")
 
 
 def downgrade() -> None:
