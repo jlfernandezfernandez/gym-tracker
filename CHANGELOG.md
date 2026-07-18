@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.3.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.2.1...v2.3.0) (2026-07-18)
+
+
+### Features
+
+* **demo:** add public read-only product tour ([#65](https://github.com/jlfernandezfernandez/gym-tracker/issues/65)) ([82aeba5](https://github.com/jlfernandezfernandez/gym-tracker/commit/82aeba5f087b7dcf580d4c75bdcb002d2a29f199))
+
+
+### Bug Fixes
+
+* **demo:** support browsers without structuredClone ([#67](https://github.com/jlfernandezfernandez/gym-tracker/issues/67)) ([ad05dcd](https://github.com/jlfernandezfernandez/gym-tracker/commit/ad05dcd1fd0d8bf3fc0a2d4e37d510f0a4c66d6d))
+
 ## [2.2.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.2.0...v2.2.1) (2026-07-17)
 
 
