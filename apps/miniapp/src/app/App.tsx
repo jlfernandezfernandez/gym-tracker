@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { createContext } from 'preact';
 import { useContext, useMemo, useState } from 'preact/hooks';
 import { apiFetch } from '../lib/api';
+import { isDemoMode } from '../lib/demo';
 import { normalizeSession } from '../lib/helpers';
 import { inTelegram } from '../lib/telegram';
 import { Empty } from '../components/feedback';
@@ -37,6 +38,7 @@ interface AppContextValue {
   sessionId?: number;
   shareToken?: string;
   readOnly: boolean;
+  demoMode: boolean;
   selectTab: (name: string) => void;
 }
 
@@ -80,8 +82,9 @@ function shareRouteParams() {
 
 function Router() {
   const route = useMemo(shareRouteParams, []);
+  const demoMode = isDemoMode();
   const shareToken = route.share_token;
-  const readOnly = !!shareToken && !inTelegram();
+  const readOnly = demoMode || (!!shareToken && !inTelegram());
 
   const [viewStack, setViewStack] = useState<View[]>(() => {
     if (shareToken) {
@@ -104,10 +107,11 @@ function Router() {
     sessionId,
     shareToken,
     readOnly,
+    demoMode,
     selectTab: (name) => setViewStack([{ name } as View]),
   };
 
-  if (!shareToken && !inTelegram() && location.hostname !== 'localhost') {
+  if (!demoMode && !shareToken && !inTelegram() && location.hostname !== 'localhost') {
     return (
       <Empty icon="📱">
         Esta app vive dentro de Telegram.
@@ -133,8 +137,13 @@ function Router() {
   const rootTabs = ['landing', 'catalog', 'history', 'records', 'profile'];
   return (
     <AppContext.Provider value={appContext}>
+      {demoMode && (
+        <div class="mb-2 rounded-pill bg-accent-bg px-3 py-2 text-center text-[.72rem] font-[680] text-accent">
+          Modo demo · datos ficticios
+        </div>
+      )}
       {screens[activeView.name]}
-      {!readOnly && rootTabs.includes(activeView.name) && (
+      {(!readOnly || demoMode) && rootTabs.includes(activeView.name) && (
         <TabBar active={activeView.name} onSelect={appContext.selectTab} />
       )}
     </AppContext.Provider>

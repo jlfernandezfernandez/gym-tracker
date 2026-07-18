@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
+import { useApp } from '../../app/App';
 import { Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
 import { MeasurementChart } from '../../components/visualizations';
@@ -72,6 +73,7 @@ function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value
 }
 
 export function Profile() {
+  const app = useApp();
   const queryClient = useQueryClient();
   const profileQuery = useQuery({ queryKey: ['profile'], queryFn: () => apiFetch('GET', '/profile') });
   const measurementsQuery = useQuery({
@@ -121,9 +123,15 @@ export function Profile() {
             return (
               <div class="flex min-h-12 items-center justify-between gap-3 border-b border-edge px-[15px] py-[13px] last:border-b-0" key={field.key}>
                 <span class="whitespace-nowrap text-[.85rem] font-[680] text-ink">{field.label}</span>
-                {'options' in field ? (
+                {app.readOnly ? (
+                  <span class="text-right text-[.85rem] font-[580] text-hint">
+                    {raw ? `${raw}${'suffix' in field ? field.suffix : ''}` : '—'}
+                  </span>
+                ) : 'options' in field ? (
                   <InlineSelect value={raw} options={field.options} onSave={(v) => saveField(field.key, v)} />
-                ) : <InlineNumber value={raw} placeholder={field.placeholder} suffix={field.suffix} inputMode={field.inputMode} onSave={(v) => saveField(field.key, v)} />}
+                ) : (
+                  <InlineNumber value={raw} placeholder={field.placeholder} suffix={field.suffix} inputMode={field.inputMode} onSave={(v) => saveField(field.key, v)} />
+                )}
               </div>
             );
           })}

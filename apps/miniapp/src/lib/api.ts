@@ -1,10 +1,13 @@
 /** Thin fetch wrapper: Telegram auth + timeout. Caching, dedupe, retries and
  * loading states are TanStack Query's job. */
+import { demoFetch, isDemoMode } from './demo';
 import { tg } from './telegram';
 
 const API_BASE = location.origin + '/api';
 
 export async function apiFetch<T = any>(method: string, path: string, body?: unknown): Promise<T> {
+  if (isDemoMode()) return demoFetch(method, path) as Promise<T>;
+
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (tg?.initData && tg.initData.length > 10) headers['X-Telegram-Init-Data'] = tg.initData;
 
