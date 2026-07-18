@@ -34,6 +34,7 @@ def create_app() -> FastAPI:
     if static_dir:
 
         @app.get("/", include_in_schema=False)
+        @app.get("/demo", include_in_schema=False)
         @app.get("/session/share/{share_token}", include_in_schema=False)
         @app.get(
             "/session/share/{share_token}/exercise/{planned_exercise_id}",

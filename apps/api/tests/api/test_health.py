@@ -55,7 +55,7 @@ def test_frontend_shell_serves_root_and_share_routes(monkeypatch, tmp_path) -> N
     os.environ["DATABASE_URL"] = "postgresql+asyncpg://x:x@localhost/x"
     client = TestClient(create_app())
 
-    for path in ("/", "/session/share/token", "/session/share/token/exercise/1"):
+    for path in ("/", "/demo", "/session/share/token", "/session/share/token/exercise/1"):
         response = client.get(path)
         assert response.status_code == 200
         assert response.text == "<main>Mini App</main>"

@@ -48,8 +48,8 @@ export function Plan() {
     <>
       <TopBar
         title={plan.title || 'Entrenamiento'}
-        subtitle={app.readOnly ? 'Sesión compartida contigo' : 'Tu ruta para hoy'}
-        onBack={app.readOnly ? undefined : app.pop}
+        subtitle={app.demoMode ? 'Datos ficticios' : app.readOnly ? 'Sesión compartida contigo' : 'Tu ruta para hoy'}
+        onBack={app.readOnly && !app.demoMode ? undefined : app.pop}
         action={!app.readOnly && plan.share_token ? <ShareButton title={plan.title || 'Entrenamiento'} token={plan.share_token} /> : undefined}
       />
       <div class="my-3 rounded-card bg-surface p-5 shadow-card">

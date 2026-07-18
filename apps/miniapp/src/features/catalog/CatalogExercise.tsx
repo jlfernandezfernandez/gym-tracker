@@ -63,13 +63,15 @@ export function CatalogExercise({ exerciseId }: { exerciseId: number }) {
           </p>
         </div>
       </div>
-      <button
-        class={`min-h-[50px] w-full cursor-pointer rounded-2xl border-0 px-[17px] py-[13px] text-[.94rem] font-[720] transition active:scale-[.975] disabled:pointer-events-none disabled:opacity-35 ${isDisliked ? 'bg-surface text-err shadow-[inset_0_0_0_1px_var(--color-edge)]' : 'bg-err/10 text-err'}`}
-        disabled={dislikedQuery.isLoading || preferenceMutation.isPending}
-        onClick={() => preferenceMutation.mutate()}
-      >
-        {isDisliked ? 'Quitar de no me gusta' : '👎 No me gusta'}
-      </button>
+      {!app.readOnly && (
+        <button
+          class={`min-h-[50px] w-full cursor-pointer rounded-2xl border-0 px-[17px] py-[13px] text-[.94rem] font-[720] transition active:scale-[.975] disabled:pointer-events-none disabled:opacity-35 ${isDisliked ? 'bg-surface text-err shadow-[inset_0_0_0_1px_var(--color-edge)]' : 'bg-err/10 text-err'}`}
+          disabled={dislikedQuery.isLoading || preferenceMutation.isPending}
+          onClick={() => preferenceMutation.mutate()}
+        >
+          {isDisliked ? 'Quitar de no me gusta' : '👎 No me gusta'}
+        </button>
+      )}
       {instructions && (
         <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
           <h3>Técnica</h3>
