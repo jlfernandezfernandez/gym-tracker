@@ -273,7 +273,10 @@ const measurements = [0, 7, 14, 21, 28].map((daysAgo, index) => ({
   notes: '',
 }));
 
-const clone = <T>(value: T): T => structuredClone(value);
+const clone = <T>(value: T): T =>
+  typeof globalThis.structuredClone === 'function'
+    ? globalThis.structuredClone(value)
+    : JSON.parse(JSON.stringify(value));
 
 export const isDemoMode = () =>
   typeof location !== 'undefined' && /^\/demo\/?$/.test(location.pathname);
