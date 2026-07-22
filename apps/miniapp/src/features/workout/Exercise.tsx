@@ -362,7 +362,7 @@ function NextExercisePicker({ exercises, onPick, onDismiss }: { exercises: any[]
         <h2>Siguiente ejercicio</h2>
         <p class="mt-1 text-hint">Elige el que tengas a mano.</p>
       </div>
-      <div class="mt-3 grid gap-2 px-3">
+      <div class="mt-3 grid gap-2 px-5">
         {exercises.map((exercise: any) => {
           const src = mediaUrl(exercise.image_url || exercise.gif_url);
           return (
