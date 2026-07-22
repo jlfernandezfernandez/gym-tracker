@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.4.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.4.0...v2.4.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* import set target formatter in exercise detail ([492b9f2](https://github.com/jlfernandezfernandez/gym-tracker/commit/492b9f22f2384c4963251c0485a411a0a641c62b))
+
 ## [2.4.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.3.0...v2.4.0) (2026-07-22)
 
 
