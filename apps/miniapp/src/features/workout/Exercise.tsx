@@ -382,29 +382,28 @@ function NextExercisePicker({ exercises, onPick, onDismiss }: { exercises: any[]
     dialogRef.current?.showModal();
   }, []);
   return (
-    <dialog ref={dialogRef} class="native-sheet m-auto mb-2.5 w-[min(100%-20px,430px)] rounded-[26px] border border-white/50 bg-surface/94 pb-3 text-ink shadow-sheet backdrop-blur-3xl backdrop-saturate-150 [&::backdrop]:bg-black/35" onClose={onDismiss}>
-      <div class="mx-auto mb-3 mt-2 h-1 w-9 rounded-pill bg-track" />
-      <div class="px-5">
-        <h2>Siguiente ejercicio</h2>
-        <p class="mt-1 text-hint">Elige el que tengas a mano.</p>
-      </div>
-      <div class="mt-3 grid gap-2 px-5">
+    <dialog ref={dialogRef} class="native-sheet m-auto mb-2.5 w-[min(100%-20px,430px)] rounded-[26px] border border-white/50 bg-surface/94 p-5 text-ink shadow-sheet backdrop-blur-3xl backdrop-saturate-150 [&::backdrop]:bg-black/35" onClose={onDismiss}>
+      <div class="mx-auto mb-4 h-1 w-9 rounded-pill bg-track" />
+      <h2>Siguiente ejercicio</h2>
+      <p class="mt-1 text-hint">Elige el que tengas a mano.</p>
+      <div class="mt-4 grid gap-2">
         {exercises.map((exercise: any) => {
           const src = mediaUrl(exercise.image_url || exercise.gif_url);
           return (
-            <button key={exercise.planned_id} class="flex cursor-pointer items-center gap-3 rounded-2xl border-0 bg-surface-2 p-3 text-left transition active:scale-[.98]" onClick={() => onPick(exercise.planned_id)}>
-              <div class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white text-lg shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
+            <button key={exercise.planned_id} class="grid w-full cursor-pointer grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border-0 bg-surface-2 p-3 text-left transition active:scale-[.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface" onClick={() => onPick(exercise.planned_id)}>
+              <div class="grid size-12 place-items-center overflow-hidden rounded-xl bg-white text-lg shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
                 {src ? <img class="size-full object-contain" src={src} alt="" loading="lazy" /> : '🏋️'}
               </div>
-              <div class="min-w-0 flex-1">
+              <div class="min-w-0">
                 <h3 class="truncate text-[.88rem]">{exercise.name}</h3>
                 <p class="text-[.72rem] text-hint">{formatMuscle(exercise.target || '')} · {exercise.sets}×{exercise.reps}</p>
               </div>
+              <span aria-hidden="true" class="text-lg text-hint">›</span>
             </button>
           );
         })}
       </div>
-      <div class="mt-3 px-5">
+      <div class="mt-4 border-t border-edge pt-3">
         <button class="min-h-[46px] w-full cursor-pointer rounded-2xl border-0 bg-transparent font-[680] text-accent transition active:scale-[.975]" onClick={onDismiss}>Ver plan completo</button>
       </div>
     </dialog>
