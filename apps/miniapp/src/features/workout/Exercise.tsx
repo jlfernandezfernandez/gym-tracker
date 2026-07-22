@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
 import { chartUsesWeight, type ProgressPoint } from '../../lib/chart';
-import { completedSetCount, formatMuscle, formatWeight, mediaUrl, parseWeight, sessionMuscles, showToast } from '../../lib/helpers';
+import { completedSetCount, formatMuscle, formatSetTarget, formatWeight, mediaUrl, parseWeight, sessionMuscles, showToast } from '../../lib/helpers';
 import { haptic } from '../../lib/telegram';
 import { useApp, useSession } from '../../app/App';
 import { BusyButton, Empty, Loading } from '../../components/feedback';
