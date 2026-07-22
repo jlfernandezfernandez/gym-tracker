@@ -57,8 +57,7 @@ export function Plan() {
             <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{formatStatus(plan.status)}</span>
             <span class="rounded-pill bg-surface-2 px-2 py-1 text-[.68rem] font-[650] text-hint">{plan.duration_estimated || 0} min</span>
           </div>
-          <h1>{plan.title || 'Entrenamiento'}</h1>
-          <p>{plan.goal || plan.coach_summary || 'Plan generado por el coach'}</p>
+          <p class="mt-2">{plan.goal || plan.coach_summary || 'Plan generado por el coach'}</p>
           <div class="mt-2.5 grid grid-cols-3 gap-[9px]">
             <Stat label="Ejercicios" value={exercises.length} />
             <Stat label="Series" value={`${completedSetsTotal}/${targetSetsTotal}`} />

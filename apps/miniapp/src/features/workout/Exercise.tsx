@@ -132,7 +132,6 @@ export function Exercise({ plannedId }: { plannedId: number }) {
               <div key={setNumber} role="group" aria-label={`Serie ${setNumber} pendiente`} class="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control bg-surface-2/55 px-3 py-3">
                 <span aria-hidden="true" class="grid size-[30px] place-items-center rounded-pill bg-surface-2 text-[.7rem] font-bold text-hint">S{setNumber}</span>
                 <div class="min-w-0">
-                  <span class="block text-[.68rem] text-hint">Plan</span>
                   <b class="block truncate text-[.84rem] text-ink">{targetValue(targetForSet(exercise, setNumber), exercise.weight_mode)}</b>
                 </div>
                 <span class="text-[.7rem] font-[650] text-hint">Pendiente</span>

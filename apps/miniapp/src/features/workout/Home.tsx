@@ -77,7 +77,7 @@ export function Home() {
             <>
               <div class="flex items-start justify-between gap-3 [&>div]:min-w-0">
                 <h2>{plan.title || 'Entrenamiento'}</h2>
-                <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{progressPct}%</span>
+                <span class="shrink-0 rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">Progreso {progressPct}%</span>
               </div>
               {/* During a workout the landing IS the workout: the upcoming set, grouped as one inset card. */}
               <div class="mt-[14px] rounded-[18px] bg-surface-2 p-[14px] shadow-[inset_0_0_0_1px_var(--color-edge)]">

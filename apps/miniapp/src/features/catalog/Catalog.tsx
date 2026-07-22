@@ -7,24 +7,15 @@ import { useApp } from '../../app/App';
 import { Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
 
-const DISLIKED_KEY = '__disliked__';
-
 export function Catalog() {
   const app = useApp();
   const [search, setSearch] = useState('');
   const [bodyPart, setBodyPart] = useState('');
-  const showDisliked = bodyPart === DISLIKED_KEY;
 
   const facetsQuery = useQuery({
     queryKey: ['exercise-facets'],
     queryFn: () => apiFetch('GET', '/exercises/facets'),
     staleTime: Infinity,
-  });
-
-  const dislikedQuery = useQuery({
-    queryKey: ['disliked-exercises'],
-    queryFn: () => apiFetch('GET', '/disliked-exercises'),
-    enabled: showDisliked,
   });
 
   const PAGE_SIZE = 50;
@@ -33,14 +24,13 @@ export function Catalog() {
     queryFn: ({ pageParam }) => {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(pageParam) });
       if (search) params.set('search', search);
-      if (bodyPart && bodyPart !== DISLIKED_KEY) params.set('body_part', bodyPart);
+      if (bodyPart) params.set('body_part', bodyPart);
       return apiFetch('GET', `/exercises?${params}`);
     },
     initialPageParam: 0,
     getNextPageParam: (lastPage: any[], pages: any[][]) =>
       lastPage.length === PAGE_SIZE ? pages.length * PAGE_SIZE : undefined,
     placeholderData: (previous: any) => previous,
-    enabled: !showDisliked,
   });
   const exercises: any[] = listQuery.data?.pages.flat() || [];
 
@@ -60,48 +50,39 @@ export function Catalog() {
     return () => observer.disconnect();
   }, []);
 
-  const bodyParts: string[] = facetsQuery.data?.body_parts || [];
-  const dislikedExercises: any[] = (dislikedQuery.data as any[]) || [];
-  const visibleExercises = showDisliked
-    ? dislikedExercises.map(({ exercise_id, ...exercise }) => ({ ...exercise, id: exercise_id }))
-    : exercises;
-  const isLoading = showDisliked ? dislikedQuery.isLoading : listQuery.isLoading;
+  const bodyParts: string[] = ['', ...(facetsQuery.data?.body_parts || [])];
 
   return (
     <>
       <TopBar title="Ejercicios" subtitle="Catálogo completo del coach" />
-      {!showDisliked && (
-        <input
-          type="search"
-          inputmode="search"
-          enterkeyhint="search"
-          placeholder="Buscar ejercicio..."
-          aria-label="Buscar ejercicio"
-          class="!text-left"
-          value={search}
-          onInput={(event: any) => setSearch(event.target.value)}
-        />
-      )}
+      <input
+        type="search"
+        inputmode="search"
+        enterkeyhint="search"
+        placeholder="Buscar ejercicio..."
+        aria-label="Buscar ejercicio"
+        class="!text-left"
+        value={search}
+        onInput={(event: any) => setSearch(event.target.value)}
+      />
       <div class="-mx-4 mt-3 flex gap-1.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
-        {['', ...bodyParts, DISLIKED_KEY].map((part) => (
+        {bodyParts.map((part) => (
           <button
             key={part}
             class={`shrink-0 cursor-pointer rounded-pill border-0 px-3 py-2 text-[.78rem] font-[650] transition active:scale-95 ${bodyPart === part ? 'bg-ink text-canvas' : 'bg-surface text-hint shadow-[inset_0_0_0_1px_var(--color-edge)]'}`}
             onClick={() => setBodyPart(part)}
           >
-            {part === DISLIKED_KEY ? 'No me gusta' : part ? formatMuscle(part) : 'Todos'}
+            {part ? formatMuscle(part) : 'Todos'}
           </button>
         ))}
       </div>
-      {isLoading ? (
+      {listQuery.isLoading ? (
         <Loading />
-      ) : !visibleExercises.length ? (
-        <Empty icon={showDisliked ? '👍' : '🔍'}>
-          {showDisliked ? 'No tienes ejercicios marcados como "no me gusta".' : 'Nada con ese filtro. Prueba otro nombre.'}
-        </Empty>
+      ) : !exercises.length ? (
+        <Empty icon="🔍">Nada con ese filtro. Prueba otro nombre.</Empty>
       ) : (
         <div class="mt-3 overflow-hidden rounded-card bg-surface [content-visibility:auto] [contain-intrinsic-size:auto_600px]">
-          {visibleExercises.map((exercise) => (
+          {exercises.map((exercise) => (
             <button
               key={exercise.id}
               class="grid min-h-[68px] w-full cursor-pointer grid-cols-[52px_1fr_auto] items-center gap-3 border-0 border-b border-edge bg-transparent px-[15px] py-2.5 text-left last:border-b-0"
@@ -122,7 +103,7 @@ export function Catalog() {
           ))}
         </div>
       )}
-      <div ref={sentinelRef} class={showDisliked ? 'hidden' : ''} />
+      <div ref={sentinelRef} />
       {listQuery.isFetchingNextPage && <p class="my-3 text-center text-xs">Cargando más...</p>}
     </>
   );
