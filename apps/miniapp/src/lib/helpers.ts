@@ -86,10 +86,18 @@ export function parseWeight(raw: string): number {
 }
 export function currentExercise(plan: any, currentState: any) {
   const currentPlannedId = currentState?.current_planned_exercise_id;
+  // Prefer the backend's current exercise, but only if it's not done/skipped.
+  const backendCurrent = plan?.exercises?.find(
+    (exercise: any) =>
+      String(exercise.planned_id) === String(currentPlannedId) &&
+      !['completed', 'skipped'].includes(exercise.status),
+  );
+  if (backendCurrent) return backendCurrent;
+  // Fall back to the first pending or in-progress exercise.
   return (
-    plan?.exercises?.find((exercise: any) => String(exercise.planned_id) === String(currentPlannedId)) ||
-    plan?.exercises?.find((exercise: any) => ['pending', 'in_progress'].includes(exercise.status)) ||
-    plan?.exercises?.[0]
+    plan?.exercises?.find((exercise: any) =>
+      ['pending', 'in_progress'].includes(exercise.status),
+    ) || plan?.exercises?.[0]
   );
 }
 

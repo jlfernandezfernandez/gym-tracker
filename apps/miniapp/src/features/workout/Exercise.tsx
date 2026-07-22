@@ -384,7 +384,7 @@ function NextExercisePicker({ exercises, onPick, onDismiss }: { exercises: any[]
         {exercises.map((exercise: any) => {
           const src = mediaUrl(exercise.image_url || exercise.gif_url);
           return (
-            <button key={exercise.planned_id} class="flex cursor-pointer items-center gap-3 rounded-2xl border-0 bg-surface-2 p-3 text-left transition active:scale-[.98]" onClick={() => onPick(exercise.planned_id)}>
+            <button key={exercise.planned_id} class="flex cursor-pointer items-center gap-3 rounded-2xl border-0 bg-surface-2 p-3 text-left transition active:scale-[.98]" onClick={() => { dialogRef.current?.close(); onPick(exercise.planned_id); }}>
               <div class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-xl bg-white text-lg shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
                 {src ? <img class="size-full object-contain" src={src} alt="" loading="lazy" /> : '🏋️'}
               </div>
