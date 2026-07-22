@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.4.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.3.0...v2.4.0) (2026-07-22)
+
+
+### Features
+
+* show planned sets with weights on Exercise detail screen ([6c5c6b4](https://github.com/jlfernandezfernandez/gym-tracker/commit/6c5c6b4fc035ed33a2d63f6ab8e9382282883594))
+
+
+### Bug Fixes
+
+* align NextExercisePicker list padding with title and footer ([b99a18d](https://github.com/jlfernandezfernandez/gym-tracker/commit/b99a18d668f80b7f10048dd56dd5d86298006be7))
+* close exercise picker before navigation ([ec80d9c](https://github.com/jlfernandezfernandez/gym-tracker/commit/ec80d9cf0fc1508888b3551c308ce4c0493b2723))
+* keep per-set planning in exercise detail only ([2696400](https://github.com/jlfernandezfernandez/gym-tracker/commit/2696400bf420d9c49b78508f1b0b12ac26130aa2))
+* prefer only in-progress exercise on Home ([ab3df9a](https://github.com/jlfernandezfernandez/gym-tracker/commit/ab3df9a68abc2f9957c2c951022d96b9aaff8e7d))
+* redesign next exercise picker layout ([05f47e3](https://github.com/jlfernandezfernandez/gym-tracker/commit/05f47e30251fb474c1314b050a66798ea704699d))
+* show every proposed set on exercise detail ([ab8f412](https://github.com/jlfernandezfernandez/gym-tracker/commit/ab8f412d11c053c2ecdd08b74292bd7cc634a9cc))
+* show next pending exercise on Home, close picker dialog on selection ([18e190e](https://github.com/jlfernandezfernandez/gym-tracker/commit/18e190ef00e1f3c11a4600c4b38780c98acbda9c))
+
 ## [2.3.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.2.1...v2.3.0) (2026-07-18)
 
 
