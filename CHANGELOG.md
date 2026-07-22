@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.5.0...v2.5.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* align Mini App information hierarchy ([705b7fa](https://github.com/jlfernandezfernandez/gym-tracker/commit/705b7fa1506b94fe9951f7d6fd8e0f7534c22a75))
+
 ## [2.5.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.4.1...v2.5.0) (2026-07-22)
 
 
