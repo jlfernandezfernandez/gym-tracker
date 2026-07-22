@@ -59,9 +59,18 @@ describe('currentExercise', () => {
     expect(currentExercise({ exercises }, { current_planned_exercise_id: 2 })?.planned_id).toBe(2);
   });
 
-  it('uses the next pending exercise when no exercise is in progress', () => {
-    const withoutInProgress = exercises.filter((exercise) => exercise.planned_id !== 2);
-    expect(currentExercise({ exercises: withoutInProgress }, { current_planned_exercise_id: 1 })?.planned_id).toBe(3);
+  it('uses the first pending exercise when no exercise is in progress', () => {
+    const pendingExercises = [
+      { planned_id: 1, status: 'completed' },
+      { planned_id: 2, status: 'pending' },
+      { planned_id: 3, status: 'pending' },
+    ];
+    expect(currentExercise({ exercises: pendingExercises }, { current_planned_exercise_id: 3 })?.planned_id).toBe(2);
+  });
+
+  it('does not treat a backend pending pointer as in progress', () => {
+    const pendingExercises = exercises.filter((exercise) => exercise.planned_id !== 2);
+    expect(currentExercise({ exercises: pendingExercises }, { current_planned_exercise_id: 3 })?.planned_id).toBe(3);
   });
 });
 
