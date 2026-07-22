@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.2](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.5.1...v2.5.2) (2026-07-22)
+
+
+### Bug Fixes
+
+* refine sticky navigation and reference content ([baf1dcb](https://github.com/jlfernandezfernandez/gym-tracker/commit/baf1dcbe5b6e98e4ca234f8a360ede75c67c89ad))
+
 ## [2.5.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.5.0...v2.5.1) (2026-07-22)
 
 
