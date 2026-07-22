@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatSetTarget, formatWeight, parseWeight } from './helpers';
+import { currentExercise, formatSetTarget, formatWeight, parseWeight } from './helpers';
 
 describe('parseWeight', () => {
   it('parses comma decimal', () => {
@@ -45,6 +45,23 @@ describe('formatSetTarget', () => {
     expect(formatSetTarget({ set_number: 1, weight: 90, reps: 12 }, 'weighted')).toBe('S1 · 90 kg × 12');
     expect(formatSetTarget({ set_number: 2, weight: null, reps: 8 }, 'bodyweight')).toBe('S2 · Peso corporal × 8');
     expect(formatSetTarget({ set_number: 3, weight: null, reps: 15 }, 'unloaded')).toBe('S3 · 15 reps');
+  });
+});
+
+describe('currentExercise', () => {
+  const exercises = [
+    { planned_id: 1, status: 'completed' },
+    { planned_id: 2, status: 'in_progress' },
+    { planned_id: 3, status: 'pending' },
+  ];
+
+  it('keeps the only exercise in progress', () => {
+    expect(currentExercise({ exercises }, { current_planned_exercise_id: 2 })?.planned_id).toBe(2);
+  });
+
+  it('uses the next pending exercise when no exercise is in progress', () => {
+    const withoutInProgress = exercises.filter((exercise) => exercise.planned_id !== 2);
+    expect(currentExercise({ exercises: withoutInProgress }, { current_planned_exercise_id: 1 })?.planned_id).toBe(3);
   });
 });
 
