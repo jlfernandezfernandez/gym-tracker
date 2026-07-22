@@ -72,16 +72,21 @@ export function CatalogExercise({ exerciseId }: { exerciseId: number }) {
           {isDisliked ? 'Quitar de no me gusta' : '👎 No me gusta'}
         </button>
       )}
-      {instructions && (
+      {(instructions || muscles.length > 0) && (
         <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
-          <h3>Técnica</h3>
-          <p class="mt-2 whitespace-pre-line">{instructions}</p>
-        </div>
-      )}
-      {muscles.length > 0 && (
-        <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
-          <h3>Músculos trabajados</h3>
-          <BodyMap muscles={muscles} />
+          <h3>Sobre el ejercicio</h3>
+          {instructions && (
+            <details class="mt-2 border-t border-edge pt-2 [&[open]>summary]:mb-2.5">
+              <summary>Técnica</summary>
+              <p class="whitespace-pre-line">{instructions}</p>
+            </details>
+          )}
+          {muscles.length > 0 && (
+            <details class="mt-1 border-t border-edge pt-2 [&[open]>summary]:mb-2.5">
+              <summary>Músculos trabajados</summary>
+              <BodyMap muscles={muscles} />
+            </details>
+          )}
         </div>
       )}
     </>

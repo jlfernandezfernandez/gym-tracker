@@ -81,10 +81,10 @@ export function Plan() {
       ))}
 
       {muscles.length > 0 && (
-        <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
-          <h2>Mapa muscular de hoy</h2>
+        <details class="my-3 rounded-card bg-surface p-[18px] shadow-card [&[open]>summary]:mb-2.5">
+          <summary>Mapa muscular de la sesión</summary>
           <BodyMap muscles={muscles} />
-        </div>
+        </details>
       )}
 
       {plan.status === 'completed' && <CompletedSummary plan={plan} exercises={exercises} />}
