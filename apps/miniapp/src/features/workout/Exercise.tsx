@@ -83,6 +83,24 @@ export function Exercise({ plannedId }: { plannedId: number }) {
           <p>{formatMuscle(exercise.target || exercise.muscle_group || '')}</p>
         </div>
       </div>
+      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+        <h3>Planificación</h3>
+        <div class="mt-2 flex flex-wrap gap-1.5">
+          {exercise.set_targets?.length ? (
+            [...exercise.set_targets]
+              .sort((a: any, b: any) => a.set_number - b.set_number)
+              .map((target: any) => (
+                <span key={target.set_number} class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
+                  {formatSetTarget(target, exercise.weight_mode)}
+                </span>
+              ))
+          ) : (
+            <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
+              {exercise.sets}×{exercise.reps}{exercise.weight ? ` · ${exercise.weight} kg` : ''}
+            </span>
+          )}
+        </div>
+      </div>
       {!app.readOnly && exercise.status !== 'completed' && (
         <SetCountControl sessionId={plan.id} plannedId={exercise.planned_id} currentSets={exercise.sets || 0} loggedSets={loggedSetCount} />
       )}
