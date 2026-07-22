@@ -7,7 +7,6 @@ import {
   currentExercise,
   formatEquipment,
   formatMuscle,
-  formatSetTarget,
   formatStatus,
   mediaUrl,
   sessionMuscles,
@@ -120,19 +119,9 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
           {exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}
         </p>
         <div class="mt-[9px] flex flex-wrap gap-1.5">
-          {exercise.set_targets?.length ? (
-            [...exercise.set_targets]
-              .sort((a: any, b: any) => a.set_number - b.set_number)
-              .map((target: any) => (
-                <span key={target.set_number} class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
-                  {formatSetTarget(target, exercise.weight_mode)}
-                </span>
-              ))
-          ) : (
-            <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
-              {exercise.sets}×{exercise.reps}
-            </span>
-          )}
+          <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
+            {exercise.sets}×{exercise.reps}
+          </span>
           <span class={`rounded-pill px-2 py-1 text-[.68rem] font-[650] ${exercise.status === 'completed' ? 'bg-ok-bg text-ok' : exercise.status === 'skipped' ? 'bg-warn-bg text-warn' : exercise.status === 'in_progress' ? 'bg-accent-bg text-accent' : 'bg-surface-2 text-hint'}`}>{formatStatus(exercise.status)}</span>
         </div>
       </div>
