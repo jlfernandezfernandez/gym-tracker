@@ -95,9 +95,14 @@ export function Exercise({ plannedId }: { plannedId: number }) {
                 </span>
               ))
           ) : (
-            <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
-              {exercise.sets}×{exercise.reps}{exercise.weight ? ` · ${exercise.weight} kg` : ''}
-            </span>
+            Array.from({ length: exercise.sets || 0 }, (_, index) => (
+              <span key={index + 1} class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
+                {formatSetTarget(
+                  { set_number: index + 1, weight: exercise.weight ?? null, reps: exercise.reps },
+                  exercise.weight_mode,
+                )}
+              </span>
+            ))
           )}
         </div>
       </div>
