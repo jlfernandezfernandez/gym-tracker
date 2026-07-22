@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.5.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.4.1...v2.5.0) (2026-07-22)
+
+
+### Features
+
+* redesign exercise workout workspace ([a381b81](https://github.com/jlfernandezfernandez/gym-tracker/commit/a381b81ad55c507a54ba34a70dc8c1c8375f8a14))
+
 ## [2.4.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.4.0...v2.4.1) (2026-07-22)
 
 
