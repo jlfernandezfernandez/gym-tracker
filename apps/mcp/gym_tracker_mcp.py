@@ -130,6 +130,7 @@ def list_exercises(
     exclude_disliked: bool = False,
     limit: int = 10,
     offset: int = 0,
+    telegram_user_id: int | None = None,
 ) -> list[dict[str, Any]]:
     """Search exercises by name and exact catalog facets.
 
@@ -152,7 +153,7 @@ def list_exercises(
     if exclude_disliked:
         params["exclude_disliked"] = "true"
     qs = urllib.parse.urlencode(params)
-    return _request("GET", f"/exercises?{qs}")
+    return _request("GET", f"/exercises?{qs}", user_id=telegram_user_id)
 
 
 @mcp.tool()
