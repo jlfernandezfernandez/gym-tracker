@@ -249,7 +249,7 @@ def create_plan(title: str = "", goal: str = "", energy: int = 5, time_available
 
     exercises: native MCP array of the exercises you picked from list_exercises, e.g.
     [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
-      "suggested_weight": 40.0, "notes": "controla la bajada"}]
+      "suggested_weight": 40.0, "unilateral": false, "notes": "controla la bajada"}]
     Optional per-set targets (ramping/variable sets):
     [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
       "suggested_weight": 40.0,
@@ -359,6 +359,7 @@ def add_planned_exercise(
     target_sets: int = 3,
     target_reps: int = 10,
     suggested_weight: float | None = None,
+    unilateral: bool = False,
     set_targets: list[dict[str, Any]] | None = None,
     notes: str = "",
     telegram_user_id: int | None = None,
@@ -381,6 +382,7 @@ def add_planned_exercise(
     }
     if suggested_weight is not None:
         payload["suggested_weight"] = float(suggested_weight)
+    payload["unilateral"] = bool(unilateral)
     if order is not None:
         payload["order"] = int(order)
     if set_targets is not None:
@@ -389,7 +391,7 @@ def add_planned_exercise(
 
 
 @mcp.tool()
-def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] | None = None, new_exercise_id: int | None = None, target_sets: int | None = None, notes: str | None = None, set_targets: list[dict[str, Any]] | None = None, telegram_user_id: int | None = None) -> dict[str, Any]:
+def update_planned_exercise(session_id: int, planned_exercise_id: int, status: Literal["pending", "in_progress", "completed", "skipped"] | None = None, new_exercise_id: int | None = None, target_sets: int | None = None, notes: str | None = None, set_targets: list[dict[str, Any]] | None = None, unilateral: bool | None = None, telegram_user_id: int | None = None) -> dict[str, Any]:
     """Update only the supplied exercise fields.
 
     Omit status and notes to preserve their current values. Completion and
@@ -409,6 +411,8 @@ def update_planned_exercise(session_id: int, planned_exercise_id: int, status: L
         payload["target_sets"] = int(target_sets)
     if set_targets is not None:
         payload["set_targets"] = set_targets
+    if unilateral is not None:
+        payload["unilateral"] = bool(unilateral)
     return _request("PUT", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", payload, user_id=telegram_user_id)
 
 

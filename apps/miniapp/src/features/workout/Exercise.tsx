@@ -23,7 +23,7 @@ const targetValue = (target: any, mode: string) => {
   return weight ? `${weight} × ${target.reps}` : `${target.reps} reps`;
 };
 
-function SetRow({ set, target, sessionId, plannedId, exerciseId, readOnly }: { set: any; target: any; sessionId: number; plannedId: number; exerciseId: number; readOnly?: boolean }) {
+function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, readOnly }: { set: any; target: any; sessionId: number; plannedId: number; exerciseId: number; unilateral?: boolean; readOnly?: boolean }) {
   const queryClient = useQueryClient();
   const del = useMutation({
     mutationFn: () => apiFetch('DELETE', `/sessions/${sessionId}/exercises/${plannedId}/sets/${set.id}`),
@@ -46,7 +46,7 @@ function SetRow({ set, target, sessionId, plannedId, exerciseId, readOnly }: { s
     <div role="group" aria-label={`Serie ${set.set_number} realizada`} class="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control bg-surface-2 px-3 py-2.5">
       <span aria-hidden="true" class="grid size-[30px] place-items-center rounded-pill bg-ok-bg text-[.7rem] font-bold text-ok">S{set.set_number}</span>
       <div class="min-w-0">
-        <span class="block truncate text-[.68rem] text-hint">Plan · {targetValue(target, set.weight_mode)}</span>
+        <span class="block truncate text-[.68rem] text-hint">Plan · {targetValue(target, set.weight_mode)}{unilateral ? ' · Unilateral' : ''}</span>
         <b class="block truncate text-[.84rem]">{performed ? `${performed} × ${set.reps}` : `${set.reps} reps`} · Hecha</b>
       </div>
       {!readOnly && (
@@ -93,7 +93,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
         </div>
         <div class="p-[18px] min-[720px]:flex min-[720px]:flex-col min-[720px]:justify-center">
           <h1 class="text-[1.55rem]">{exercise.name || 'Ejercicio'}</h1>
-          <p class="mt-1">{formatMuscle(exercise.target || exercise.muscle_group || '')}</p>
+          <p class="mt-1">{formatMuscle(exercise.target || exercise.muscle_group || '')}{exercise.unilateral ? ' · Unilateral' : ''}</p>
           <div class="mt-4 flex items-center justify-between text-[.68rem] font-bold tracking-[.05em] text-hint uppercase">
             <span>Progreso</span>
             <span>{loggedSetCount}/{exercise.sets} series</span>
@@ -120,6 +120,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
               sessionId={plan.id}
               plannedId={exercise.planned_id}
               exerciseId={exercise.exercise_id}
+              unilateral={exercise.unilateral}
               readOnly={app.readOnly || plan.status === 'completed'}
             />
           ))}
@@ -132,7 +133,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
               <div key={setNumber} role="group" aria-label={`Serie ${setNumber} pendiente`} class="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control bg-surface-2/55 px-3 py-3">
                 <span aria-hidden="true" class="grid size-[30px] place-items-center rounded-pill bg-surface-2 text-[.7rem] font-bold text-hint">S{setNumber}</span>
                 <div class="min-w-0">
-                  <b class="block truncate text-[.84rem] text-ink">{targetValue(targetForSet(exercise, setNumber), exercise.weight_mode)}</b>
+                  <b class="block truncate text-[.84rem] text-ink">{targetValue(targetForSet(exercise, setNumber), exercise.weight_mode)}{exercise.unilateral ? ' · Unilateral' : ''}</b>
                 </div>
                 <span class="text-[.7rem] font-[650] text-hint">Pendiente</span>
               </div>
@@ -354,7 +355,7 @@ function LogSetForm({
         <span aria-hidden="true" class="grid size-[30px] place-items-center rounded-pill bg-accent text-[.7rem] font-bold text-white">S{nextSetNumber}</span>
         <div class="min-w-0">
           <span class="block text-[.68rem] font-bold tracking-[.05em] text-accent uppercase">En curso</span>
-          <b class="block truncate text-[.84rem]">Plan · {targetValue(setTarget, exercise.weight_mode)}</b>
+          <b class="block truncate text-[.84rem]">Plan · {targetValue(setTarget, exercise.weight_mode)}{exercise.unilateral ? ' · Unilateral' : ''}</b>
         </div>
       </div>
       <div class="flex items-stretch gap-[9px]">

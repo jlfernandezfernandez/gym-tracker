@@ -141,6 +141,8 @@ async def update_planned_exercise(
         planned_exercise.target_sets = body.target_sets
     if body.notes is not None:
         planned_exercise.notes = body.notes
+    if body.unilateral is not None:
+        planned_exercise.unilateral = body.unilateral
     if body.set_targets is not None:
         set_targets_data = [t.model_dump() for t in body.set_targets]
         for t in set_targets_data:
@@ -223,6 +225,7 @@ async def add_planned_exercise(
             target_sets=body.target_sets,
             target_reps=body.target_reps,
             suggested_weight=body.suggested_weight,
+            unilateral=body.unilateral,
             notes=body.notes,
             set_targets=set_targets_data,
         )

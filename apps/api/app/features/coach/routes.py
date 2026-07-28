@@ -203,6 +203,7 @@ async def coach_plan(
                 target_sets=exercise_spec.target_sets,
                 target_reps=exercise_spec.target_reps,
                 suggested_weight=exercise_spec.suggested_weight,
+                unilateral=exercise_spec.unilateral,
                 notes=exercise_spec.notes,
                 set_targets=set_targets_data,
             )
@@ -249,6 +250,7 @@ async def coach_import(
             target_sets=len(exercise_spec.sets),
             target_reps=exercise_spec.sets[0].reps,
             suggested_weight=exercise_spec.sets[0].weight,
+            unilateral=exercise_spec.unilateral,
             notes=exercise_spec.notes,
             status="completed",
         )

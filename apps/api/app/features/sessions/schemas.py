@@ -25,6 +25,7 @@ class PlannedExerciseCreate(BaseModel):
     target_sets: int = Field(default=3, ge=1)
     target_reps: int = Field(default=10, ge=1)
     suggested_weight: float | None = Field(default=None, gt=0)
+    unilateral: bool = False
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
@@ -49,6 +50,7 @@ class PlannedExerciseUpdate(BaseModel):
     target_sets: int | None = Field(default=None, ge=1, le=20)
     notes: str | None = None
     set_targets: list[SetTarget] | None = None
+    unilateral: bool | None = None
 
     @model_validator(mode="after")
     def validate_set_targets(self) -> "PlannedExerciseUpdate":
@@ -62,6 +64,7 @@ class AddExerciseRequest(BaseModel):
     target_sets: int = Field(default=3, ge=1)
     target_reps: int = Field(default=10, ge=1)
     suggested_weight: float | None = Field(default=None, gt=0)
+    unilateral: bool = False
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
@@ -116,6 +119,7 @@ class ImportExercise(BaseModel):
     exercise_id: int = Field(gt=0)
     order: int = Field(default=0, ge=0)
     notes: str = ""
+    unilateral: bool = False
     sets: list[ImportSet] = Field(min_length=1)
 
 
@@ -170,6 +174,7 @@ class PlannedExerciseOut(BaseModel):
     target_sets: int
     target_reps: int
     suggested_weight: float | None
+    unilateral: bool
     weight_mode: Literal["bodyweight", "unloaded", "weighted"]
     notes: str
     status: str

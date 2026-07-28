@@ -123,6 +123,7 @@ class PlannedExercise(SQLModel, table=True):
     target_sets: int = Field(default=3)
     target_reps: int = Field(default=10)
     suggested_weight: float | None = Field(default=None)
+    unilateral: bool = Field(default=False)
     notes: str = Field(default="")
     status: str = Field(default="pending")
     set_targets: list | None = Field(default=None, sa_type=sa.JSON)

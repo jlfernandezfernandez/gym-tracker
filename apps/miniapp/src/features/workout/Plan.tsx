@@ -116,6 +116,7 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
         <p>
           {formatMuscle(exercise.target || exercise.muscle_group || '')}
           {exercise.equipment ? ` · ${formatEquipment(exercise.equipment)}` : ''}
+          {exercise.unilateral ? ' · Unilateral' : ''}
         </p>
         <div class="mt-[9px] flex flex-wrap gap-1.5">
           <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
