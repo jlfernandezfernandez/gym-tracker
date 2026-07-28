@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.6.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.5.2...v2.6.0) (2026-07-28)
+
+
+### Features
+
+* add agent-agnostic webhook outbox ([a63f3b1](https://github.com/jlfernandezfernandez/gym-tracker/commit/a63f3b10200c3f9b06cc594c2e0c9468cc41256f))
+* emit session and discomfort webhooks ([9cb1095](https://github.com/jlfernandezfernandez/gym-tracker/commit/9cb1095e03d9189e21d51501e388f7ae5a89cede))
+* mark unilateral exercise loads ([03c60dd](https://github.com/jlfernandezfernandez/gym-tracker/commit/03c60dd4dababebd90527a9af4777f056a2cba08))
+
+
+### Bug Fixes
+
+* carry unilateral flag into workout view ([4314c25](https://github.com/jlfernandezfernandez/gym-tracker/commit/4314c2589db7ccb987c3bca68fa206190ce7a9f8))
+* **mcp:** pass telegram_user_id to list_exercises so exclude_disliked works ([08a0302](https://github.com/jlfernandezfernandez/gym-tracker/commit/08a0302652612c66f8c33446f5720a43e457c303))
+
 ## [2.5.2](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.5.1...v2.5.2) (2026-07-22)
 
 
