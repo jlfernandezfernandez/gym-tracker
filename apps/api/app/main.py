@@ -1,4 +1,6 @@
+import asyncio
 import os
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,12 +10,24 @@ from fastapi.staticfiles import StaticFiles
 from app import APP_VERSION
 from app.core.config import get_settings
 from app.core.health import router as health_router
+from app.core.webhooks import run_webhook_dispatcher
 from app.router import api_router
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    stop_event = asyncio.Event()
+    dispatcher = asyncio.create_task(run_webhook_dispatcher(stop_event))
+    try:
+        yield
+    finally:
+        stop_event.set()
+        await dispatcher
 
 
 def create_app() -> FastAPI:
     settings = get_settings()
-    app = FastAPI(title="Gym Tracker API", version=APP_VERSION)
+    app = FastAPI(title="Gym Tracker API", version=APP_VERSION, lifespan=lifespan)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,

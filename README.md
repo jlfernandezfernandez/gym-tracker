@@ -18,6 +18,7 @@ series y mediciones. La Mini App sirve para ver y registrar el entrenamiento.
 | Usar Coolify | [Coolify](docs/install-coolify.md) | Un recurso Compose portable |
 | Abrirlo desde Telegram | [Telegram](docs/setup-telegram.md) | Botón Mini App autenticado |
 | Conectar mi agente | [MCP](docs/agent-setup.md) | Agente con herramientas de gimnasio |
+| Recibir eventos | [Webhooks](docs/webhooks.md) | Transporte HTTP agnóstico y opcional |
 
 ## Arranque local
 
@@ -61,6 +62,7 @@ Agente ─MCP privado──────────────→ API
 | `PUBLIC_APP_URL` | URL HTTPS que reciben los enlaces de sesión |
 | `CORS_ORIGINS` | Origen HTTPS de la Mini App |
 | `GYM_TRACKER_VERSION` | Tag de imágenes GHCR; usa `latest` |
+| `WEBHOOKS_*` | Transporte HTTP opcional para eventos futuros |
 
 Copia `.env.example`; contiene valores locales seguros y comentarios de cada
 variable. Para una Mini App real, `TELEGRAM_BOT_TOKEN` debe ser exactamente el

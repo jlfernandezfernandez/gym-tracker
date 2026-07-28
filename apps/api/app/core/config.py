@@ -23,6 +23,11 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     exercise_dataset_version: str = "v1.0.0"
     exercise_dataset_root: Path = Path("/data/exercise-datasets")
+    webhooks_enabled: bool = False
+    webhooks_url: str = ""
+    webhooks_secret: str = ""
+    webhooks_poll_seconds: float = 5.0
+    webhooks_max_attempts: int = 8
 
     @model_validator(mode="after")
     def validate_production(self) -> "Settings":

@@ -164,6 +164,33 @@ class PerformedSet(SQLModel, table=True):
         return weight_mode(exercise.is_unloaded if exercise else False, self.weight)
 
 
+class WebhookEvent(SQLModel, table=True):
+    """Durable, agent-agnostic outbox entry for a future domain event."""
+
+    __tablename__ = "webhook_events"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('pending', 'delivered', 'failed')",
+            name="ck_webhook_event_status",
+        ),
+    )
+
+    id: str = Field(default_factory=lambda: uuid4().hex, primary_key=True)
+    event_type: str = Field(default="", index=True)
+    source: str = Field(default="gym-tracker")
+    subject: str = Field(default="")
+    event_time: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    payload: dict = Field(default_factory=dict, sa_type=sa.JSON)
+    status: str = Field(default="pending", index=True)
+    attempts: int = Field(default=0)
+    next_attempt_at: datetime = Field(
+        default_factory=lambda: datetime.now(UTC).replace(tzinfo=None), index=True
+    )
+    last_error: str = Field(default="")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+    delivered_at: datetime | None = Field(default=None)
+
+
 class AthleteMeasurement(SQLModel, table=True):
     __tablename__ = "athlete_measurements"
 
