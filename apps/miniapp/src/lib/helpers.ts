@@ -43,6 +43,7 @@ export function normalizeSession(session: any) {
       reps: plannedExercise.target_reps || 10,
       weight: plannedExercise.suggested_weight,
       weight_mode: plannedExercise.weight_mode,
+      unilateral: plannedExercise.unilateral === true,
       notes: plannedExercise.notes || '',
       status: plannedExercise.status || 'pending',
       performed_sets: plannedExercise.performed_sets || [],

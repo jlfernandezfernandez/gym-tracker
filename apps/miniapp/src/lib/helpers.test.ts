@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currentExercise, formatSetTarget, formatWeight, parseWeight } from './helpers';
+import { currentExercise, formatSetTarget, formatWeight, normalizeSession, parseWeight } from './helpers';
 
 describe('parseWeight', () => {
   it('parses comma decimal', () => {
@@ -45,6 +45,13 @@ describe('formatSetTarget', () => {
     expect(formatSetTarget({ set_number: 1, weight: 90, reps: 12 }, 'weighted')).toBe('S1 · 90 kg × 12');
     expect(formatSetTarget({ set_number: 2, weight: null, reps: 8 }, 'bodyweight')).toBe('S2 · Peso corporal × 8');
     expect(formatSetTarget({ set_number: 3, weight: null, reps: 15 }, 'unloaded')).toBe('S3 · 15 reps');
+  });
+});
+
+describe('normalizeSession', () => {
+  it('carries unilateral from planned exercise into the workout view', () => {
+    expect(normalizeSession({ planned_exercises: [{ id: 7, order: 0, exercise_id: 9, unilateral: true }] }).exercises[0].unilateral).toBe(true);
+    expect(normalizeSession({ planned_exercises: [{ id: 8, order: 0, exercise_id: 10 }] }).exercises[0].unilateral).toBe(false);
   });
 });
 
