@@ -8,6 +8,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.auth import current_user_id
 from app.core.database import get_session as get_db_session
+from app.core.webhooks import enqueue_event
 from app.features.disliked.routes import disliked_exercise_ids
 from app.features.profile.routes import _get_or_create_profile
 from app.features.sessions.schemas import (
@@ -281,8 +282,21 @@ async def update_session(
     discomfort, energy or duration."""
     workout = await load_session(session_id, db)
     check_session_owner(workout, user_id)
+    previous_discomfort = workout.discomfort
     for field, value in body.model_dump(exclude_none=True).items():
         setattr(workout, field, value)
+    if body.discomfort and body.discomfort != previous_discomfort:
+        await enqueue_event(
+            db,
+            event_type="gym.discomfort.reported",
+            subject=f"sessions/{session_id}",
+            data={
+                "session_id": session_id,
+                "telegram_user_id": workout.telegram_user_id,
+                "discomfort": body.discomfort,
+                "source": "session_update",
+            },
+        )
     await db.commit()
     return await load_session(session_id, db)
 
@@ -415,8 +429,36 @@ async def finish_session(
     workout.duration_actual = duration
     workout.feedback = body.feedback
     workout.energy = body.energy
+    previous_discomfort = workout.discomfort
     workout.discomfort = body.discomfort
 
+    if body.discomfort and body.discomfort != previous_discomfort:
+        await enqueue_event(
+            db,
+            event_type="gym.discomfort.reported",
+            subject=f"sessions/{session_id}",
+            data={
+                "session_id": session_id,
+                "telegram_user_id": workout.telegram_user_id,
+                "discomfort": body.discomfort,
+                "source": "session_finished",
+            },
+        )
+    await enqueue_event(
+        db,
+        event_type="gym.session.finished",
+        subject=f"sessions/{session_id}",
+        data={
+            "session_id": session_id,
+            "telegram_user_id": workout.telegram_user_id,
+            "title": workout.title,
+            "session_date": workout.session_date.isoformat(),
+            "duration_actual": duration,
+            "energy": body.energy,
+            "discomfort": body.discomfort,
+            "feedback": body.feedback,
+        },
+    )
     await db.commit()
     return await load_session(session_id, db)
 

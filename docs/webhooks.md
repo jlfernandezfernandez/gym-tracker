@@ -3,9 +3,14 @@
 Gym Tracker incluye una capa base para entregar eventos a cualquier agente o servicio
 externo mediante HTTP. No depende de Hermes, OpenClaw, OpenAI ni de un broker.
 
-La capa está **desactivada por defecto** y no define eventos de producto todavía.
-Las funcionalidades futuras podrán guardar eventos usando el outbox común sin
-cambiar el transporte.
+La capa está **desactivada por defecto**. Actualmente publica solo estos eventos
+cuando el endpoint está configurado:
+
+- `gym.session.finished`, al terminar una sesión desde la aplicación.
+- `gym.discomfort.reported`, cuando se registra una molestia explícita desde la
+  sesión; no se emite por cada actualización normal.
+
+No incluye eventos de cada serie ni eventos de navegación.
 
 ## Configuración
 
@@ -53,14 +58,15 @@ PostgreSQL. El identificador del evento permite hacer el receptor idempotente.
 
 ## Arquitectura
 
-1. Una funcionalidad futura guarda el cambio de negocio y el evento en la misma
+1. La acción de sesión guarda el cambio de negocio y el evento en la misma
    transacción mediante el outbox.
 2. El dispatcher opcional lee eventos pendientes de PostgreSQL.
 3. Envía el CloudEvent al endpoint configurado.
 4. Guarda intentos, último error y estado de entrega.
 
-No hay ningún evento activo en esta versión. La Mini App y el MCP no cambian su
-comportamiento hasta que una funcionalidad concreta publique un evento.
+No hay eventos adicionales activos en esta versión. La Mini App y el MCP no cambian
+su comportamiento fuera de emitir los dos eventos anteriores cuando sus acciones
+correspondientes ocurren.
 
 ## Local y Coolify
 
