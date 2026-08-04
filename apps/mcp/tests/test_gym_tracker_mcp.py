@@ -120,7 +120,6 @@ class AddPlannedExerciseTests(unittest.TestCase):
         )
 
 
-
 class SessionMutationTests(unittest.TestCase):
     def test_restore_set_calls_endpoint(self) -> None:
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
@@ -134,19 +133,26 @@ class SessionMutationTests(unittest.TestCase):
 
     def test_reclassify_preserves_sets_contract(self) -> None:
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
-            gym_tracker_mcp.reclassify_performed_exercise(1, 2, 99, "corrección", telegram_user_id=7)
+            gym_tracker_mcp.reclassify_performed_exercise(
+                1, 2, 99, "corrección", telegram_user_id=7
+            )
         request.assert_called_once_with(
-            "POST", "/sessions/1/exercises/2/reclassify",
-            {"new_exercise_id": 99, "reason": "corrección"}, user_id=7,
+            "POST",
+            "/sessions/1/exercises/2/reclassify",
+            {"new_exercise_id": 99, "reason": "corrección"},
+            user_id=7,
         )
 
     def test_reorder_requires_complete_order_payload(self) -> None:
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
             gym_tracker_mcp.reorder_session_exercises(1, [4, 2, 3], telegram_user_id=7)
         request.assert_called_once_with(
-            "PUT", "/sessions/1/exercises/reorder",
-            {"planned_exercise_ids": [4, 2, 3]}, user_id=7,
+            "PUT",
+            "/sessions/1/exercises/reorder",
+            {"planned_exercise_ids": [4, 2, 3]},
+            user_id=7,
         )
+
     def test_correction_tools_require_telegram_user_id_locally(self) -> None:
         with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
             gym_tracker_mcp.restore_set(1, 2, 1, 10)

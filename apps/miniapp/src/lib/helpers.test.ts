@@ -5,7 +5,6 @@ import {
   formatSetTarget,
   formatWeight,
   missingSetNumbers,
-  nextSetNumber,
   normalizeSession,
   parseWeight,
 } from './helpers';
@@ -68,7 +67,6 @@ describe('series workspace', () => {
   it('selects the first missing set number after deleting a middle set', () => {
     const exercise = { sets: 3, performed_sets: [{ set_number: 1 }, { set_number: 3 }] };
     expect(missingSetNumbers(exercise)).toEqual([2]);
-    expect(nextSetNumber(exercise)).toBe(2);
   });
 
   it('keeps a completed session non-editable even if an exercise remains pending', () => {

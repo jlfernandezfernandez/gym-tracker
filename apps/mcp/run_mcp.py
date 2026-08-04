@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Run the gym-tracker MCP server with Streamable HTTP transport."""
+
 import os
 import sys
 

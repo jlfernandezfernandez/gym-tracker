@@ -89,10 +89,6 @@ export function missingSetNumbers(exercise: any): number[] {
   );
 }
 
-export function nextSetNumber(exercise: any): number | undefined {
-  return missingSetNumbers(exercise)[0];
-}
-
 /** Owner-only workout edits require an editable session and exercise. */
 export function canEditWorkout(
   readOnly: boolean,

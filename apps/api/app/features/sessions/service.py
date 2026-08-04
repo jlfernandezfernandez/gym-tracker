@@ -60,18 +60,14 @@ def find_planned_exercise(workout: WorkoutSession, planned_id: int) -> PlannedEx
     raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
 
 
-def expected_set_numbers(planned_exercise: PlannedExercise) -> set[int]:
-    """The only set numbers that constitute a complete planned exercise."""
-    return set(range(1, planned_exercise.target_sets + 1))
-
-
 def performed_set_numbers(planned_exercise: PlannedExercise) -> set[int]:
     return {performed.set_number for performed in planned_exercise.performed_sets or []}
 
 
 def exercise_has_all_target_sets(planned_exercise: PlannedExercise) -> bool:
     """Completion is based on the actual numbered set collection, never its length."""
-    return performed_set_numbers(planned_exercise) == expected_set_numbers(planned_exercise)
+    expected = set(range(1, planned_exercise.target_sets + 1))
+    return performed_set_numbers(planned_exercise) == expected
 
 
 def next_missing_set_number(planned_exercise: PlannedExercise) -> int | None:

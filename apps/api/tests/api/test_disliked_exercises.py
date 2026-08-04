@@ -1,7 +1,7 @@
 import os
 from collections.abc import AsyncGenerator
 from datetime import datetime
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -36,7 +36,7 @@ def _disliked(
 
 def _make_client(profile: AthleteProfile, user_id_override: int | None = 42):
     fake_db = AsyncMock()
-    fake_db.add = AsyncMock()
+    fake_db.add = MagicMock()
     fake_db.delete = AsyncMock()
     fake_db.commit = AsyncMock()
     fake_db.refresh = AsyncMock()

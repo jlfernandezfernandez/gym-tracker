@@ -10,7 +10,6 @@ import {
   formatWeight,
   mediaUrl,
   missingSetNumbers,
-  nextSetNumber,
   parseWeight,
   sessionMuscles,
   showToast,
@@ -41,8 +40,6 @@ function refreshWorkoutQueries(queryClient: any, sessionId: number, updatedSessi
   queryClient.invalidateQueries({ queryKey: ['sessions'] });
   queryClient.invalidateQueries({ queryKey: ['records'] });
   if (exerciseId) queryClient.invalidateQueries({ queryKey: ['progress', exerciseId] });
-  // Home may be mounted behind the session stack; eagerly refresh its source of truth.
-  queryClient.refetchQueries({ queryKey: ['active'], type: 'active' });
 }
 
 function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, readOnly }: { set: any; target: any; sessionId: number; plannedId: number; exerciseId: number; unilateral?: boolean; readOnly?: boolean }) {
@@ -114,7 +111,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
   const loggedSetCount = completedSetCount(exercise);
   const performedSetNumbers = new Set<number>((exercise.performed_sets || []).map((set: any) => set.set_number));
   const missingSets = missingSetNumbers(exercise);
-  const currentSetNumber = nextSetNumber(exercise);
+  const currentSetNumber = missingSets[0];
   const mediaSrc = mediaUrl(exercise.gif_url || exercise.image_url);
   const muscles = sessionMuscles([exercise]);
   const instructions =
