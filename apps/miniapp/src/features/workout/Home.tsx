@@ -22,6 +22,9 @@ export function Home() {
     queryKey: ["active"],
     queryFn: () => apiFetch("GET", "/sessions/active"),
     retry: 0,
+    staleTime: 0,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 
   const activeData = activeQuery.data;

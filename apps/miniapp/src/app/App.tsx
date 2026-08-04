@@ -87,7 +87,7 @@ function Router() {
   const route = useMemo(shareRouteParams, []);
   const demoMode = isDemoMode();
   const shareToken = route.share_token;
-  const readOnly = demoMode || (!!shareToken && !inTelegram());
+  const readOnly = demoMode || !!shareToken;
 
   const [viewStack, setViewStack] = useState<View[]>(() => {
     if (shareToken) {

@@ -46,8 +46,12 @@ def _normalize_search(value: str) -> str:
 def _normalized_column(column):
     expression = func.lower(column)
     for source, replacement in (
-        ("á", "a"), ("é", "e"), ("í", "i"),
-        ("ó", "o"), ("ú", "u"), ("ü", "u"),
+        ("á", "a"),
+        ("é", "e"),
+        ("í", "i"),
+        ("ó", "o"),
+        ("ú", "u"),
+        ("ü", "u"),
     ):
         expression = func.replace(expression, source, replacement)
     return expression

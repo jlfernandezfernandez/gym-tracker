@@ -147,6 +147,13 @@ class SessionMutationTests(unittest.TestCase):
             "PUT", "/sessions/1/exercises/reorder",
             {"planned_exercise_ids": [4, 2, 3]}, user_id=7,
         )
+    def test_correction_tools_require_telegram_user_id_locally(self) -> None:
+        with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
+            gym_tracker_mcp.restore_set(1, 2, 1, 10)
+        with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
+            gym_tracker_mcp.reclassify_performed_exercise(1, 2, 99)
+        with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
+            gym_tracker_mcp.reorder_session_exercises(1, [2])
 
 
 class DeletePlannedExerciseTests(unittest.TestCase):

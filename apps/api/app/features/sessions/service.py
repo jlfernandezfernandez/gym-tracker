@@ -60,6 +60,53 @@ def find_planned_exercise(workout: WorkoutSession, planned_id: int) -> PlannedEx
     raise HTTPException(status_code=404, detail="Planned exercise not found in this session")
 
 
+def expected_set_numbers(planned_exercise: PlannedExercise) -> set[int]:
+    """The only set numbers that constitute a complete planned exercise."""
+    return set(range(1, planned_exercise.target_sets + 1))
+
+
+def performed_set_numbers(planned_exercise: PlannedExercise) -> set[int]:
+    return {performed.set_number for performed in planned_exercise.performed_sets or []}
+
+
+def exercise_has_all_target_sets(planned_exercise: PlannedExercise) -> bool:
+    """Completion is based on the actual numbered set collection, never its length."""
+    return performed_set_numbers(planned_exercise) == expected_set_numbers(planned_exercise)
+
+
+def next_missing_set_number(planned_exercise: PlannedExercise) -> int | None:
+    """Return the earliest missing target set, including a deleted middle set."""
+    performed = performed_set_numbers(planned_exercise)
+    return next(
+        (
+            number
+            for number in range(1, planned_exercise.target_sets + 1)
+            if number not in performed
+        ),
+        None,
+    )
+
+
+def sync_exercise_status_from_sets(planned_exercise: PlannedExercise) -> None:
+    """Keep derived set-driven states aligned after a correction.
+
+    Explicit completion remains available through the complete endpoint. Correction
+    endpoints use this helper because their meaning is the real performed-set set.
+    """
+    if exercise_has_all_target_sets(planned_exercise):
+        planned_exercise.status = "completed"
+    elif planned_exercise.performed_sets:
+        planned_exercise.status = "in_progress"
+    else:
+        planned_exercise.status = "pending"
+
+
+def reopen_session_for_correction(workout: WorkoutSession) -> None:
+    """A set correction reopens an auto/manual completed workout coherently."""
+    if workout.status == "completed":
+        workout.status = "in_progress"
+
+
 def start_session(workout: WorkoutSession) -> None:
     if workout.status == "planned":
         workout.status = "in_progress"
@@ -121,8 +168,9 @@ def current_state(workout: WorkoutSession) -> dict:
             "total_sets": total_sets,
             "is_complete": True,
         }
-    current_set_count = len(current.performed_sets or [])
-    next_set_number = min(current_set_count + 1, current.target_sets)
+    next_set_number = next_missing_set_number(current)
+    if next_set_number is None:
+        next_set_number = current.target_sets
     next_set_target = next(
         (t for t in current.set_targets or [] if t.get("set_number") == next_set_number), None
     )

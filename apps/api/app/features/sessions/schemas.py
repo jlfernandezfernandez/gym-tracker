@@ -39,7 +39,7 @@ class PerformedSetCreate(BaseModel):
     set_number: int = Field(ge=1)
     weight: float | None = Field(default=None, gt=0)
     reps: int = Field(ge=1)
-    rpe: float | None = None
+    rpe: float | None = Field(default=None, ge=1, le=10)
     sensation: str = ""
     notes: str = ""
 

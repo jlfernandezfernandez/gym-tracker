@@ -108,7 +108,9 @@ async def deliver_pending_events() -> int:
                 try:
                     await _deliver_one(event, client)
                 except Exception as exc:  # delivery must never break the API worker
-                    event.status = "failed" if event.attempts >= settings.webhooks_max_attempts else "pending"
+                    event.status = (
+                        "failed" if event.attempts >= settings.webhooks_max_attempts else "pending"
+                    )
                     event.last_error = str(exc)[:1000]
                     event.next_attempt_at = _now() + timedelta(
                         seconds=min(300, 2 ** min(event.attempts, 8))

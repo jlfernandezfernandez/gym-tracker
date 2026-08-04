@@ -91,7 +91,10 @@ class WorkoutSession(SQLModel, table=True):
     telegram_user_id: int | None = Field(default=None, index=True)
     started_at: datetime | None = Field(default=None)
 
-    planned_exercises: list["PlannedExercise"] = Relationship(back_populates="session")
+    planned_exercises: list["PlannedExercise"] = Relationship(
+        back_populates="session",
+        sa_relationship_kwargs={"order_by": "PlannedExercise.order"},
+    )
 
     @property
     def total_volume(self) -> float:
@@ -130,7 +133,10 @@ class PlannedExercise(SQLModel, table=True):
 
     session: "WorkoutSession" = Relationship(back_populates="planned_exercises")
     exercise: "Exercise" = Relationship(back_populates="planned_exercises")
-    performed_sets: list["PerformedSet"] = Relationship(back_populates="planned_exercise")
+    performed_sets: list["PerformedSet"] = Relationship(
+        back_populates="planned_exercise",
+        sa_relationship_kwargs={"order_by": "PerformedSet.set_number"},
+    )
 
     @property
     def weight_mode(self) -> str:

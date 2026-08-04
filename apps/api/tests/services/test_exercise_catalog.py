@@ -14,6 +14,7 @@ from app.features.exercises.catalog import (
     manifest_url,
     parse_exercise,
 )
+from app.features.exercises.routes import _normalize_search
 from app.models import CatalogState
 
 ENTRY = {
@@ -53,6 +54,12 @@ def fixture_archive(path: Path, extra_name: str | None = None) -> None:
         add_file(archive, "NOTICE.md", b"terms")
         if extra_name:
             add_file(archive, extra_name, b"bad")
+
+
+def test_search_normalizes_accents_case_and_known_synonyms() -> None:
+    assert _normalize_search("  TRÍCEPS  ") == "triceps"
+    assert _normalize_search("curl femoral") == "flexion piernas"
+    assert _normalize_search("Stair Climber") == "escaladora"
 
 
 def test_parse_exercise_maps_release_metadata() -> None:

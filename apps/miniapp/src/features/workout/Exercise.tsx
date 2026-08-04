@@ -3,7 +3,18 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
 import { chartUsesWeight, type ProgressPoint } from '../../lib/chart';
-import { completedSetCount, formatMuscle, formatWeight, mediaUrl, parseWeight, sessionMuscles, showToast } from '../../lib/helpers';
+import {
+  canEditWorkout,
+  completedSetCount,
+  formatMuscle,
+  formatWeight,
+  mediaUrl,
+  missingSetNumbers,
+  nextSetNumber,
+  parseWeight,
+  sessionMuscles,
+  showToast,
+} from '../../lib/helpers';
 import { haptic } from '../../lib/telegram';
 import { useApp, useSession } from '../../app/App';
 import { BusyButton, Empty, Loading } from '../../components/feedback';
@@ -23,16 +34,23 @@ const targetValue = (target: any, mode: string) => {
   return weight ? `${weight} × ${target.reps}` : `${target.reps} reps`;
 };
 
+function refreshWorkoutQueries(queryClient: any, sessionId: number, updatedSession: any, exerciseId?: number) {
+  queryClient.setQueryData(['session', sessionId], updatedSession);
+  queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
+  queryClient.invalidateQueries({ queryKey: ['active'] });
+  queryClient.invalidateQueries({ queryKey: ['sessions'] });
+  queryClient.invalidateQueries({ queryKey: ['records'] });
+  if (exerciseId) queryClient.invalidateQueries({ queryKey: ['progress', exerciseId] });
+  // Home may be mounted behind the session stack; eagerly refresh its source of truth.
+  queryClient.refetchQueries({ queryKey: ['active'], type: 'active' });
+}
+
 function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, readOnly }: { set: any; target: any; sessionId: number; plannedId: number; exerciseId: number; unilateral?: boolean; readOnly?: boolean }) {
   const queryClient = useQueryClient();
   const del = useMutation({
     mutationFn: () => apiFetch('DELETE', `/sessions/${sessionId}/exercises/${plannedId}/sets/${set.id}`),
     onSuccess: (updated: any) => {
-      queryClient.setQueryData(['session', sessionId], updated);
-      queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['progress', exerciseId] });
-      queryClient.invalidateQueries({ queryKey: ['active'] });
-      queryClient.invalidateQueries({ queryKey: ['records'] });
+      refreshWorkoutQueries(queryClient, sessionId, updated, exerciseId);
       haptic('ok');
       showToast('Serie borrada', 'ok', 'Deshacer', () => restore.mutate());
     },
@@ -52,9 +70,7 @@ function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, rea
         notes: set.notes,
       }),
     onSuccess: (updated: any) => {
-      queryClient.setQueryData(['session', sessionId], updated);
-      queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['progress', exerciseId] });
+      refreshWorkoutQueries(queryClient, sessionId, updated, exerciseId);
       haptic('ok');
       showToast('Serie restaurada', 'ok');
     },
@@ -96,13 +112,15 @@ export function Exercise({ plannedId }: { plannedId: number }) {
     );
 
   const loggedSetCount = completedSetCount(exercise);
+  const performedSetNumbers = new Set<number>((exercise.performed_sets || []).map((set: any) => set.set_number));
+  const missingSets = missingSetNumbers(exercise);
+  const currentSetNumber = nextSetNumber(exercise);
   const mediaSrc = mediaUrl(exercise.gif_url || exercise.image_url);
   const muscles = sessionMuscles([exercise]);
   const instructions =
     exercise.instructions_es || exercise.instructions || exercise.notes || 'Sigue las indicaciones del coach en Telegram.';
-  const showEditor = !app.readOnly && exercise.status !== 'completed';
-  const futureStart = loggedSetCount + (showEditor ? 2 : 1);
-  const futureCount = Math.max(0, exercise.sets - futureStart + 1);
+  const showEditor = canEditWorkout(app.readOnly, plan.status, exercise.status) && currentSetNumber !== undefined;
+  const futureSetNumbers = missingSets.filter((setNumber) => setNumber !== currentSetNumber);
 
   return (
     <>
@@ -121,7 +139,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
           </div>
           <div class="mt-2 flex gap-[5px] [&>span]:h-[5px] [&>span]:flex-1 [&>span]:rounded-[9px] [&>span]:bg-track-dim" aria-label={`${loggedSetCount} de ${exercise.sets} series completadas`}>
             {Array.from({ length: exercise.sets || 0 }, (_, setIndex) => (
-              <span key={setIndex} class={setIndex < loggedSetCount ? '!bg-ok-bright' : setIndex === loggedSetCount && showEditor ? '!bg-accent' : ''} />
+              <span key={setIndex} class={performedSetNumbers.has(setIndex + 1) ? '!bg-ok-bright' : setIndex + 1 === currentSetNumber && showEditor ? '!bg-accent' : ''} />
             ))}
           </div>
         </div>
@@ -130,10 +148,10 @@ export function Exercise({ plannedId }: { plannedId: number }) {
       <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
         <div class="mb-3 flex min-h-9 items-center justify-between gap-3">
           <h3>Series</h3>
-          {showEditor && <SetCountControl sessionId={plan.id} plannedId={exercise.planned_id} currentSets={exercise.sets || 0} loggedSets={loggedSetCount} />}
+          {showEditor && <SetCountControl sessionId={plan.id} plannedId={exercise.planned_id} currentSets={exercise.sets || 0} minimumSets={Math.max(...performedSetNumbers, 0)} />}
         </div>
         <div class="grid gap-2">
-          {(exercise.performed_sets || []).map((performedSet: any) => (
+          {[...(exercise.performed_sets || [])].sort((first: any, second: any) => first.set_number - second.set_number).map((performedSet: any) => (
             <SetRow
               key={performedSet.id}
               set={performedSet}
@@ -145,11 +163,10 @@ export function Exercise({ plannedId }: { plannedId: number }) {
               readOnly={app.readOnly || plan.status === 'completed'}
             />
           ))}
-          {showEditor && (
-            <LogSetForm key={loggedSetCount} sessionId={plan.id} exercise={exercise} loggedSetCount={loggedSetCount} onShowPicker={() => setShowPicker(true)} />
+          {showEditor && currentSetNumber !== undefined && (
+            <LogSetForm key={currentSetNumber} sessionId={plan.id} exercise={exercise} nextSetNumber={currentSetNumber} remainingSetCount={missingSets.length} onShowPicker={() => setShowPicker(true)} />
           )}
-          {Array.from({ length: futureCount }, (_, index) => {
-            const setNumber = futureStart + index;
+          {futureSetNumbers.map((setNumber) => {
             return (
               <div key={setNumber} role="group" aria-label={`Serie ${setNumber} pendiente`} class="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control bg-surface-2/55 px-3 py-3">
                 <span aria-hidden="true" class="grid size-[30px] place-items-center rounded-pill bg-surface-2 text-[.7rem] font-bold text-hint">S{setNumber}</span>
@@ -202,9 +219,11 @@ export function Exercise({ plannedId }: { plannedId: number }) {
 }
 
 function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
+  const app = useApp();
   const progressQuery = useQuery({
     queryKey: ['progress', exerciseId],
     queryFn: () => apiFetch<ProgressPoint[]>('GET', `/exercises/${exerciseId}/progress?limit=50`),
+    enabled: !app.readOnly,
   });
   const points = progressQuery.data;
   if (!points || points.length === 0) return null;
@@ -241,15 +260,15 @@ function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
   );
 }
 
-function SetCountControl({ sessionId, plannedId, currentSets, loggedSets }: { sessionId: number; plannedId: number; currentSets: number; loggedSets: number }) {
+function SetCountControl({ sessionId, plannedId, currentSets, minimumSets }: { sessionId: number; plannedId: number; currentSets: number; minimumSets: number }) {
   const queryClient = useQueryClient();
   const [sets, setSets] = useState(currentSets);
+  useEffect(() => setSets(currentSets), [currentSets]);
   const adjust = useMutation({
     mutationFn: (target: number) =>
       apiFetch('PUT', `/sessions/${sessionId}/exercises/${plannedId}`, { target_sets: target }),
     onSuccess: (updated: any) => {
-      queryClient.setQueryData(['session', sessionId], updated);
-      queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
+      refreshWorkoutQueries(queryClient, sessionId, updated);
       haptic('light');
     },
     onError: (error: any) => {
@@ -259,14 +278,14 @@ function SetCountControl({ sessionId, plannedId, currentSets, loggedSets }: { se
     },
   });
   const step = (delta: number) => {
-    const next = Math.max(1, loggedSets, Math.min(20, sets + delta));
+    const next = Math.max(1, minimumSets, Math.min(20, sets + delta));
     if (next === sets) return;
     setSets(next);
     adjust.mutate(next);
   };
   return (
     <div class="flex items-center gap-2" aria-label={`${sets} series planificadas`}>
-      <button class="grid size-9 cursor-pointer place-items-center rounded-xl border-0 bg-surface-2 text-[1.2rem] font-bold text-ink transition active:scale-90 active:bg-hover disabled:cursor-default disabled:opacity-30" disabled={adjust.isPending || sets <= loggedSets} onClick={() => step(-1)} aria-label="Quitar serie">−</button>
+      <button class="grid size-9 cursor-pointer place-items-center rounded-xl border-0 bg-surface-2 text-[1.2rem] font-bold text-ink transition active:scale-90 active:bg-hover disabled:cursor-default disabled:opacity-30" disabled={adjust.isPending || sets <= minimumSets} onClick={() => step(-1)} aria-label="Quitar serie">−</button>
       <span class="min-w-6 text-center text-[1.05rem] font-[720] tracking-[-.03em]">{sets}</span>
       <button class="grid size-9 cursor-pointer place-items-center rounded-xl border-0 bg-surface-2 text-[1.2rem] font-bold text-ink transition active:scale-90 active:bg-hover disabled:cursor-default disabled:opacity-30" disabled={adjust.isPending || sets >= 20} onClick={() => step(1)} aria-label="Añadir serie">+</button>
     </div>
@@ -276,41 +295,40 @@ function SetCountControl({ sessionId, plannedId, currentSets, loggedSets }: { se
 function LogSetForm({
   sessionId,
   exercise,
-  loggedSetCount,
+  nextSetNumber,
+  remainingSetCount,
   onShowPicker,
 }: {
   sessionId: number;
   exercise: any;
-  loggedSetCount: number;
+  nextSetNumber: number;
+  remainingSetCount: number;
   onShowPicker: () => void;
 }) {
   const app = useApp();
   const queryClient = useQueryClient();
   // Prefill priority: per-set target > previous performed set > global prescription.
-  const nextSetNumber = loggedSetCount + 1;
   const explicitTarget = exercise.set_targets?.find((target: any) => target.set_number === nextSetNumber);
   const setTarget = targetForSet(exercise, nextSetNumber);
-  const previousSet = exercise.performed_sets?.at(-1);
+  const previousSet = [...(exercise.performed_sets || [])].sort(
+    (first: any, second: any) => second.set_number - first.set_number,
+  )[0];
   // The backend gives bodyweight exercises their fixed sentinel value.
   const isBodyweight = exercise.weight_mode === 'bodyweight';
   const [weight, setWeight] = useState(String(explicitTarget?.weight ?? previousSet?.weight ?? exercise.weight ?? ''));
   const [reps, setReps] = useState(String(explicitTarget?.reps ?? previousSet?.reps ?? exercise.reps ?? 10));
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
-  const isLastSet = nextSetNumber >= (exercise.sets || 1);
-  const remainingSets = exercise.sets - loggedSetCount;
+  const isLastSet = remainingSetCount === 1;
+  const remainingSets = remainingSetCount;
 
   const refreshAfterMutation = (updatedSession: any) => {
-    queryClient.setQueryData(['session', sessionId], updatedSession);
-    queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
-    queryClient.invalidateQueries({ queryKey: ['progress', exercise.exercise_id] });
-    queryClient.invalidateQueries({ queryKey: ['active'] });
-    queryClient.invalidateQueries({ queryKey: ['records'] });
+    refreshWorkoutQueries(queryClient, sessionId, updatedSession, exercise.exercise_id);
   };
 
   const logSet = useMutation({
     mutationFn: (normalizedWeight: number | null) =>
       apiFetch('POST', `/sessions/${sessionId}/exercises/${exercise.planned_id}/sets`, {
-        set_number: loggedSetCount + 1,
+        set_number: nextSetNumber,
         weight: normalizedWeight,
         reps: parseInt(reps || '0'),
         sensation: 'ok',
@@ -404,7 +422,7 @@ function LogSetForm({
         </div>
       </div>
       <BusyButton busy={isBusy} busyLabel="Guardando..." class="mt-4 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82] disabled:pointer-events-none disabled:opacity-35" onClick={saveSet}>
-        {isLastSet ? 'Registrar y terminar' : 'Registrar serie'}
+        {isLastSet ? 'Registrar' : 'Continuar'}
       </BusyButton>
       {!isLastSet && (
         <button class="mt-1 min-h-11 w-full cursor-pointer rounded-2xl border-0 bg-transparent px-4 py-2 text-[.88rem] font-[700] text-accent transition active:scale-[.975] disabled:pointer-events-none disabled:opacity-35" disabled={isBusy} onClick={() => setConfirmFinishOpen(true)}>

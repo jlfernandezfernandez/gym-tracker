@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { currentExercise, formatSetTarget, formatWeight, normalizeSession, parseWeight } from './helpers';
+import {
+  canEditWorkout,
+  currentExercise,
+  formatSetTarget,
+  formatWeight,
+  missingSetNumbers,
+  nextSetNumber,
+  normalizeSession,
+  parseWeight,
+} from './helpers';
 
 describe('parseWeight', () => {
   it('parses comma decimal', () => {
@@ -52,6 +61,24 @@ describe('normalizeSession', () => {
   it('carries unilateral from planned exercise into the workout view', () => {
     expect(normalizeSession({ planned_exercises: [{ id: 7, order: 0, exercise_id: 9, unilateral: true }] }).exercises[0].unilateral).toBe(true);
     expect(normalizeSession({ planned_exercises: [{ id: 8, order: 0, exercise_id: 10 }] }).exercises[0].unilateral).toBe(false);
+  });
+});
+
+describe('series workspace', () => {
+  it('selects the first missing set number after deleting a middle set', () => {
+    const exercise = { sets: 3, performed_sets: [{ set_number: 1 }, { set_number: 3 }] };
+    expect(missingSetNumbers(exercise)).toEqual([2]);
+    expect(nextSetNumber(exercise)).toBe(2);
+  });
+
+  it('keeps a completed session non-editable even if an exercise remains pending', () => {
+    expect(canEditWorkout(false, 'completed', 'pending')).toBe(false);
+    expect(canEditWorkout(false, 'in_progress', 'completed')).toBe(false);
+    expect(canEditWorkout(false, 'in_progress', 'in_progress')).toBe(true);
+  });
+
+  it('keeps every share-token route read-only, including Telegram launches', () => {
+    expect(canEditWorkout(true, 'in_progress', 'in_progress')).toBe(false);
   });
 });
 

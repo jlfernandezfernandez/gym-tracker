@@ -82,6 +82,26 @@ export function sessionMuscles(exercises: any[]) {
 
 export const completedSetCount = (exercise: any) => exercise.performed_sets?.length || 0;
 
+export function missingSetNumbers(exercise: any): number[] {
+  const performed = new Set((exercise.performed_sets || []).map((set: any) => set.set_number));
+  return Array.from({ length: exercise.sets || 0 }, (_, index) => index + 1).filter(
+    (setNumber) => !performed.has(setNumber),
+  );
+}
+
+export function nextSetNumber(exercise: any): number | undefined {
+  return missingSetNumbers(exercise)[0];
+}
+
+/** Owner-only workout edits require an editable session and exercise. */
+export function canEditWorkout(
+  readOnly: boolean,
+  sessionStatus: string | undefined,
+  exerciseStatus: string | undefined,
+) {
+  return !readOnly && sessionStatus !== 'completed' && exerciseStatus !== 'completed';
+}
+
 export function parseWeight(raw: string): number {
   return Number((raw || '0').replace(',', '.'));
 }

@@ -71,6 +71,15 @@ async def readiness_check(_: Request) -> JSONResponse:
     return JSONResponse({"status": "ready", "service": "gym-tracker-mcp"})
 
 
+def _require_telegram_user_id(telegram_user_id: int | None, tool_name: str) -> int:
+    """Fail before any HTTP call when a correction would be unscoped."""
+    if telegram_user_id is None:
+        raise ValueError(
+            f"telegram_user_id is required for {tool_name}; pass the athlete id from the current chat."
+        )
+    return int(telegram_user_id)
+
+
 def _request(method: str, path: str, payload: dict[str, Any] | None = None, user_id: int | None = None) -> Any:
     """Send an HTTP request to the gym-tracker API and return parsed JSON.
 
@@ -347,13 +356,17 @@ def delete_set(session_id: int, planned_exercise_id: int, set_id: int, telegram_
 
 @mcp.tool()
 def restore_set(session_id: int, planned_exercise_id: int, set_number: int, reps: int, weight: float | None = None, rpe: float | None = None, sensation: str = "", notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Restore the next consecutive set after an accidental deletion."""
+    """Restore one deleted set at its original number, including a middle set.
+
+    telegram_user_id is required so the correction stays scoped to its athlete.
+    """
+    user_id = _require_telegram_user_id(telegram_user_id, "restore_set")
     payload: dict[str, Any] = {"set_number": int(set_number), "reps": int(reps), "sensation": sensation, "notes": notes}
     if weight is not None:
         payload["weight"] = float(weight)
     if rpe is not None:
         payload["rpe"] = float(rpe)
-    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets/restore", payload, user_id=telegram_user_id)
+    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets/restore", payload, user_id=user_id)
 
 
 @mcp.tool()
@@ -429,14 +442,20 @@ def update_planned_exercise(session_id: int, planned_exercise_id: int, status: L
 
 @mcp.tool()
 def reclassify_performed_exercise(session_id: int, planned_exercise_id: int, new_exercise_id: int, reason: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Change an exercise catalog identity while preserving all performed sets."""
-    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/reclassify", {"new_exercise_id": int(new_exercise_id), "reason": reason}, user_id=telegram_user_id)
+    """Reclassify a performed exercise after weight-compatibility validation.
+
+    All historical sets are preserved. telegram_user_id is required for this
+    athlete-scoped correction.
+    """
+    user_id = _require_telegram_user_id(telegram_user_id, "reclassify_performed_exercise")
+    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/reclassify", {"new_exercise_id": int(new_exercise_id), "reason": reason}, user_id=user_id)
 
 
 @mcp.tool()
 def reorder_session_exercises(session_id: int, planned_exercise_ids: list[int], telegram_user_id: int | None = None) -> dict[str, Any]:
-    """Set the complete explicit order of exercises in a session."""
-    return _request("PUT", f"/sessions/{int(session_id)}/exercises/reorder", {"planned_exercise_ids": [int(value) for value in planned_exercise_ids]}, user_id=telegram_user_id)
+    """Set the complete explicit order of a single athlete's session."""
+    user_id = _require_telegram_user_id(telegram_user_id, "reorder_session_exercises")
+    return _request("PUT", f"/sessions/{int(session_id)}/exercises/reorder", {"planned_exercise_ids": [int(value) for value in planned_exercise_ids]}, user_id=user_id)
 
 
 @mcp.tool()
