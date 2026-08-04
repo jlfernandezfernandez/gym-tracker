@@ -13,8 +13,11 @@ from app.features.disliked.routes import disliked_exercise_ids
 from app.features.profile.routes import _get_or_create_profile
 from app.features.sessions.schemas import (
     AddExerciseRequest,
+    ExerciseReclassify,
     PerformedSetCreate,
+    PerformedSetRestore,
     PlannedExerciseUpdate,
+    SessionExerciseReorder,
     SessionFinish,
     SessionOut,
     SessionSummary,
@@ -107,6 +110,59 @@ async def complete_planned_exercise(
     planned_exercise.status = "completed"
     start_session(workout)
     auto_finish_if_done(workout)
+    await db.commit()
+    return await load_session(session_id, db)
+
+
+@router.put("/{session_id}/exercises/reorder", response_model=SessionOut)
+async def reorder_session_exercises(
+    session_id: int,
+    body: SessionExerciseReorder,
+    db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
+):
+    """Apply an explicit, gap-free order to every exercise in a session."""
+    workout = await load_session(session_id, db)
+    check_session_owner(workout, user_id)
+    exercises = list(workout.planned_exercises or [])
+    by_id = {exercise.id: exercise for exercise in exercises}
+    requested = body.planned_exercise_ids
+    if len(requested) != len(exercises) or set(requested) != set(by_id):
+        raise HTTPException(
+            status_code=422,
+            detail="Order must contain every exercise exactly once",
+        )
+    # Move to a temporary range first to avoid the unique(session_id, order) constraint.
+    temporary_offset = (
+        max((exercise.order for exercise in exercises), default=-1) + len(exercises) + 1
+    )
+    for index, planned in enumerate(exercises):
+        planned.order = temporary_offset + index
+    await db.flush()
+    for index, planned_id in enumerate(requested):
+        by_id[planned_id].order = index
+    await db.commit()
+    return await load_session(session_id, db)
+
+
+@router.post("/{session_id}/exercises/{planned_id}/reclassify", response_model=SessionOut)
+async def reclassify_exercise(
+    session_id: int,
+    planned_id: int,
+    body: ExerciseReclassify,
+    db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
+):
+    """Change the catalog identity while preserving every performed set."""
+    workout = await load_session(session_id, db)
+    check_session_owner(workout, user_id)
+    planned = find_planned_exercise(workout, planned_id)
+    new_exercise = await db.get(Exercise, body.new_exercise_id)
+    if not new_exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found in catalog")
+    planned.exercise_id = new_exercise.id
+    if body.reason:
+        planned.notes = f"{planned.notes}\nCorrección: {body.reason}".strip()
     await db.commit()
     return await load_session(session_id, db)
 
@@ -391,6 +447,40 @@ async def delete_set(
         planned_exercise.status = "in_progress"
     await db.commit()
     db.expire_all()
+    return await load_session(session_id, db)
+
+
+@router.post("/{session_id}/exercises/{planned_id}/sets/restore", response_model=SessionOut)
+async def restore_set(
+    session_id: int,
+    planned_id: int,
+    body: PerformedSetRestore,
+    db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
+):
+    """Restore a recently deleted set without allowing gaps or duplicates."""
+    workout = await load_session(session_id, db)
+    check_session_owner(workout, user_id)
+    planned = find_planned_exercise(workout, planned_id)
+    existing_numbers = {item.set_number for item in planned.performed_sets or []}
+    if body.set_number in existing_numbers:
+        raise HTTPException(status_code=409, detail="That set number already exists")
+    if body.set_number > planned.target_sets:
+        raise HTTPException(status_code=422, detail="Cannot restore a set beyond the target")
+    validate_exercise_weight(planned.exercise, body.weight)
+    db.add(
+        PerformedSet(
+            planned_exercise_id=planned_id,
+            set_number=body.set_number,
+            weight=body.weight,
+            reps=body.reps,
+            rpe=body.rpe,
+            sensation=body.sensation,
+            notes=body.notes,
+        )
+    )
+    planned.status = "completed" if body.set_number == planned.target_sets else "in_progress"
+    await db.commit()
     return await load_session(session_id, db)
 
 

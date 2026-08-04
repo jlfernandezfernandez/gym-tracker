@@ -59,6 +59,7 @@ class AddPlannedExerciseTests(unittest.TestCase):
                 "target_sets": 3,
                 "target_reps": 10,
                 "notes": "",
+                "unilateral": False,
             },
             user_id=7,
         )
@@ -86,6 +87,7 @@ class AddPlannedExerciseTests(unittest.TestCase):
                 "target_reps": 8,
                 "suggested_weight": 50.0,
                 "notes": "controla la bajada",
+                "unilateral": False,
             },
             user_id=7,
         )
@@ -111,9 +113,39 @@ class AddPlannedExerciseTests(unittest.TestCase):
                 "target_sets": 3,
                 "target_reps": 10,
                 "notes": "",
+                "unilateral": False,
                 "set_targets": targets,
             },
             user_id=7,
+        )
+
+
+
+class SessionMutationTests(unittest.TestCase):
+    def test_restore_set_calls_endpoint(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.restore_set(1, 2, 3, 10, weight=40, telegram_user_id=7)
+        request.assert_called_once_with(
+            "POST",
+            "/sessions/1/exercises/2/sets/restore",
+            {"set_number": 3, "reps": 10, "sensation": "", "notes": "", "weight": 40.0},
+            user_id=7,
+        )
+
+    def test_reclassify_preserves_sets_contract(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.reclassify_performed_exercise(1, 2, 99, "corrección", telegram_user_id=7)
+        request.assert_called_once_with(
+            "POST", "/sessions/1/exercises/2/reclassify",
+            {"new_exercise_id": 99, "reason": "corrección"}, user_id=7,
+        )
+
+    def test_reorder_requires_complete_order_payload(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.reorder_session_exercises(1, [4, 2, 3], telegram_user_id=7)
+        request.assert_called_once_with(
+            "PUT", "/sessions/1/exercises/reorder",
+            {"planned_exercise_ids": [4, 2, 3]}, user_id=7,
         )
 
 

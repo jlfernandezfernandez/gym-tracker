@@ -101,12 +101,25 @@ export function currentExercise(plan: any, currentState: any) {
   );
 }
 
-export function showToast(message: string, type?: string) {
+export function showToast(message: string, type?: string, actionLabel?: string, action?: () => void) {
   const toastElement = document.createElement('div');
   toastElement.className = 'toast' + (type ? ' ' + type : '');
   toastElement.setAttribute('role', type === 'err' ? 'alert' : 'status');
   toastElement.setAttribute('aria-live', type === 'err' ? 'assertive' : 'polite');
-  toastElement.textContent = message;
+  const text = document.createElement('span');
+  text.textContent = message;
+  toastElement.appendChild(text);
+  if (actionLabel && action) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ml-2 font-bold underline';
+    button.textContent = actionLabel;
+    button.onclick = () => {
+      action();
+      toastElement.remove();
+    };
+    toastElement.appendChild(button);
+  }
   document.body.appendChild(toastElement);
-  setTimeout(() => toastElement.remove(), 2800);
+  setTimeout(() => toastElement.remove(), 5000);
 }

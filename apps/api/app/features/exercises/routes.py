@@ -1,3 +1,5 @@
+import unicodedata
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,6 +21,36 @@ from app.models import (
 )
 
 router = APIRouter(prefix="/exercises", tags=["exercises"])
+
+
+_SEARCH_SYNONYMS = {
+    "leg curl": "flexion piernas",
+    "curl femoral": "flexion piernas",
+    "hamstring curl": "flexion piernas",
+    "aductor": "aduccion",
+    "adductors": "aduccion",
+    "abductor": "abduccion",
+    "abductors": "abduccion",
+    "stepper": "escaladora",
+    "stair climber": "escaladora",
+}
+
+
+def _normalize_search(value: str) -> str:
+    value = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode().lower()
+    for source, replacement in _SEARCH_SYNONYMS.items():
+        value = value.replace(source, replacement)
+    return " ".join(value.split())
+
+
+def _normalized_column(column):
+    expression = func.lower(column)
+    for source, replacement in (
+        ("á", "a"), ("é", "e"), ("í", "i"),
+        ("ó", "o"), ("ú", "u"), ("ü", "u"),
+    ):
+        expression = func.replace(expression, source, replacement)
+    return expression
 
 
 @router.get("", response_model=list[ExerciseOut])
@@ -43,9 +75,12 @@ async def list_exercises(
     if equipment:
         statement = statement.where(Exercise.equipment == equipment)
     if search:
-        for term in search.split():
+        normalized_search = _normalize_search(search)
+        for term in normalized_search.split():
+            pattern = f"%{term}%"
             statement = statement.where(
-                Exercise.name.ilike(f"%{term}%") | Exercise.name_en.ilike(f"%{term}%")
+                _normalized_column(Exercise.name).like(pattern)
+                | _normalized_column(Exercise.name_en).like(pattern)
             )
 
     if exclude_disliked:

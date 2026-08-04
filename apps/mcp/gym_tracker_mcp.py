@@ -346,6 +346,17 @@ def delete_set(session_id: int, planned_exercise_id: int, set_id: int, telegram_
 
 
 @mcp.tool()
+def restore_set(session_id: int, planned_exercise_id: int, set_number: int, reps: int, weight: float | None = None, rpe: float | None = None, sensation: str = "", notes: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Restore the next consecutive set after an accidental deletion."""
+    payload: dict[str, Any] = {"set_number": int(set_number), "reps": int(reps), "sensation": sensation, "notes": notes}
+    if weight is not None:
+        payload["weight"] = float(weight)
+    if rpe is not None:
+        payload["rpe"] = float(rpe)
+    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets/restore", payload, user_id=telegram_user_id)
+
+
+@mcp.tool()
 def delete_planned_exercise(session_id: int, planned_exercise_id: int, telegram_user_id: int | None = None) -> dict[str, Any]:
     """Remove a planned exercise from a session completely. Only works when no sets have been logged for it."""
     return _request("DELETE", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", user_id=telegram_user_id)
@@ -414,6 +425,18 @@ def update_planned_exercise(session_id: int, planned_exercise_id: int, status: L
     if unilateral is not None:
         payload["unilateral"] = bool(unilateral)
     return _request("PUT", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}", payload, user_id=telegram_user_id)
+
+
+@mcp.tool()
+def reclassify_performed_exercise(session_id: int, planned_exercise_id: int, new_exercise_id: int, reason: str = "", telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Change an exercise catalog identity while preserving all performed sets."""
+    return _request("POST", f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/reclassify", {"new_exercise_id": int(new_exercise_id), "reason": reason}, user_id=telegram_user_id)
+
+
+@mcp.tool()
+def reorder_session_exercises(session_id: int, planned_exercise_ids: list[int], telegram_user_id: int | None = None) -> dict[str, Any]:
+    """Set the complete explicit order of exercises in a session."""
+    return _request("PUT", f"/sessions/{int(session_id)}/exercises/reorder", {"planned_exercise_ids": [int(value) for value in planned_exercise_ids]}, user_id=telegram_user_id)
 
 
 @mcp.tool()

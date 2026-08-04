@@ -34,12 +34,31 @@ function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, rea
       queryClient.invalidateQueries({ queryKey: ['active'] });
       queryClient.invalidateQueries({ queryKey: ['records'] });
       haptic('ok');
-      showToast('Serie borrada', 'ok');
+      showToast('Serie borrada', 'ok', 'Deshacer', () => restore.mutate());
     },
     onError: (error: any) => {
       haptic('bad');
       showToast(error.message, 'err');
     },
+  });
+  const restore = useMutation({
+    mutationFn: () =>
+      apiFetch('POST', `/sessions/${sessionId}/exercises/${plannedId}/sets/restore`, {
+        set_number: set.set_number,
+        weight: set.weight,
+        reps: set.reps,
+        rpe: set.rpe,
+        sensation: set.sensation,
+        notes: set.notes,
+      }),
+    onSuccess: (updated: any) => {
+      queryClient.setQueryData(['session', sessionId], updated);
+      queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['progress', exerciseId] });
+      haptic('ok');
+      showToast('Serie restaurada', 'ok');
+    },
+    onError: (error: any) => showToast(error.message, 'err'),
   });
   const performed = formatWeight(set.weight, set.weight_mode);
   return (
@@ -50,7 +69,9 @@ function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, rea
         <b class="block truncate text-[.84rem]">{performed ? `${performed} × ${set.reps}` : `${set.reps} reps`} · Hecha</b>
       </div>
       {!readOnly && (
-        <button class="grid size-10 cursor-pointer place-items-center rounded-pill border-0 bg-transparent text-err disabled:opacity-30" disabled={del.isPending} onClick={() => del.mutate()} aria-label={`Borrar serie ${set.set_number}`}>
+        <button class="grid size-10 cursor-pointer place-items-center rounded-pill border-0 bg-transparent text-err disabled:opacity-30" disabled={del.isPending || restore.isPending} onClick={() => {
+          if (window.confirm(`¿Borrar la serie ${set.set_number}? Puedes deshacerlo durante unos segundos.`)) del.mutate();
+        }} aria-label={`Borrar serie ${set.set_number}`}>
           ✕
         </button>
       )}
@@ -298,9 +319,14 @@ function LogSetForm({
     onSuccess: (updatedSession) => {
       refreshAfterMutation(updatedSession);
       haptic('ok');
-      // Last step of the flow: logging the final set also completes the exercise.
-      if (isLastSet) completeExercise.mutate();
-      else showToast('Serie guardada', 'ok');
+      if (isLastSet) {
+        showToast('Ejercicio completado', 'ok');
+        const pending = (updatedSession.planned_exercises || []).filter(
+          (candidate: any) => candidate.planned_id !== exercise.planned_id && ['pending', 'in_progress'].includes(candidate.status)
+        );
+        if (pending.length > 0) onShowPicker();
+        else app.pop();
+      } else showToast('Serie guardada', 'ok');
     },
     onError: (error: any) => {
       haptic('bad');
@@ -314,8 +340,9 @@ function LogSetForm({
       refreshAfterMutation(updatedSession);
       haptic('ok');
       showToast('Ejercicio completado', 'ok');
+      setConfirmFinishOpen(false);
       const pending = (updatedSession.planned_exercises || []).filter(
-        (e: any) => e.id !== exercise.planned_id && ['pending', 'in_progress'].includes(e.status)
+        (candidate: any) => candidate.id !== exercise.planned_id && ['pending', 'in_progress'].includes(candidate.status)
       );
       if (pending.length > 0) onShowPicker();
       else app.pop();

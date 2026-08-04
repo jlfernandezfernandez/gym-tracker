@@ -44,6 +44,19 @@ class PerformedSetCreate(BaseModel):
     notes: str = ""
 
 
+class PerformedSetRestore(PerformedSetCreate):
+    """Payload used by the short-lived undo action in the Mini App."""
+
+
+class ExerciseReclassify(BaseModel):
+    new_exercise_id: int = Field(gt=0)
+    reason: str = Field(default="", max_length=500)
+
+
+class SessionExerciseReorder(BaseModel):
+    planned_exercise_ids: list[int] = Field(min_length=1)
+
+
 class PlannedExerciseUpdate(BaseModel):
     status: Literal["pending", "in_progress", "completed", "skipped"] | None = None
     new_exercise_id: int | None = None

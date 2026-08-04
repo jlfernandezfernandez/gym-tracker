@@ -55,6 +55,9 @@ export function useSession() {
         ? apiFetch('GET', '/sessions/share/' + encodeURIComponent(shareToken))
         : apiFetch('GET', '/sessions/' + sessionId),
     enabled: !!(shareToken || sessionId),
+    staleTime: 0,
+    refetchOnWindowFocus: !shareToken,
+    refetchOnReconnect: !shareToken,
     select: normalizeSession,
   });
 }
