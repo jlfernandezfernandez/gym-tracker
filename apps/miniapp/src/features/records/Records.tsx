@@ -48,7 +48,7 @@ export function Records() {
                 <div class="min-w-0">
                   <h3>{record.name}</h3>
                   <div class="mt-[9px] flex flex-wrap gap-1.5">
-                    <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{record.weight_mode === 'weighted' ? `${record.max_weight} kg` : `${record.max_reps} reps`}</span>
+                    <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{record.activity_type === 'cardio' ? `${record.max_duration_minutes} min` : record.weight_mode === 'weighted' ? `${record.max_weight} kg` : `${record.max_reps} reps`}</span>
                     <span class="rounded-pill bg-surface-2 px-2 py-1 text-[.68rem] font-[650] text-hint">{formatDate(record.last_date)}</span>
                     <span class="rounded-pill bg-surface-2 px-2 py-1 text-[.68rem] font-[650] text-hint">
                       {record.sessions} {record.sessions === 1 ? 'sesión' : 'sesiones'}

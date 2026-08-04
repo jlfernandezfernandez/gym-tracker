@@ -12,6 +12,6 @@ def test_measurements_reject_invalid_values(field: str, value: float) -> None:
 
 
 def test_plan_rejects_duplicate_orders() -> None:
-    exercise = PlannedExerciseCreate(exercise_id=1, order=0)
+    exercise = PlannedExerciseCreate(exercise_id=1, order=0, target_reps=10)
     with pytest.raises(ValidationError):
         CoachPlanRequest(exercises=[exercise, exercise.model_copy(update={"exercise_id": 2})])

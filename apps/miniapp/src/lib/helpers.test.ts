@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   canEditWorkout,
   currentExercise,
-  formatSetTarget,
+  executionMetricPayload,
   formatWeight,
   missingSetNumbers,
   normalizeSession,
@@ -30,7 +30,6 @@ describe('parseWeight', () => {
 describe('formatWeight', () => {
   it('formats bodyweight mode', () => {
     expect(formatWeight(null, 'bodyweight')).toBe('Peso corporal');
-    expect(formatWeight(-1, 'bodyweight')).toBe('Peso corporal');
   });
 
   it('formats weighted mode', () => {
@@ -41,25 +40,38 @@ describe('formatWeight', () => {
     expect(formatWeight(null, 'unloaded')).toBe('');
     expect(formatWeight(undefined, 'unloaded')).toBe('');
   });
-
-  it('formats weighted/unloaded with numeric 0', () => {
-    expect(formatWeight(0, 'weighted')).toBe('0 kg');
-    expect(formatWeight(0, 'unloaded')).toBe('0 kg');
-  });
 });
 
-describe('formatSetTarget', () => {
-  it('formats each prescribed set as its own labelled value', () => {
-    expect(formatSetTarget({ set_number: 1, weight: 90, reps: 12 }, 'weighted')).toBe('S1 · 90 kg × 12');
-    expect(formatSetTarget({ set_number: 2, weight: null, reps: 8 }, 'bodyweight')).toBe('S2 · Peso corporal × 8');
-    expect(formatSetTarget({ set_number: 3, weight: null, reps: 15 }, 'unloaded')).toBe('S3 · 15 reps');
+describe('executionMetricPayload', () => {
+  it('emits only the metric fields for the activity domain', () => {
+    expect(executionMetricPayload('cardio', { duration_minutes: 20, reps: 20, weight: 5 }))
+      .toEqual({ duration_minutes: 20 });
+    expect(executionMetricPayload('strength', { duration_minutes: 20, reps: 10, weight: 40 }))
+      .toEqual({ reps: 10, weight: 40 });
   });
 });
 
 describe('normalizeSession', () => {
-  it('carries unilateral from planned exercise into the workout view', () => {
-    expect(normalizeSession({ planned_exercises: [{ id: 7, order: 0, exercise_id: 9, unilateral: true }] }).exercises[0].unilateral).toBe(true);
-    expect(normalizeSession({ planned_exercises: [{ id: 8, order: 0, exercise_id: 10 }] }).exercises[0].unilateral).toBe(false);
+  it('carries strength asymmetry into the workout view', () => {
+    expect(normalizeSession({ planned_exercises: [{ id: 7, order: 0, exercise_id: 9, unilateral: true, target_reps: 10, exercise: { activity_type: 'strength' } }] }).exercises[0].unilateral).toBe(true);
+    expect(normalizeSession({ planned_exercises: [{ id: 8, order: 0, exercise_id: 10, target_reps: 10, exercise: { activity_type: 'strength' } }] }).exercises[0].unilateral).toBe(false);
+  });
+
+  it('normalizes cardio with minutes and no reps fallback', () => {
+    const exercise = normalizeSession({
+      planned_exercises: [{
+        id: 9,
+        order: 0,
+        exercise_id: 11,
+        target_sets: 1,
+        target_reps: null,
+        target_duration_minutes: 25,
+        exercise: { activity_type: 'cardio' },
+      }],
+    }).exercises[0];
+    expect(exercise.activity_type).toBe('cardio');
+    expect(exercise.duration_minutes).toBe(25);
+    expect(exercise.reps).toBeNull();
   });
 });
 

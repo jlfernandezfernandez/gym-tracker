@@ -19,12 +19,12 @@ def test_zero_and_negative_weights_are_rejected_by_schemas():
         with pytest.raises(ValidationError):
             PerformedSetCreate(set_number=1, weight=bad_weight, reps=10)
         with pytest.raises(ValidationError):
-            PlannedExerciseCreate(exercise_id=1, suggested_weight=bad_weight)
+            PlannedExerciseCreate(exercise_id=1, target_reps=10, suggested_weight=bad_weight)
 
 
 def test_null_weight_is_accepted():
     assert PerformedSetCreate(set_number=1, reps=10).weight is None
-    assert PlannedExerciseCreate(exercise_id=1).suggested_weight is None
+    assert PlannedExerciseCreate(exercise_id=1, target_reps=10).suggested_weight is None
 
 
 def test_unloaded_equipment_rejects_any_weight():

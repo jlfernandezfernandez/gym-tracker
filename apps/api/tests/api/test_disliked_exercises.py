@@ -241,7 +241,7 @@ def test_coach_plan_rejects_disliked_exercises() -> None:
     payload = {
         "title": "Leg Day",
         "goal": "Hypertrophy",
-        "exercises": [{"exercise_id": 10, "order": 0}],
+        "exercises": [{"exercise_id": 10, "order": 0, "target_reps": 10}],
     }
     response = client.post("/api/coach/plan", json=payload)
     assert response.status_code == 422

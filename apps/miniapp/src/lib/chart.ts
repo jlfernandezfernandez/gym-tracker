@@ -9,8 +9,10 @@ Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryS
 export interface ProgressPoint {
   date: string;
   top_weight: number | null;
-  weight_mode: 'bodyweight' | 'unloaded' | 'weighted';
+  activity_type: 'strength' | 'cardio';
+  weight_mode: 'bodyweight' | 'unloaded' | 'weighted' | null;
   top_reps?: number;
+  top_duration_minutes?: number;
   volume: number;
   sets: number;
 }
@@ -26,16 +28,28 @@ const COLORS = {
   ok: () => getComputedStyle(document.documentElement).getPropertyValue('--color-ok').trim() || '#248a3d',
 };
 
+export const progressValue = (point: ProgressPoint, metric: 'minutes' | 'weight' | 'reps') =>
+  metric === 'minutes' ? point.top_duration_minutes || 0 : metric === 'weight' ? point.top_weight || 0 : point.top_reps || 0;
+
+export const progressUnit = (metric: 'minutes' | 'weight' | 'reps') =>
+  metric === 'minutes' ? 'min' : metric === 'weight' ? 'kg' : 'reps';
+
 const GRID_COLOR = 'rgba(17,24,39,.08)';
 
 /** Bodyweight exercises have no logged weight; the chart (and its labels) fall back to reps. */
 export const chartUsesWeight = (points: ProgressPoint[]) => points.some((point) => point.weight_mode === 'weighted');
+export const progressMetric = (points: ProgressPoint[]) =>
+  points.some((point) => point.activity_type === 'cardio')
+    ? 'minutes'
+    : chartUsesWeight(points)
+      ? 'weight'
+      : 'reps';
 
 export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressPoint[]): Chart {
   const accentColor = COLORS.accent();
   const hintColor = COLORS.hint();
-  const usesWeight = chartUsesWeight(points);
-  const values = points.map((point) => (usesWeight ? point.top_weight || 0 : point.top_reps || 0));
+  const metric = progressMetric(points);
+  const values = points.map((point) => progressValue(point, metric));
 
   return new Chart(canvas, {
     type: 'line',
@@ -64,7 +78,9 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
           callbacks: {
             label: (tooltipContext) => {
               const point = points[tooltipContext.dataIndex];
-              return usesWeight
+              return metric === 'minutes'
+                ? [`máx ${point.top_duration_minutes || 0} min`, `${point.sets} bloques`]
+                : metric === 'weight'
                 ? [`máx ${point.top_weight || 0} kg`, `${point.sets} series · ${Math.round(point.volume)} kg vol`]
                 : [`máx ${point.top_reps || 0} reps`, `${point.sets} series`];
             },
@@ -74,7 +90,7 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
       scales: {
         x: { ticks: { color: hintColor, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
         y: {
-          ticks: { color: hintColor, font: { size: 10 }, callback: (value) => (usesWeight ? `${value}kg` : `${value} reps`) },
+          ticks: { color: hintColor, font: { size: 10 }, callback: (value) => metric === 'minutes' ? `${value} min` : metric === 'weight' ? `${value}kg` : `${value} reps` },
           grid: { color: GRID_COLOR },
         },
       },

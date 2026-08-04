@@ -83,6 +83,18 @@ def _require_telegram_user_id(telegram_user_id: int | None, tool_name: str) -> i
     return int(telegram_user_id)
 
 
+def _require_one_metric(
+    payload: dict[str, Any],
+    reps_key: str = "reps",
+    duration_key: str = "duration_minutes",
+    weight_key: str = "weight",
+) -> None:
+    if (payload.get(reps_key) is None) == (payload.get(duration_key) is None):
+        raise ValueError(f"exactly one of {reps_key} or {duration_key} is required")
+    if payload.get(duration_key) is not None and payload.get(weight_key) is not None:
+        raise ValueError(f"{duration_key} does not accept {weight_key}")
+
+
 def _request(
     method: str,
     path: str,
@@ -151,6 +163,7 @@ def list_exercises(
     muscle_group: str = "",
     body_part: str = "",
     equipment: str = "",
+    activity_type: str = "",
     exclude_disliked: bool = False,
     limit: int = 10,
     offset: int = 0,
@@ -159,7 +172,7 @@ def list_exercises(
     """Search exercises by name and exact catalog facets.
 
     Call list_exercise_facets first instead of guessing muscle_group, body_part,
-    or equipment. Use offset to inspect more than the first page.
+    equipment, or activity_type. Use offset to inspect more than the first page.
     Pass exclude_disliked=true to filter out the athlete's disliked exercises.
     """
     params: dict[str, Any] = {
@@ -174,6 +187,8 @@ def list_exercises(
         params["body_part"] = body_part
     if equipment:
         params["equipment"] = equipment
+    if activity_type:
+        params["activity_type"] = activity_type
     if exclude_disliked:
         params["exclude_disliked"] = "true"
     qs = urllib.parse.urlencode(params)
@@ -188,7 +203,7 @@ def get_exercise(exercise_id: int) -> dict[str, Any]:
 
 @mcp.tool()
 def list_exercise_facets() -> dict[str, list[str]]:
-    """List valid muscle_group, body_part, and equipment values for catalog search."""
+    """List valid muscle_group, body_part, equipment, and activity_type values."""
     return _request("GET", "/exercises/facets")
 
 
@@ -196,7 +211,7 @@ def list_exercise_facets() -> dict[str, list[str]]:
 def exercise_progress(
     exercise_id: int, limit: int = 20, telegram_user_id: int | None = None
 ) -> list[dict[str, Any]]:
-    """Progression by session: session_id, date, top_weight, top_reps, volume, and sets. Bodyweight exercises use top_reps. Use session_id to open a past session with session_web_url."""
+    """Progression by session. Strength reports weight/reps; cardio reports top_duration_minutes. Use session_id to open a past session."""
     qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 100))})
     return _request(
         "GET", f"/exercises/{int(exercise_id)}/progress?{qs}", user_id=telegram_user_id
@@ -304,15 +319,20 @@ def create_plan(
     exercises: native MCP array of the exercises you picked from list_exercises, e.g.
     [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
       "suggested_weight": 40.0, "unilateral": false, "notes": "controla la bajada"}]
+    Cardio uses target_duration_minutes instead of target_reps/suggested_weight:
+    [{"exercise_id": 99, "order": 1, "target_sets": 1,
+      "target_duration_minutes": 20, "unilateral": false}]
     Optional per-set targets (ramping/variable sets):
     [{"exercise_id": 12, "order": 0, "target_sets": 3, "target_reps": 10,
       "suggested_weight": 40.0,
       "set_targets": [{"set_number": 1, "weight": 40, "reps": 12},
                       {"set_number": 2, "weight": 45, "reps": 10},
                       {"set_number": 3, "weight": 50, "reps": 8}]}]
+                      Cardio uses target_duration_minutes and duration_minutes in set_targets;
+                      it never uses target_reps, reps, or weight.
     Required: pick the exercises yourself from list_exercises; the API rejects empty plans.
-    Always give suggested_weight for loaded (non-bodyweight) exercises, based on the
-    athlete's history (get_snapshot); omit it only for bodyweight movements.
+    Always give suggested_weight for loaded strength exercises, based on the
+    athlete's history; omit it for bodyweight and cardio exercises.
     """
     if telegram_user_id is None:
         raise ValueError(
@@ -321,6 +341,21 @@ def create_plan(
             "from the current chat/context."
         )
     exercises = exercises or []
+    for exercise in exercises:
+        _require_one_metric(
+            exercise,
+            "target_reps",
+            "target_duration_minutes",
+            "suggested_weight",
+        )
+        if exercise.get("target_duration_minutes") is not None and exercise.get(
+            "unilateral"
+        ):
+            raise ValueError(
+                "cardio target_duration_minutes does not accept unilateral"
+            )
+        for target in exercise.get("set_targets") or []:
+            _require_one_metric(target)
     return _request(
         "POST",
         "/coach/plan",
@@ -356,14 +391,17 @@ def import_completed_session(
     never invent catalog ids. exercises is a native MCP array:
     [{"exercise_id": 12, "order": 0, "notes": "",
       "sets": [{"weight": 40.0, "reps": 10, "rpe": 8.0}, {"weight": 40.0, "reps": 8}]}]
-    Unloaded exercises (bodyweight, bands, cardio): omit weight entirely —
-    weight is either absent/null or a number > 0, never 0 or -1.
+    Bodyweight and band exercises omit weight; weighted strength uses kg > 0.
+    Cardio sets use duration_minutes and omit reps and weight.
     telegram_user_id is required so the session belongs to the athlete.
     """
     if telegram_user_id is None:
         raise ValueError(
             "telegram_user_id is required so the imported session belongs to the athlete."
         )
+    for exercise in exercises:
+        for performed_set in exercise.get("sets") or []:
+            _require_one_metric(performed_set)
     return _request(
         "POST",
         "/coach/import",
@@ -390,7 +428,8 @@ def log_set(
     session_id: int,
     planned_exercise_id: int,
     set_number: int,
-    reps: int,
+    reps: int | None = None,
+    duration_minutes: int | None = None,
     weight: float | None = None,
     rpe: float | None = None,
     sensation: str = "",
@@ -399,17 +438,21 @@ def log_set(
 ) -> dict[str, Any]:
     """Log one performed set.
 
-    weight: kg > 0 for loaded exercises; omit for unloaded ones (bodyweight,
-    bands, cardio) — 0 and -1 are rejected by the API.
+    Strength requires reps and optional kg. Cardio requires duration_minutes and
+    rejects reps/weight. Exactly one execution metric must be supplied.
     """
     payload: dict[str, Any] = {
         "set_number": int(set_number),
-        "reps": int(reps),
         "sensation": sensation,
         "notes": notes,
     }
+    if reps is not None:
+        payload["reps"] = int(reps)
+    if duration_minutes is not None:
+        payload["duration_minutes"] = int(duration_minutes)
     if weight is not None:
         payload["weight"] = float(weight)
+    _require_one_metric(payload)
     if rpe is not None:
         payload["rpe"] = float(rpe)
     return _request(
@@ -440,7 +483,8 @@ def restore_set(
     session_id: int,
     planned_exercise_id: int,
     set_number: int,
-    reps: int,
+    reps: int | None = None,
+    duration_minutes: int | None = None,
     weight: float | None = None,
     rpe: float | None = None,
     sensation: str = "",
@@ -454,12 +498,16 @@ def restore_set(
     user_id = _require_telegram_user_id(telegram_user_id, "restore_set")
     payload: dict[str, Any] = {
         "set_number": int(set_number),
-        "reps": int(reps),
         "sensation": sensation,
         "notes": notes,
     }
+    if reps is not None:
+        payload["reps"] = int(reps)
+    if duration_minutes is not None:
+        payload["duration_minutes"] = int(duration_minutes)
     if weight is not None:
         payload["weight"] = float(weight)
+    _require_one_metric(payload)
     if rpe is not None:
         payload["rpe"] = float(rpe)
     return _request(
@@ -488,7 +536,8 @@ def add_planned_exercise(
     exercise_id: int,
     order: int | None = None,
     target_sets: int = 3,
-    target_reps: int = 10,
+    target_reps: int | None = None,
+    target_duration_minutes: int | None = None,
     suggested_weight: float | None = None,
     unilateral: bool = False,
     set_targets: list[dict[str, Any]] | None = None,
@@ -499,24 +548,35 @@ def add_planned_exercise(
 
     Omit order to append at the end. Pass order to insert at a specific position
     (existing exercises at that position or later shift down).
-    set_targets: per-set weight/reps overrides, e.g.
-    [{"set_number": 1, "weight": 40, "reps": 12},
-     {"set_number": 2, "weight": 45, "reps": 10}]
-    Always give suggested_weight for loaded (non-bodyweight) exercises, based on the
-    athlete's history; omit it only for bodyweight movements.
+    set_targets: per-set metric overrides. Strength uses weight/reps; cardio uses
+    duration_minutes and no weight/reps. Always give suggested_weight for loaded
+    strength exercises; omit it for bodyweight and cardio exercises.
     """
     payload: dict[str, Any] = {
         "exercise_id": int(exercise_id),
         "target_sets": int(target_sets),
-        "target_reps": int(target_reps),
         "notes": notes,
     }
+    if target_reps is not None:
+        payload["target_reps"] = int(target_reps)
+    if target_duration_minutes is not None:
+        payload["target_duration_minutes"] = int(target_duration_minutes)
     if suggested_weight is not None:
         payload["suggested_weight"] = float(suggested_weight)
+    _require_one_metric(
+        payload,
+        "target_reps",
+        "target_duration_minutes",
+        "suggested_weight",
+    )
+    if target_duration_minutes is not None and unilateral:
+        raise ValueError("cardio target_duration_minutes does not accept unilateral")
     payload["unilateral"] = bool(unilateral)
     if order is not None:
         payload["order"] = int(order)
     if set_targets is not None:
+        for target in set_targets:
+            _require_one_metric(target)
         payload["set_targets"] = set_targets
     return _request(
         "POST",
@@ -556,6 +616,8 @@ def update_planned_exercise(
     if target_sets is not None:
         payload["target_sets"] = int(target_sets)
     if set_targets is not None:
+        for target in set_targets:
+            _require_one_metric(target)
         payload["set_targets"] = set_targets
     if unilateral is not None:
         payload["unilateral"] = bool(unilateral)

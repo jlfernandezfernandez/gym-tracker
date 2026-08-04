@@ -5,3 +5,4 @@ class ExerciseFacets(BaseModel):
     muscle_groups: list[str]
     body_parts: list[str]
     equipment: list[str]
+    activity_types: list[str]

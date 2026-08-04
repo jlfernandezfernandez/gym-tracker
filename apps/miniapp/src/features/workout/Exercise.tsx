@@ -2,10 +2,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
-import { chartUsesWeight, type ProgressPoint } from '../../lib/chart';
+import { progressMetric, progressUnit, progressValue, type ProgressPoint } from '../../lib/chart';
 import {
   canEditWorkout,
   completedSetCount,
+  executionMetricPayload,
   formatMuscle,
   formatWeight,
   mediaUrl,
@@ -26,10 +27,12 @@ const targetForSet = (exercise: any, setNumber: number) =>
     set_number: setNumber,
     weight: exercise.weight ?? null,
     reps: exercise.reps,
+    duration_minutes: exercise.duration_minutes,
   };
 
-const targetValue = (target: any, mode: string) => {
-  const weight = formatWeight(target.weight, mode);
+const targetValue = (target: any, exercise: any) => {
+  if (exercise.activity_type === 'cardio') return `${target.duration_minutes} min`;
+  const weight = formatWeight(target.weight, exercise.weight_mode);
   return weight ? `${weight} × ${target.reps}` : `${target.reps} reps`;
 };
 
@@ -42,7 +45,7 @@ function refreshWorkoutQueries(queryClient: any, sessionId: number, updatedSessi
   if (exerciseId) queryClient.invalidateQueries({ queryKey: ['progress', exerciseId] });
 }
 
-function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, readOnly }: { set: any; target: any; sessionId: number; plannedId: number; exerciseId: number; unilateral?: boolean; readOnly?: boolean }) {
+function SetRow({ set, target, sessionId, plannedId, exerciseId, activityType, unilateral, readOnly }: { set: any; target: any; sessionId: number; plannedId: number; exerciseId: number; activityType: string; unilateral?: boolean; readOnly?: boolean }) {
   const queryClient = useQueryClient();
   const del = useMutation({
     mutationFn: () => apiFetch('DELETE', `/sessions/${sessionId}/exercises/${plannedId}/sets/${set.id}`),
@@ -60,8 +63,7 @@ function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, rea
     mutationFn: () =>
       apiFetch('POST', `/sessions/${sessionId}/exercises/${plannedId}/sets/restore`, {
         set_number: set.set_number,
-        weight: set.weight,
-        reps: set.reps,
+        ...executionMetricPayload(activityType as 'strength' | 'cardio', set),
         rpe: set.rpe,
         sensation: set.sensation,
         notes: set.notes,
@@ -78,8 +80,8 @@ function SetRow({ set, target, sessionId, plannedId, exerciseId, unilateral, rea
     <div role="group" aria-label={`Serie ${set.set_number} realizada`} class="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control bg-surface-2 px-3 py-2.5">
       <span aria-hidden="true" class="grid size-[30px] place-items-center rounded-pill bg-ok-bg text-[.7rem] font-bold text-ok">S{set.set_number}</span>
       <div class="min-w-0">
-        <span class="block truncate text-[.68rem] text-hint">Plan · {targetValue(target, set.weight_mode)}{unilateral ? ' · Unilateral' : ''}</span>
-        <b class="block truncate text-[.84rem]">{performed ? `${performed} × ${set.reps}` : `${set.reps} reps`} · Hecha</b>
+        <span class="block truncate text-[.68rem] text-hint">Plan · {targetValue(target, { activity_type: activityType, weight_mode: set.weight_mode })}{unilateral ? ' · Unilateral' : ''}</span>
+        <b class="block truncate text-[.84rem]">{activityType === 'cardio' ? `${set.duration_minutes} min` : performed ? `${performed} × ${set.reps}` : `${set.reps} reps`} · Hecha</b>
       </div>
       {!readOnly && (
         <button class="grid size-10 cursor-pointer place-items-center rounded-pill border-0 bg-transparent text-err disabled:opacity-30" disabled={del.isPending || restore.isPending} onClick={() => {
@@ -156,6 +158,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
               sessionId={plan.id}
               plannedId={exercise.planned_id}
               exerciseId={exercise.exercise_id}
+              activityType={exercise.activity_type}
               unilateral={exercise.unilateral}
               readOnly={app.readOnly || plan.status === 'completed'}
             />
@@ -168,7 +171,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
               <div key={setNumber} role="group" aria-label={`Serie ${setNumber} pendiente`} class="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control bg-surface-2/55 px-3 py-3">
                 <span aria-hidden="true" class="grid size-[30px] place-items-center rounded-pill bg-surface-2 text-[.7rem] font-bold text-hint">S{setNumber}</span>
                 <div class="min-w-0">
-                  <b class="block truncate text-[.84rem] text-ink">{targetValue(targetForSet(exercise, setNumber), exercise.weight_mode)}{exercise.unilateral ? ' · Unilateral' : ''}</b>
+                  <b class="block truncate text-[.84rem] text-ink">{targetValue(targetForSet(exercise, setNumber), exercise)}{exercise.unilateral ? ' · Unilateral' : ''}</b>
                 </div>
                 <span class="text-[.7rem] font-[650] text-hint">Pendiente</span>
               </div>
@@ -224,13 +227,10 @@ function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
   });
   const points = progressQuery.data;
   if (!points || points.length === 0) return null;
-
-  const usesWeight = chartUsesWeight(points);
-  const best = usesWeight
-    ? Math.max(...points.map((point) => point.top_weight || 0))
-    : Math.max(...points.map((point) => point.top_reps || 0));
-  const last = points[points.length - 1];
-  const lastValue = usesWeight ? (last.top_weight || 0) : (last.top_reps || 0);
+  const metric = progressMetric(points);
+  const unit = progressUnit(metric);
+  const best = Math.max(...points.map((point) => progressValue(point, metric)));
+  const lastValue = progressValue(points[points.length - 1], metric);
 
   return (
     <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
@@ -238,18 +238,18 @@ function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
       <div class="mt-3 flex items-center">
         <div class="flex-1">
           <span class="mb-1 block text-[.68rem] font-bold tracking-[.06em] text-hint uppercase">Mejor</span>
-          <b class="text-[1.05rem]">{usesWeight ? `${best} kg` : `${best} reps`}</b>
+          <b class="text-[1.05rem]">{best} {unit}</b>
         </div>
         <div class="mx-4 h-9 w-px bg-edge" />
         <div class="flex-1">
           <span class="mb-1 block text-[.68rem] font-bold tracking-[.06em] text-hint uppercase">Última</span>
-          <b class="text-[1.05rem]">{usesWeight ? `${lastValue} kg` : `${lastValue} reps`}</b>
+          <b class="text-[1.05rem]">{lastValue} {unit}</b>
         </div>
       </div>
       {points.length >= 2 && (
         <details class="mt-3 border-t border-edge pt-2 [&[open]>summary]:mb-2.5">
           <summary>Ver progresión</summary>
-          <p class="text-xs">{usesWeight ? 'Peso máximo por sesión' : 'Repeticiones máximas por sesión'}</p>
+          <p class="text-xs">{metric === 'minutes' ? 'Minutos máximos por sesión' : metric === 'weight' ? 'Peso máximo por sesión' : 'Repeticiones máximas por sesión'}</p>
           <ProgressChart points={points.slice(-12)} />
         </details>
       )}
@@ -289,7 +289,7 @@ function SetCountControl({ sessionId, plannedId, currentSets, minimumSets }: { s
   );
 }
 
-function LogSetForm({
+export function LogSetForm({
   sessionId,
   exercise,
   nextSetNumber,
@@ -310,10 +310,11 @@ function LogSetForm({
   const previousSet = [...(exercise.performed_sets || [])].sort(
     (first: any, second: any) => second.set_number - first.set_number,
   )[0];
-  // The backend gives bodyweight exercises their fixed sentinel value.
   const isBodyweight = exercise.weight_mode === 'bodyweight';
+  const isCardio = exercise.activity_type === 'cardio';
   const [weight, setWeight] = useState(String(explicitTarget?.weight ?? previousSet?.weight ?? exercise.weight ?? ''));
-  const [reps, setReps] = useState(String(explicitTarget?.reps ?? previousSet?.reps ?? exercise.reps ?? 10));
+  const [reps, setReps] = useState(String(explicitTarget?.reps ?? previousSet?.reps ?? exercise.reps ?? ''));
+  const [durationMinutes, setDurationMinutes] = useState(String(explicitTarget?.duration_minutes ?? previousSet?.duration_minutes ?? exercise.duration_minutes ?? ''));
   const [confirmFinishOpen, setConfirmFinishOpen] = useState(false);
   const isLastSet = remainingSetCount === 1;
   const remainingSets = remainingSetCount;
@@ -326,8 +327,11 @@ function LogSetForm({
     mutationFn: (normalizedWeight: number | null) =>
       apiFetch('POST', `/sessions/${sessionId}/exercises/${exercise.planned_id}/sets`, {
         set_number: nextSetNumber,
-        weight: normalizedWeight,
-        reps: parseInt(reps || '0'),
+        ...executionMetricPayload(exercise.activity_type, {
+          duration_minutes: parseInt(durationMinutes || '0'),
+          weight: normalizedWeight,
+          reps: parseInt(reps || '0'),
+        }),
         sensation: 'ok',
         notes: '',
       }),
@@ -369,6 +373,14 @@ function LogSetForm({
   });
 
   const saveSet = () => {
+    if (isCardio) {
+      if (parseInt(durationMinutes || '0') <= 0) {
+        showToast('Pon los minutos', 'err');
+        return;
+      }
+      logSet.mutate(null);
+      return;
+    }
     if (parseInt(reps || '0') <= 0) {
       showToast('Pon las reps', 'err');
       return;
@@ -397,27 +409,34 @@ function LogSetForm({
         <span aria-hidden="true" class="grid size-[30px] place-items-center rounded-pill bg-accent text-[.7rem] font-bold text-white">S{nextSetNumber}</span>
         <div class="min-w-0">
           <span class="block text-[.68rem] font-bold tracking-[.05em] text-accent uppercase">En curso</span>
-          <b class="block truncate text-[.84rem]">Plan · {targetValue(setTarget, exercise.weight_mode)}{exercise.unilateral ? ' · Unilateral' : ''}</b>
+          <b class="block truncate text-[.84rem]">Plan · {targetValue(setTarget, exercise)}{exercise.unilateral ? ' · Unilateral' : ''}</b>
         </div>
       </div>
-      <div class="flex items-stretch gap-[9px]">
-        <div class="min-w-0 flex-1">
-          <label for="set-weight">{isBodyweight ? 'Peso corporal' : 'Peso (kg)'}</label>
-          <div class="flex items-center gap-1.5">
-            {isBodyweight ? (
-              <div class="grid min-h-14 min-w-0 flex-1 place-items-center rounded-control bg-surface text-[1rem] font-[720] tracking-[-.03em] text-hint">Corporal</div>
-            ) : (
-              <input id="set-weight" class="bg-surface" type="text" inputmode="decimal" enterkeyhint="done" value={weight} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setWeight(event.target.value)} />
-            )}
+      {isCardio ? (
+        <div>
+          <label for="set-duration">Minutos</label>
+          <input id="set-duration" class="bg-surface" type="text" inputmode="numeric" enterkeyhint="done" value={durationMinutes} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setDurationMinutes(event.target.value)} />
+        </div>
+      ) : (
+        <div class="flex items-stretch gap-[9px]">
+          <div class="min-w-0 flex-1">
+            <label for="set-weight">{isBodyweight ? 'Peso corporal' : 'Peso (kg)'}</label>
+            <div class="flex items-center gap-1.5">
+              {isBodyweight ? (
+                <div class="grid min-h-14 min-w-0 flex-1 place-items-center rounded-control bg-surface text-[1rem] font-[720] tracking-[-.03em] text-hint">Corporal</div>
+              ) : (
+                <input id="set-weight" class="bg-surface" type="text" inputmode="decimal" enterkeyhint="done" value={weight} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setWeight(event.target.value)} />
+              )}
+            </div>
+          </div>
+          <div class="min-w-0 flex-1">
+            <label for="set-reps">Reps</label>
+            <div class="flex items-center gap-1.5">
+              <input id="set-reps" class="bg-surface" type="text" inputmode="numeric" enterkeyhint="done" value={reps} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setReps(event.target.value)} />
+            </div>
           </div>
         </div>
-        <div class="min-w-0 flex-1">
-          <label for="set-reps">Reps</label>
-          <div class="flex items-center gap-1.5">
-            <input id="set-reps" class="bg-surface" type="text" inputmode="numeric" enterkeyhint="done" value={reps} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setReps(event.target.value)} />
-          </div>
-        </div>
-      </div>
+      )}
       <BusyButton busy={isBusy} busyLabel="Guardando..." class="mt-4 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82] disabled:pointer-events-none disabled:opacity-35" onClick={saveSet}>
         {isLastSet ? 'Registrar' : 'Continuar'}
       </BusyButton>
@@ -459,7 +478,7 @@ function NextExercisePicker({ exercises, onPick, onDismiss }: { exercises: any[]
               </div>
               <div class="min-w-0">
                 <h3 class="truncate text-[.88rem]">{exercise.name}</h3>
-                <p class="text-[.72rem] text-hint">{formatMuscle(exercise.target || '')} · {exercise.sets}×{exercise.reps}</p>
+                <p class="text-[.72rem] text-hint">{formatMuscle(exercise.target || '')} · {exercise.activity_type === 'cardio' ? `${exercise.sets}×${exercise.duration_minutes} min` : `${exercise.sets}×${exercise.reps}`}</p>
               </div>
               <span aria-hidden="true" class="text-lg text-hint">›</span>
             </button>

@@ -62,6 +62,7 @@ async def list_exercises(
     muscle_group: str | None = Query(None, description="Filter by muscle group"),
     body_part: str | None = Query(None, description="Filter by body part"),
     equipment: str | None = Query(None, description="Filter by equipment type"),
+    activity_type: str | None = Query(None, pattern="^(strength|cardio)$"),
     search: str | None = Query(None, description="Search by name"),
     exclude_disliked: bool = Query(False, description="Exclude athlete's disliked exercises"),
     limit: int = Query(50, ge=1, le=200),
@@ -78,6 +79,8 @@ async def list_exercises(
         statement = statement.where(Exercise.body_part == body_part)
     if equipment:
         statement = statement.where(Exercise.equipment == equipment)
+    if activity_type:
+        statement = statement.where(Exercise.activity_type == activity_type)
     if search:
         normalized_search = _normalize_search(search)
         for term in normalized_search.split():
@@ -111,6 +114,7 @@ async def exercise_facets(db: AsyncSession = Depends(get_db_session)):
         muscle_groups=await distinct_values(Exercise.muscle_group),
         body_parts=await distinct_values(Exercise.body_part),
         equipment=await distinct_values(Exercise.equipment),
+        activity_types=await distinct_values(Exercise.activity_type),
     )
 
 
@@ -127,8 +131,10 @@ async def personal_records(
             Exercise.muscle_group,
             Exercise.equipment,
             Exercise.image_url,
+            Exercise.activity_type,
             PerformedSet.weight,
             PerformedSet.reps,
+            PerformedSet.duration_minutes,
             WorkoutSession.session_date,
             WorkoutSession.id,
         )
@@ -140,6 +146,7 @@ async def personal_records(
         statement = statement.where(WorkoutSession.telegram_user_id == user_id)
     statement = statement.order_by(
         Exercise.id,
+        PerformedSet.duration_minutes.desc().nulls_last(),  # pyright: ignore[reportOptionalMemberAccess]
         PerformedSet.weight.desc().nulls_last(),  # pyright: ignore[reportOptionalMemberAccess]
         PerformedSet.reps.desc(),
         WorkoutSession.session_date.desc(),
@@ -153,8 +160,10 @@ async def personal_records(
         muscle_group,
         equipment,
         image_url,
+        activity_type,
         weight,
         reps,
+        duration_minutes,
         session_date,
         session_id,
     ) in rows:
@@ -166,10 +175,18 @@ async def personal_records(
                 "muscle_group": muscle_group,
                 "equipment": equipment,
                 "image_url": image_url,
+                "activity_type": activity_type,
                 # The first row is one real best set, never a synthetic weight/reps pair.
                 "max_weight": float(weight) if weight is not None else None,
-                "max_reps": int(reps or 0),
-                "weight_mode": weight_mode(equipment in UNLOADED_EQUIPMENT, weight),
+                "max_reps": None if activity_type == "cardio" else int(reps or 0),
+                "max_duration_minutes": (
+                    int(duration_minutes or 0) if activity_type == "cardio" else None
+                ),
+                "weight_mode": (
+                    None
+                    if activity_type == "cardio"
+                    else weight_mode(equipment in UNLOADED_EQUIPMENT, weight)
+                ),
                 "last_date": session_date,
                 "sessions": {session_id},
             }
@@ -203,6 +220,7 @@ async def exercise_progress(
             WorkoutSession.session_date,
             func.max(PerformedSet.weight),
             func.max(PerformedSet.reps),
+            func.max(PerformedSet.duration_minutes),
             func.sum(
                 case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)  # pyright: ignore[reportOptionalOperand]
             ),
@@ -225,12 +243,26 @@ async def exercise_progress(
             "session_id": session_id,
             "date": session_date.isoformat(),
             "top_weight": float(top_weight) if top_weight is not None else None,
-            "top_reps": int(top_reps or 0),
+            "top_reps": None if exercise.is_cardio else int(top_reps or 0),
+            "top_duration_minutes": (
+                int(top_duration_minutes or 0) if exercise.is_cardio else None
+            ),
             "volume": float(volume or 0),
-            "weight_mode": weight_mode(exercise.is_unloaded, top_weight),
+            "activity_type": exercise.activity_type,
+            "weight_mode": (
+                None if exercise.is_cardio else weight_mode(exercise.is_unloaded, top_weight)
+            ),
             "sets": set_count,
         }
-        for session_id, session_date, top_weight, top_reps, volume, set_count in reversed(rows)
+        for (
+            session_id,
+            session_date,
+            top_weight,
+            top_reps,
+            top_duration_minutes,
+            volume,
+            set_count,
+        ) in reversed(rows)
     ]
 
 

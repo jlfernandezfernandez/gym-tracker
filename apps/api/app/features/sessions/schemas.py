@@ -7,30 +7,41 @@ from pydantic import BaseModel, Field, model_validator
 class SetTarget(BaseModel):
     set_number: int = Field(ge=1)
     weight: float | None = Field(default=None, gt=0)
-    reps: int = Field(default=10, ge=1)
+    reps: int | None = Field(default=None, ge=1)
+    duration_minutes: int | None = Field(default=None, ge=1)
+
+    @model_validator(mode="after")
+    def validate_metric(self) -> "SetTarget":
+        if (self.reps is None) == (self.duration_minutes is None):
+            raise ValueError("exactly one of reps or duration_minutes is required")
+        return self
 
 
-# ponytail: set_targets are sparse overrides — sets without a target fall back to
-# target_reps/suggested_weight, so only uniqueness needs validating.
 def _reject_duplicate_set_numbers(set_targets: list[SetTarget] | None) -> None:
     if set_targets is not None:
-        set_numbers = [t.set_number for t in set_targets]
+        set_numbers = [target.set_number for target in set_targets]
         if len(set_numbers) != len(set(set_numbers)):
             raise ValueError("set_targets contains duplicate set_number values")
+
+
+def _require_one_metric(reps: int | None, duration_minutes: int | None) -> None:
+    if (reps is None) == (duration_minutes is None):
+        raise ValueError("exactly one of reps or duration_minutes is required")
 
 
 class PlannedExerciseCreate(BaseModel):
     exercise_id: int = Field(gt=0)
     order: int = Field(default=0, ge=0)
     target_sets: int = Field(default=3, ge=1)
-    target_reps: int = Field(default=10, ge=1)
+    target_reps: int | None = Field(default=None, ge=1)
+    target_duration_minutes: int | None = Field(default=None, ge=1)
     suggested_weight: float | None = Field(default=None, gt=0)
     unilateral: bool = False
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
     @model_validator(mode="after")
-    def validate_set_targets(self) -> "PlannedExerciseCreate":
+    def validate_metrics(self) -> "PlannedExerciseCreate":
         _reject_duplicate_set_numbers(self.set_targets)
         return self
 
@@ -38,10 +49,16 @@ class PlannedExerciseCreate(BaseModel):
 class PerformedSetCreate(BaseModel):
     set_number: int = Field(ge=1)
     weight: float | None = Field(default=None, gt=0)
-    reps: int = Field(ge=1)
+    reps: int | None = Field(default=None, ge=1)
+    duration_minutes: int | None = Field(default=None, ge=1)
     rpe: float | None = Field(default=None, ge=1, le=10)
     sensation: str = ""
     notes: str = ""
+
+    @model_validator(mode="after")
+    def validate_metric(self) -> "PerformedSetCreate":
+        _require_one_metric(self.reps, self.duration_minutes)
+        return self
 
 
 class PerformedSetRestore(PerformedSetCreate):
@@ -75,14 +92,15 @@ class AddExerciseRequest(BaseModel):
     exercise_id: int = Field(gt=0)
     order: int | None = Field(default=None, ge=0)
     target_sets: int = Field(default=3, ge=1)
-    target_reps: int = Field(default=10, ge=1)
+    target_reps: int | None = Field(default=None, ge=1)
+    target_duration_minutes: int | None = Field(default=None, ge=1)
     suggested_weight: float | None = Field(default=None, gt=0)
     unilateral: bool = False
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
     @model_validator(mode="after")
-    def validate_set_targets(self) -> "AddExerciseRequest":
+    def validate_metrics(self) -> "AddExerciseRequest":
         _reject_duplicate_set_numbers(self.set_targets)
         return self
 
@@ -115,7 +133,7 @@ class CoachPlanRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_unique_orders(self) -> "CoachPlanRequest":
-        orders = [ex.order for ex in self.exercises]
+        orders = [exercise.order for exercise in self.exercises]
         if len(orders) != len(set(orders)):
             raise ValueError("exercise order values must be unique")
         return self
@@ -123,9 +141,15 @@ class CoachPlanRequest(BaseModel):
 
 class ImportSet(BaseModel):
     weight: float | None = Field(default=None, gt=0)
-    reps: int = Field(ge=1)
+    reps: int | None = Field(default=None, ge=1)
+    duration_minutes: int | None = Field(default=None, ge=1)
     rpe: float | None = Field(default=None, ge=1, le=10)
     notes: str = ""
+
+    @model_validator(mode="after")
+    def validate_metric(self) -> "ImportSet":
+        _require_one_metric(self.reps, self.duration_minutes)
+        return self
 
 
 class ImportExercise(BaseModel):
@@ -145,7 +169,7 @@ class CoachImportRequest(BaseModel):
 
     @model_validator(mode="after")
     def validate_unique_orders(self) -> "CoachImportRequest":
-        orders = [ex.order for ex in self.exercises]
+        orders = [exercise.order for exercise in self.exercises]
         if len(orders) != len(set(orders)):
             raise ValueError("exercise order values must be unique")
         return self
@@ -166,14 +190,17 @@ class ExerciseOut(BaseModel):
     instructions_es: str = ""
     image_url: str = ""
     gif_url: str = ""
+    activity_type: Literal["strength", "cardio"]
 
 
 class PerformedSetOut(BaseModel):
     id: int
     set_number: int
     weight: float | None
-    weight_mode: Literal["bodyweight", "unloaded", "weighted"]
-    reps: int
+    activity_type: Literal["strength", "cardio"]
+    weight_mode: Literal["bodyweight", "unloaded", "weighted"] | None
+    reps: int | None
+    duration_minutes: int | None
     rpe: float | None = None
     sensation: str
     notes: str
@@ -185,10 +212,12 @@ class PlannedExerciseOut(BaseModel):
     exercise_id: int
     order: int
     target_sets: int
-    target_reps: int
+    target_reps: int | None
+    target_duration_minutes: int | None
     suggested_weight: float | None
     unilateral: bool
-    weight_mode: Literal["bodyweight", "unloaded", "weighted"]
+    activity_type: Literal["strength", "cardio"]
+    weight_mode: Literal["bodyweight", "unloaded", "weighted"] | None
     notes: str
     status: str
     set_targets: list[SetTarget] | None = None

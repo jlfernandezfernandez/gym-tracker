@@ -22,7 +22,7 @@ from app.features.sessions.schemas import (
     SessionOut,
     SessionSummary,
 )
-from app.features.sessions.service import current_state, load_session, validate_exercise_weight
+from app.features.sessions.service import current_state, load_session, validate_exercise_metrics
 from app.models import (
     AthleteMeasurement,
     Exercise,
@@ -127,10 +127,13 @@ async def training_snapshot(
                         "status": item.status,
                         "target_sets": item.target_sets,
                         "target_reps": item.target_reps,
+                        "target_duration_minutes": item.target_duration_minutes,
+                        "activity_type": item.activity_type,
                         "performed_sets": [
                             {
                                 "weight": performed.weight,
                                 "reps": performed.reps,
+                                "duration_minutes": performed.duration_minutes,
                                 "rpe": performed.rpe,
                             }
                             for performed in item.performed_sets or []
@@ -189,12 +192,24 @@ async def coach_plan(
             raise HTTPException(
                 status_code=422, detail=f"Exercise {exercise_spec.exercise_id} not found"
             )
-        validate_exercise_weight(exercise, exercise_spec.suggested_weight)
+        validate_exercise_metrics(
+            exercise,
+            reps=exercise_spec.target_reps,
+            duration_minutes=exercise_spec.target_duration_minutes,
+            weight=exercise_spec.suggested_weight,
+            unilateral=exercise_spec.unilateral,
+            require_cardio_duration=False,
+        )
         set_targets_data = None
         if exercise_spec.set_targets:
             set_targets_data = [t.model_dump() for t in exercise_spec.set_targets]
-            for t in set_targets_data:
-                validate_exercise_weight(exercise, t.get("weight"))
+            for target in set_targets_data:
+                validate_exercise_metrics(
+                    exercise,
+                    reps=target.get("reps"),
+                    duration_minutes=target.get("duration_minutes"),
+                    weight=target.get("weight"),
+                )
         db.add(
             PlannedExercise(
                 session_id=workout.id,
@@ -202,6 +217,7 @@ async def coach_plan(
                 order=exercise_spec.order,
                 target_sets=exercise_spec.target_sets,
                 target_reps=exercise_spec.target_reps,
+                target_duration_minutes=exercise_spec.target_duration_minutes,
                 suggested_weight=exercise_spec.suggested_weight,
                 unilateral=exercise_spec.unilateral,
                 notes=exercise_spec.notes,
@@ -249,6 +265,7 @@ async def coach_import(
             order=exercise_spec.order,
             target_sets=len(exercise_spec.sets),
             target_reps=exercise_spec.sets[0].reps,
+            target_duration_minutes=exercise_spec.sets[0].duration_minutes,
             suggested_weight=exercise_spec.sets[0].weight,
             unilateral=exercise_spec.unilateral,
             notes=exercise_spec.notes,
@@ -257,13 +274,20 @@ async def coach_import(
         db.add(planned)
         await db.flush()
         for set_number, set_spec in enumerate(exercise_spec.sets, start=1):
-            validate_exercise_weight(exercise, set_spec.weight)
+            validate_exercise_metrics(
+                exercise,
+                reps=set_spec.reps,
+                duration_minutes=set_spec.duration_minutes,
+                weight=set_spec.weight,
+                unilateral=exercise_spec.unilateral,
+            )
             db.add(
                 PerformedSet(
                     planned_exercise_id=planned.id,
                     set_number=set_number,
                     weight=set_spec.weight,
                     reps=set_spec.reps,
+                    duration_minutes=set_spec.duration_minutes,
                     rpe=set_spec.rpe,
                     notes=set_spec.notes,
                     timestamp=performed_at,

@@ -5,8 +5,8 @@ import sqlalchemy as sa
 from sqlalchemy import CheckConstraint, UniqueConstraint
 from sqlmodel import Field, Relationship, SQLModel
 
-# Equipment whose load cannot be expressed in kg: own body, elastics, balance
-# tools and cardio machines. Sets for these exercises must have weight NULL;
+# Equipment whose load cannot be expressed in kg: own body, elastics and balance
+# tools. Cardio is a separate activity domain and never uses weight/repetitions.
 # everything else takes an optional weight > 0. Neither 0 nor -1 exist.
 UNLOADED_EQUIPMENT = {
     "body weight",
@@ -17,11 +17,6 @@ UNLOADED_EQUIPMENT = {
     "wheel roller",
     "stability ball",
     "bosu ball",
-    "stationary bike",
-    "elliptical machine",
-    "stepmill machine",
-    "skierg machine",
-    "upper body ergometer",
 }
 
 
@@ -35,6 +30,11 @@ def weight_mode(is_unloaded: bool, weight: float | None) -> str:
 
 class Exercise(SQLModel, table=True):
     __tablename__ = "exercises"
+    __table_args__ = (
+        CheckConstraint(
+            "activity_type IN ('strength', 'cardio')", name="ck_exercise_activity_type"
+        ),
+    )
 
     id: int = Field(default=None, primary_key=True)
     external_id: str = Field(default="", index=True, unique=True)
@@ -50,12 +50,17 @@ class Exercise(SQLModel, table=True):
     instructions_es: str = Field(default="")
     image_url: str = Field(default="")
     gif_url: str = Field(default="")
+    activity_type: str = Field(default="strength", index=True)
 
     planned_exercises: list["PlannedExercise"] = Relationship(back_populates="exercise")
 
     @property
     def is_unloaded(self) -> bool:
         return self.equipment in UNLOADED_EQUIPMENT
+
+    @property
+    def is_cardio(self) -> bool:
+        return self.activity_type == "cardio"
 
 
 class CatalogState(SQLModel, table=True):
@@ -99,7 +104,7 @@ class WorkoutSession(SQLModel, table=True):
     @property
     def total_volume(self) -> float:
         return sum(
-            max(performed_set.weight or 0, 0) * performed_set.reps
+            max(performed_set.weight or 0, 0) * (performed_set.reps or 0)
             for planned_exercise in self.planned_exercises or []
             for performed_set in planned_exercise.performed_sets or []
         )
@@ -110,7 +115,11 @@ class PlannedExercise(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("session_id", "order", name="uq_planned_exercise_order"),
         CheckConstraint("target_sets > 0", name="ck_planned_target_sets"),
-        CheckConstraint("target_reps > 0", name="ck_planned_target_reps"),
+        CheckConstraint("target_reps IS NULL OR target_reps > 0", name="ck_planned_target_reps"),
+        CheckConstraint(
+            "target_duration_minutes IS NULL OR target_duration_minutes > 0",
+            name="ck_planned_duration_positive",
+        ),
         CheckConstraint(
             "status IN ('pending', 'in_progress', 'completed', 'skipped')", name="ck_planned_status"
         ),
@@ -124,7 +133,8 @@ class PlannedExercise(SQLModel, table=True):
     exercise_id: int = Field(foreign_key="exercises.id")
     order: int = Field(default=0)
     target_sets: int = Field(default=3)
-    target_reps: int = Field(default=10)
+    target_reps: int | None = Field(default=None)
+    target_duration_minutes: int | None = Field(default=None)
     suggested_weight: float | None = Field(default=None)
     unilateral: bool = Field(default=False)
     notes: str = Field(default="")
@@ -139,10 +149,14 @@ class PlannedExercise(SQLModel, table=True):
     )
 
     @property
-    def weight_mode(self) -> str:
-        return weight_mode(
-            self.exercise.is_unloaded if self.exercise else False, self.suggested_weight
-        )
+    def activity_type(self) -> str:
+        return self.exercise.activity_type
+
+    @property
+    def weight_mode(self) -> str | None:
+        if self.activity_type == "cardio":
+            return None
+        return weight_mode(self.exercise.is_unloaded, self.suggested_weight)
 
 
 class PerformedSet(SQLModel, table=True):
@@ -150,13 +164,22 @@ class PerformedSet(SQLModel, table=True):
     __table_args__ = (
         UniqueConstraint("planned_exercise_id", "set_number", name="uq_performed_set_number"),
         CheckConstraint("weight IS NULL OR weight > 0", name="ck_set_weight_positive"),
+        CheckConstraint("reps IS NULL OR reps > 0", name="ck_set_reps_positive"),
+        CheckConstraint(
+            "duration_minutes IS NULL OR duration_minutes > 0", name="ck_set_duration_positive"
+        ),
+        CheckConstraint(
+            "(reps IS NULL) <> (duration_minutes IS NULL)",
+            name="ck_set_metric_exactly_one",
+        ),
     )
 
     id: int = Field(default=None, primary_key=True)
     planned_exercise_id: int = Field(foreign_key="planned_exercises.id")
     set_number: int = Field(default=1)
     weight: float | None = Field(default=None)
-    reps: int = Field(default=0)
+    reps: int | None = Field(default=None)
+    duration_minutes: int | None = Field(default=None)
     rpe: float | None = Field(default=None, ge=1.0, le=10.0)
     sensation: str = Field(default="")
     notes: str = Field(default="")
@@ -165,9 +188,14 @@ class PerformedSet(SQLModel, table=True):
     planned_exercise: "PlannedExercise" = Relationship(back_populates="performed_sets")
 
     @property
-    def weight_mode(self) -> str:
-        exercise = self.planned_exercise.exercise if self.planned_exercise else None
-        return weight_mode(exercise.is_unloaded if exercise else False, self.weight)
+    def activity_type(self) -> str:
+        return self.planned_exercise.exercise.activity_type
+
+    @property
+    def weight_mode(self) -> str | None:
+        if self.activity_type == "cardio":
+            return None
+        return weight_mode(self.planned_exercise.exercise.is_unloaded, self.weight)
 
 
 class WebhookEvent(SQLModel, table=True):

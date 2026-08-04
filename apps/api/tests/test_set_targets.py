@@ -25,8 +25,8 @@ def test_planned_exercise_create_with_set_targets():
 
 
 def test_planned_exercise_create_without_set_targets():
-    """set_targets defaults to None for backward compatibility."""
-    spec = PlannedExerciseCreate(exercise_id=1, order=0)
+    """set_targets remain optional when the strength metric is explicit."""
+    spec = PlannedExerciseCreate(exercise_id=1, order=0, target_reps=10)
     assert spec.set_targets is None
 
 
@@ -39,6 +39,7 @@ def test_coach_plan_request_with_set_targets():
                 exercise_id=1,
                 order=0,
                 target_sets=2,
+                target_reps=10,
                 set_targets=[
                     SetTarget(set_number=1, weight=30, reps=15),
                     SetTarget(set_number=2, weight=35, reps=12),
@@ -100,7 +101,7 @@ def test_current_state_next_set_target_after_logged():
 
 
 def test_current_state_no_set_targets():
-    """Without set_targets, next_set_target is None (backward compat)."""
+    """Without per-set overrides, current state has no next_set_target."""
     workout = _make_workout_with_set_targets(None)
     state = current_state(workout)
     assert state["next_set_target"] is None
@@ -112,6 +113,7 @@ def test_set_targets_can_be_sparse():
         exercise_id=1,
         order=0,
         target_sets=3,
+        target_reps=10,
         set_targets=[
             SetTarget(set_number=1, weight=40, reps=12),
             SetTarget(set_number=2, weight=45, reps=10),
@@ -129,6 +131,7 @@ def test_set_targets_no_duplicate_set_numbers():
             exercise_id=1,
             order=0,
             target_sets=3,
+            target_reps=10,
             set_targets=[
                 SetTarget(set_number=1, weight=40, reps=12),
                 SetTarget(set_number=1, weight=45, reps=10),
@@ -143,6 +146,7 @@ def test_set_targets_beyond_target_sets_trimmed_by_update_route():
         exercise_id=1,
         order=0,
         target_sets=3,
+        target_reps=10,
         set_targets=[SetTarget(set_number=4, weight=50, reps=8)],
     )
     assert spec.set_targets is not None
@@ -154,6 +158,7 @@ def test_set_targets_can_be_nullable():
     spec = PlannedExerciseCreate(
         exercise_id=1,
         order=0,
+        target_reps=10,
         suggested_weight=None,
         set_targets=[
             SetTarget(set_number=1, weight=None, reps=10),
@@ -167,8 +172,10 @@ def test_set_targets_can_be_nullable():
         session_id=1,
         exercise_id=1,
         order=0,
+        target_reps=10,
         suggested_weight=None,
         set_targets=[{"set_number": 1, "weight": None, "reps": 10}],
     )
+    pe.exercise = Exercise(id=1, name="Machine row", muscle_group="back", equipment="machine")
     assert pe.suggested_weight is None
     assert pe.weight_mode == "unloaded"

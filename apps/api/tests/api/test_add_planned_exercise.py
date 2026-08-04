@@ -125,6 +125,52 @@ def test_add_exercise_to_in_progress_session() -> None:
     assert response.status_code == 200
 
 
+def test_add_cardio_exercise_uses_minutes() -> None:
+    workout = _build_workout("planned", exercises=[])
+    cardio = Exercise(
+        id=20,
+        name="Bicicleta",
+        muscle_group="cardiovascular",
+        body_part="cardio",
+        equipment="stationary bike",
+        activity_type="cardio",
+    )
+    gen = _make_client(workout, catalog_exercise=cardio)
+    client, fake_db = next(gen)
+
+    response = client.post(
+        "/api/sessions/1/exercises",
+        json={"exercise_id": 20, "target_sets": 1, "target_duration_minutes": 20},
+    )
+
+    assert response.status_code == 200
+    added = fake_db.add.call_args.args[0]
+    assert added.target_duration_minutes == 20
+    assert added.target_reps is None
+
+
+def test_add_cardio_exercise_rejects_reps_contract() -> None:
+    workout = _build_workout("planned", exercises=[])
+    cardio = Exercise(
+        id=20,
+        name="Bicicleta",
+        muscle_group="cardiovascular",
+        body_part="cardio",
+        activity_type="cardio",
+    )
+    gen = _make_client(workout, catalog_exercise=cardio)
+    client, fake_db = next(gen)
+
+    response = client.post(
+        "/api/sessions/1/exercises",
+        json={"exercise_id": 20, "target_sets": 1, "target_reps": 20},
+    )
+
+    assert response.status_code == 422
+    assert "Cardio requires duration_minutes" in response.json()["detail"]
+    fake_db.add.assert_not_called()
+
+
 def test_add_exercise_to_completed_session_returns_422() -> None:
     workout = _build_workout("completed", exercises=[])
     gen = _make_client(workout)

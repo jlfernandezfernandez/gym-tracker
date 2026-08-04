@@ -48,6 +48,7 @@ class AddPlannedExerciseTests(unittest.TestCase):
             gym_tracker_mcp.add_planned_exercise(
                 session_id=12,
                 exercise_id=42,
+                target_reps=10,
                 telegram_user_id=7,
             )
 
@@ -101,6 +102,7 @@ class AddPlannedExerciseTests(unittest.TestCase):
             gym_tracker_mcp.add_planned_exercise(
                 session_id=5,
                 exercise_id=20,
+                target_reps=10,
                 set_targets=targets,
                 telegram_user_id=7,
             )
@@ -189,6 +191,106 @@ class DeletePlannedExerciseTests(unittest.TestCase):
             "/sessions/7/exercises/50",
             user_id=None,
         )
+
+
+class CardioContractTests(unittest.TestCase):
+    def test_create_plan_forwards_native_cardio_contract(self) -> None:
+        exercises = [
+            {
+                "exercise_id": 9,
+                "order": 0,
+                "target_sets": 1,
+                "target_duration_minutes": 20,
+            }
+        ]
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.create_plan(
+                title="Cardio",
+                exercises=exercises,
+                telegram_user_id=7,
+            )
+
+        request.assert_called_once_with(
+            "POST",
+            "/coach/plan",
+            {
+                "title": "Cardio",
+                "goal": "",
+                "energy": 5,
+                "time_available": 45,
+                "discomfort": "",
+                "exercises": exercises,
+            },
+            user_id=7,
+        )
+
+    def test_import_forwards_cardio_minutes(self) -> None:
+        exercises = [{"exercise_id": 9, "sets": [{"duration_minutes": 30}]}]
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.import_completed_session(
+                session_date="2026-08-01",
+                exercises=exercises,
+                telegram_user_id=7,
+            )
+
+        assert request.call_args.args[2]["exercises"] == exercises
+
+    def test_log_set_sends_minutes_without_reps_or_weight(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.log_set(
+                session_id=1,
+                planned_exercise_id=2,
+                set_number=1,
+                duration_minutes=25,
+                telegram_user_id=7,
+            )
+        request.assert_called_once_with(
+            "POST",
+            "/sessions/1/exercises/2/sets",
+            {"set_number": 1, "duration_minutes": 25, "sensation": "", "notes": ""},
+            user_id=7,
+        )
+
+    def test_add_cardio_uses_target_minutes_without_target_reps(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.add_planned_exercise(
+                session_id=1,
+                exercise_id=42,
+                target_sets=1,
+                target_duration_minutes=20,
+                telegram_user_id=7,
+            )
+        request.assert_called_once_with(
+            "POST",
+            "/sessions/1/exercises",
+            {
+                "exercise_id": 42,
+                "target_sets": 1,
+                "target_duration_minutes": 20,
+                "notes": "",
+                "unilateral": False,
+            },
+            user_id=7,
+        )
+
+    def test_log_set_rejects_mixed_cardio_and_strength_metrics(self) -> None:
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            gym_tracker_mcp.log_set(1, 2, 1, reps=10, duration_minutes=10)
+        with self.assertRaisesRegex(ValueError, "does not accept weight"):
+            gym_tracker_mcp.log_set(1, 2, 1, duration_minutes=10, weight=5)
+
+    def test_create_plan_rejects_cardio_weight_or_unilateral(self) -> None:
+        base = {
+            "exercise_id": 9,
+            "target_sets": 1,
+            "target_duration_minutes": 20,
+        }
+        for invalid in (
+            {**base, "suggested_weight": 5},
+            {**base, "unilateral": True},
+        ):
+            with self.assertRaises(ValueError):
+                gym_tracker_mcp.create_plan(exercises=[invalid], telegram_user_id=7)
 
 
 if __name__ == "__main__":

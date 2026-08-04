@@ -60,20 +60,25 @@ def parse_exercise(entry: dict[str, Any]) -> dict[str, Any]:
     instructions_es = instructions.get("es", "") if isinstance(instructions, dict) else ""
     image_path = entry.get("image", "")
     gif_path = entry.get("gif_url", "")
+    muscle_group = entry.get("target", "")
+    body_part = entry.get("body_part", "")
     return {
         "external_id": str(entry.get("id", "")),
         "name": entry.get("name_es", "") or entry.get("name", ""),
         "name_en": entry.get("name", ""),
         "name_es": entry.get("name_es", ""),
-        "muscle_group": entry.get("target", ""),
+        "muscle_group": muscle_group,
         "secondary_muscles": ", ".join(entry.get("secondary_muscles", [])),
         "target": entry.get("target", ""),
-        "body_part": entry.get("body_part", ""),
+        "body_part": body_part,
         "equipment": entry.get("equipment", ""),
         "instructions": instructions_en,
         "instructions_es": instructions_es,
         "image_url": f"/exercise-media/{image_path}" if image_path else "",
         "gif_url": f"/exercise-media/{gif_path}" if gif_path else "",
+        "activity_type": (
+            "cardio" if body_part == "cardio" or muscle_group == "cardiovascular" else "strength"
+        ),
     }
 
 

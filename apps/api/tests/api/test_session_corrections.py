@@ -124,6 +124,30 @@ def _workout(
     return workout
 
 
+def _cardio_workout() -> WorkoutSession:
+    exercise = Exercise(
+        id=20,
+        name="Bicicleta",
+        muscle_group="cardiovascular",
+        body_part="cardio",
+        equipment="stationary bike",
+        activity_type="cardio",
+    )
+    planned = PlannedExercise(
+        id=6,
+        session_id=2,
+        exercise_id=exercise.id,
+        target_sets=1,
+        target_duration_minutes=20,
+        status="pending",
+    )
+    planned.exercise = exercise
+    planned.performed_sets = []
+    workout = WorkoutSession(id=2, status="planned", telegram_user_id=42)
+    workout.planned_exercises = [planned]
+    return workout
+
+
 def _client(workout: WorkoutSession, user_id: int = 42, catalog: dict[int, Exercise] | None = None):
     memory = MemorySession(workout)
     original_get = memory.get
@@ -210,6 +234,35 @@ def test_log_set_refills_the_earliest_missing_middle_number() -> None:
         2,
         3,
     ]
+
+
+def test_log_cardio_set_uses_duration_minutes() -> None:
+    gen = _client(_cardio_workout())
+    client, _ = next(gen)
+
+    response = client.post(
+        "/api/sessions/2/exercises/6/sets",
+        json={"set_number": 1, "duration_minutes": 24},
+    )
+
+    assert response.status_code == 200
+    performed = response.json()["planned_exercises"][0]["performed_sets"][0]
+    assert performed["duration_minutes"] == 24
+    assert performed["reps"] is None
+    assert performed["weight_mode"] is None
+
+
+def test_log_cardio_set_rejects_reps_contract() -> None:
+    gen = _client(_cardio_workout())
+    client, _ = next(gen)
+
+    response = client.post(
+        "/api/sessions/2/exercises/6/sets",
+        json={"set_number": 1, "reps": 24},
+    )
+
+    assert response.status_code == 422
+    assert "Cardio requires duration_minutes" in response.json()["detail"]
 
 
 def test_reclassify_rejects_weighted_history_for_unloaded_exercise() -> None:

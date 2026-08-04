@@ -53,6 +53,10 @@ export function Home() {
   const lastSet =
     activeExercise?.performed_sets?.[activeExercise.performed_sets.length - 1];
   const nextWeight = lastSet?.weight ?? activeExercise?.weight ?? null;
+  const nextDuration = currentState?.next_set_target?.duration_minutes
+    ?? lastSet?.duration_minutes
+    ?? activeExercise?.duration_minutes
+    ?? '—';
   const doneSetCount = activeExercise?.performed_sets?.length || 0;
   const totalSetCount = activeExercise?.sets || currentState?.target_sets || 0;
 
@@ -114,10 +118,14 @@ export function Home() {
                     />
                   ))}
                 </div>
-                <div class="grid grid-cols-2 gap-[9px]">
-                  <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode) || '—'} />
-                  <Stat surface label="Reps" value={activeExercise?.reps || "-"} />
-                </div>
+                {activeExercise?.activity_type === 'cardio' ? (
+                  <Stat surface label="Minutos" value={nextDuration} />
+                ) : (
+                  <div class="grid grid-cols-2 gap-[9px]">
+                    <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode) || '—'} />
+                    <Stat surface label="Reps" value={activeExercise?.reps || "-"} />
+                  </div>
+                )}
               </div>
               <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(true)}>
                 Continuar entreno

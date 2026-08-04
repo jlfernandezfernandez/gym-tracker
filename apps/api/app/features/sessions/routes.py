@@ -36,7 +36,7 @@ from app.features.sessions.service import (
     set_conflict_error,
     start_session,
     sync_exercise_status_from_sets,
-    validate_exercise_weight,
+    validate_exercise_metrics,
 )
 from app.models import (
     Exercise,
@@ -169,10 +169,27 @@ async def reclassify_exercise(
     # The historical sets keep their values.  Changing their catalog identity is
     # only valid when every existing load has the new exercise's weight semantics.
     for performed_set in planned.performed_sets or []:
-        validate_exercise_weight(new_exercise, performed_set.weight)
-    validate_exercise_weight(new_exercise, planned.suggested_weight)
+        validate_exercise_metrics(
+            new_exercise,
+            reps=performed_set.reps,
+            duration_minutes=performed_set.duration_minutes,
+            weight=performed_set.weight,
+        )
+    validate_exercise_metrics(
+        new_exercise,
+        reps=planned.target_reps,
+        duration_minutes=planned.target_duration_minutes,
+        weight=planned.suggested_weight,
+        unilateral=planned.unilateral,
+        require_cardio_duration=False,
+    )
     for target in planned.set_targets or []:
-        validate_exercise_weight(new_exercise, target.get("weight"))
+        validate_exercise_metrics(
+            new_exercise,
+            reps=target.get("reps"),
+            duration_minutes=target.get("duration_minutes"),
+            weight=target.get("weight"),
+        )
     planned.exercise_id = new_exercise.id
     planned.exercise = new_exercise
     if body.reason:
@@ -203,9 +220,21 @@ async def update_planned_exercise(
         replacement = await db.get(Exercise, body.new_exercise_id)
         if not replacement:
             raise HTTPException(status_code=404, detail="Exercise not found in catalog")
-        validate_exercise_weight(replacement, planned_exercise.suggested_weight)
+        validate_exercise_metrics(
+            replacement,
+            reps=planned_exercise.target_reps,
+            duration_minutes=planned_exercise.target_duration_minutes,
+            weight=planned_exercise.suggested_weight,
+            unilateral=planned_exercise.unilateral,
+            require_cardio_duration=False,
+        )
         for target in planned_exercise.set_targets or []:
-            validate_exercise_weight(replacement, target.get("weight"))
+            validate_exercise_metrics(
+                replacement,
+                reps=target.get("reps"),
+                duration_minutes=target.get("duration_minutes"),
+                weight=target.get("weight"),
+            )
         planned_exercise.exercise_id = replacement.id
         planned_exercise.exercise = replacement
     if body.target_sets is not None:
@@ -222,11 +251,20 @@ async def update_planned_exercise(
     if body.notes is not None:
         planned_exercise.notes = body.notes
     if body.unilateral is not None:
+        if planned_exercise.exercise.is_cardio and body.unilateral:
+            raise HTTPException(
+                status_code=422, detail="Cardio does not accept unilateral execution"
+            )
         planned_exercise.unilateral = body.unilateral
     if body.set_targets is not None:
         set_targets_data = [t.model_dump() for t in body.set_targets]
-        for t in set_targets_data:
-            validate_exercise_weight(planned_exercise.exercise, t.get("weight"))
+        for target in set_targets_data:
+            validate_exercise_metrics(
+                planned_exercise.exercise,
+                reps=target.get("reps"),
+                duration_minutes=target.get("duration_minutes"),
+                weight=target.get("weight"),
+            )
         planned_exercise.set_targets = set_targets_data
     # Trim set_targets when target_sets is lowered (avoid orphan targets)
     if planned_exercise.set_targets and planned_exercise.target_sets:
@@ -286,13 +324,25 @@ async def add_planned_exercise(
             if pe.order >= order:
                 pe.order += 1
 
-    validate_exercise_weight(exercise, body.suggested_weight)
+    validate_exercise_metrics(
+        exercise,
+        reps=body.target_reps,
+        duration_minutes=body.target_duration_minutes,
+        weight=body.suggested_weight,
+        unilateral=body.unilateral,
+        require_cardio_duration=False,
+    )
 
     set_targets_data = None
     if body.set_targets:
-        set_targets_data = [t.model_dump() for t in body.set_targets]
-        for t in set_targets_data:
-            validate_exercise_weight(exercise, t.get("weight"))
+        set_targets_data = [target.model_dump() for target in body.set_targets]
+        for target in set_targets_data:
+            validate_exercise_metrics(
+                exercise,
+                reps=target.get("reps"),
+                duration_minutes=target.get("duration_minutes"),
+                weight=target.get("weight"),
+            )
 
     db.add(
         PlannedExercise(
@@ -301,6 +351,7 @@ async def add_planned_exercise(
             order=order,
             target_sets=body.target_sets,
             target_reps=body.target_reps,
+            target_duration_minutes=body.target_duration_minutes,
             suggested_weight=body.suggested_weight,
             unilateral=body.unilateral,
             notes=body.notes,
@@ -390,7 +441,12 @@ async def log_set(
     check_session_owner(workout, user_id)
     planned_exercise = find_planned_exercise(workout, planned_id)
 
-    validate_exercise_weight(planned_exercise.exercise, body.weight)
+    validate_exercise_metrics(
+        planned_exercise.exercise,
+        reps=body.reps,
+        duration_minutes=body.duration_minutes,
+        weight=body.weight,
+    )
 
     reopen_session_for_correction(workout)
     next_set_number = next_missing_set_number(planned_exercise)
@@ -405,6 +461,7 @@ async def log_set(
         set_number=body.set_number,
         weight=body.weight,
         reps=body.reps,
+        duration_minutes=body.duration_minutes,
         rpe=body.rpe,
         sensation=body.sensation,
         notes=body.notes,
@@ -492,7 +549,12 @@ async def restore_set(
         raise HTTPException(status_code=409, detail="That set number already exists")
     if body.set_number > planned.target_sets:
         raise HTTPException(status_code=422, detail="Cannot restore a set beyond the target")
-    validate_exercise_weight(planned.exercise, body.weight)
+    validate_exercise_metrics(
+        planned.exercise,
+        reps=body.reps,
+        duration_minutes=body.duration_minutes,
+        weight=body.weight,
+    )
     reopened = workout.status == "completed"
     reopen_session_for_correction(workout)
     restored = PerformedSet(
@@ -500,6 +562,7 @@ async def restore_set(
         set_number=body.set_number,
         weight=body.weight,
         reps=body.reps,
+        duration_minutes=body.duration_minutes,
         rpe=body.rpe,
         sensation=body.sensation,
         notes=body.notes,

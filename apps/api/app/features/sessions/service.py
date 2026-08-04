@@ -10,12 +10,45 @@ from app.models import Exercise, PlannedExercise, WorkoutSession
 
 
 def validate_exercise_weight(exercise: Exercise, weight: float | None) -> None:
-    """Weight is NULL or > 0; unloaded equipment (bodyweight, bands, cardio) takes none."""
+    """Weight is NULL or > 0; unloaded strength equipment takes none."""
     if exercise.is_unloaded and weight is not None:
         raise HTTPException(
             status_code=422,
             detail=f"'{exercise.equipment}' exercises take no weight; omit it",
         )
+
+
+def validate_exercise_metrics(
+    exercise: Exercise,
+    *,
+    reps: int | None,
+    duration_minutes: int | None,
+    weight: float | None,
+    unilateral: bool = False,
+    require_cardio_duration: bool = True,
+) -> None:
+    """Enforce the catalog activity domain at every session mutation boundary."""
+    if exercise.is_cardio:
+        if (
+            reps is not None
+            or (require_cardio_duration and duration_minutes is None)
+            or weight is not None
+            or unilateral
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Cardio requires duration_minutes and does not accept reps, weight,"
+                    " or unilateral execution"
+                ),
+            )
+        return
+    if reps is None or duration_minutes is not None:
+        raise HTTPException(
+            status_code=422,
+            detail="Strength requires reps and does not accept duration_minutes",
+        )
+    validate_exercise_weight(exercise, weight)
 
 
 def set_conflict_error(error: IntegrityError) -> HTTPException:
@@ -179,8 +212,10 @@ def current_state(workout: WorkoutSession) -> dict:
         "current_set_number": next_set_number,
         "target_sets": current.target_sets,
         "target_reps": current.target_reps,
+        "target_duration_minutes": current.target_duration_minutes,
         "suggested_weight": current.suggested_weight,
         "weight_mode": current.weight_mode,
+        "activity_type": current.activity_type,
         "next_set_target": next_set_target,
         "exercise_order": current.order,
         "exercise_count": len(planned),

@@ -12,16 +12,16 @@ export const formatMuscle = (muscle: string) => {
   return EXERCISE_TAXONOMY[value.toLowerCase()]?.es || (value ? value[0].toUpperCase() + value.slice(1) : '');
 };
 
-export const formatWeight = (weight: number | null | undefined, mode: string) =>
+export const formatWeight = (weight: number | null | undefined, mode: string | null) =>
   mode === 'bodyweight' ? 'Peso corporal' : weight != null ? `${weight} kg` : '';
 
-export const formatSetTarget = (
-  target: { set_number: number; weight: number | null; reps: number },
-  mode: string,
-) => {
-  const weight = formatWeight(target.weight, mode);
-  return `S${target.set_number} · ${weight ? `${weight} × ${target.reps}` : `${target.reps} reps`}`;
-};
+export const executionMetricPayload = (
+  activityType: 'strength' | 'cardio',
+  values: { weight?: number | null; reps?: number | null; duration_minutes?: number | null },
+) => activityType === 'cardio'
+  ? { duration_minutes: values.duration_minutes }
+  : { weight: values.weight, reps: values.reps };
+
 
 export const formatEquipment = (equipment: string) =>
   EQUIPMENT_ES[String(equipment || '').toLowerCase()] || equipment;
@@ -39,8 +39,9 @@ export function normalizeSession(session: any) {
       planned_id: plannedExercise.id,
       exercise_id: plannedExercise.exercise_id,
       order: plannedExercise.order,
-      sets: plannedExercise.target_sets || 3,
-      reps: plannedExercise.target_reps || 10,
+      sets: plannedExercise.target_sets,
+      reps: plannedExercise.target_reps,
+      duration_minutes: plannedExercise.target_duration_minutes,
       weight: plannedExercise.suggested_weight,
       weight_mode: plannedExercise.weight_mode,
       unilateral: plannedExercise.unilateral === true,

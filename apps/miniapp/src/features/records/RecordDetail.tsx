@@ -1,7 +1,7 @@
 /** Record detail: per-session history and progression chart for one exercise. */
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../../lib/api';
-import { chartUsesWeight } from '../../lib/chart';
+import { progressMetric, progressUnit, progressValue } from '../../lib/chart';
 import { formatDate } from '../../lib/helpers';
 import { useApp } from '../../app/App';
 import { Empty, Loading, Stat } from '../../components/feedback';
@@ -15,9 +15,9 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
     queryFn: () => apiFetch('GET', `/exercises/${exerciseId}/progress?limit=50`),
   });
   const points = progressQuery.data || [];
-  const maxWeight = points.length ? Math.max(...points.map((point: any) => point.top_weight || 0)) : 0;
-  const maxReps = points.length ? Math.max(...points.map((point: any) => point.top_reps || 0)) : 0;
-  const usesWeight = chartUsesWeight(points);
+  const metric = progressMetric(points);
+  const unit = progressUnit(metric);
+  const maximum = points.length ? Math.max(...points.map((point: any) => progressValue(point, metric))) : 0;
   const latestPoint = points[points.length - 1];
 
   return (
@@ -33,15 +33,15 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
         <>
           <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
             <div class="grid grid-cols-3 gap-[9px]">
-              <Stat label="Máximo" value={usesWeight ? `${maxWeight} kg` : `${maxReps} reps`} />
+              <Stat label="Máximo" value={`${maximum} ${unit}`} />
               <Stat label="Sesiones" value={points.length} />
-              <Stat label="Última" value={usesWeight && latestPoint.top_weight ? `${latestPoint.top_weight} kg` : `${latestPoint.top_reps} reps`} />
+              <Stat label="Última" value={`${progressValue(latestPoint, metric)} ${unit}`} />
             </div>
           </div>
           {points.length >= 2 && (
             <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
               <h3>Progresión</h3>
-              <p class="text-xs">{usesWeight ? 'Peso máximo por sesión' : 'Repeticiones máximas por sesión'}</p>
+              <p class="text-xs">{metric === 'minutes' ? 'Minutos máximos por sesión' : metric === 'weight' ? 'Peso máximo por sesión' : 'Repeticiones máximas por sesión'}</p>
               <ProgressChart points={points} />
             </div>
           )}
@@ -59,11 +59,11 @@ export function RecordDetail({ exerciseId, title }: { exerciseId: number; title:
                 <span class="text-[.74rem] text-hint">{formatDate(point.date)}</span>
                 <span class="min-w-0">
                   <b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">
-                    {usesWeight && point.top_weight ? `${point.top_weight} kg` : `${point.top_reps} reps`}
-                    {point.sets > 1 ? ` · ${point.sets} series` : ' · 1 serie'}
+                    {progressValue(point, metric)} {unit}
+                    {point.sets > 1 ? ` · ${point.sets} ${metric === 'minutes' ? 'bloques' : 'series'}` : metric === 'minutes' ? ' · 1 bloque' : ' · 1 serie'}
                   </b>
                   <small class="mt-[3px] block text-[.72rem] text-hint">
-                    {usesWeight ? `${Math.round(point.volume)} kg volumen` : `${point.sets} series`}
+                    {metric === 'weight' ? `${Math.round(point.volume)} kg volumen` : metric === 'minutes' ? `${point.top_duration_minutes} min` : `${point.sets} series`}
                   </small>
                 </span>
                 <span class="text-[1.4rem] text-divider">›</span>
