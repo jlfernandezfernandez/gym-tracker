@@ -74,11 +74,11 @@ def upgrade() -> None:
         UPDATE planned_exercises AS planned
         SET set_targets = (
             SELECT jsonb_agg(
-                (target - 'reps' - 'weight')
-                || jsonb_build_object('duration_minutes', (target ->> 'reps')::integer)
-                ORDER BY (target ->> 'set_number')::integer
+                (item.value - 'reps' - 'weight')
+                || jsonb_build_object('duration_minutes', (item.value ->> 'reps')::integer)
+                ORDER BY (item.value ->> 'set_number')::integer
             )
-            FROM jsonb_array_elements(planned.set_targets::jsonb) AS target
+            FROM jsonb_array_elements(planned.set_targets::jsonb) AS item(value)
         )
         FROM exercises AS exercise
         WHERE planned.exercise_id = exercise.id
@@ -143,19 +143,19 @@ def downgrade() -> None:
         UPDATE planned_exercises
         SET set_targets = (
             SELECT jsonb_agg(
-                (target - 'duration_minutes')
+                (item.value - 'duration_minutes')
                 || jsonb_build_object(
                     'weight', NULL,
-                    'reps', (target ->> 'duration_minutes')::integer
+                    'reps', (item.value ->> 'duration_minutes')::integer
                 )
-                ORDER BY (target ->> 'set_number')::integer
+                ORDER BY (item.value ->> 'set_number')::integer
             )
-            FROM jsonb_array_elements(set_targets::jsonb) AS target
+            FROM jsonb_array_elements(set_targets::jsonb) AS item(value)
         )
         WHERE set_targets IS NOT NULL
           AND EXISTS (
-              SELECT 1 FROM jsonb_array_elements(set_targets::jsonb) AS target
-              WHERE target ? 'duration_minutes'
+              SELECT 1 FROM jsonb_array_elements(set_targets::jsonb) AS item(value)
+              WHERE item.value ? 'duration_minutes'
           )
         """
     )
