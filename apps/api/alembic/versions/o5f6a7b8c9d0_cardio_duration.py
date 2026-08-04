@@ -72,6 +72,17 @@ def upgrade() -> None:
     op.execute(
         """
         UPDATE planned_exercises AS planned
+        SET set_targets = NULL
+        FROM exercises AS exercise
+        WHERE planned.exercise_id = exercise.id
+          AND exercise.activity_type = 'cardio'
+          AND planned.set_targets IS NOT NULL
+          AND jsonb_typeof(planned.set_targets::jsonb) <> 'array'
+        """
+    )
+    op.execute(
+        """
+        UPDATE planned_exercises AS planned
         SET set_targets = (
             SELECT jsonb_agg(
                 (item.value - 'reps' - 'weight')
@@ -84,6 +95,7 @@ def upgrade() -> None:
         WHERE planned.exercise_id = exercise.id
           AND exercise.activity_type = 'cardio'
           AND planned.set_targets IS NOT NULL
+          AND jsonb_typeof(planned.set_targets::jsonb) = 'array'
         """
     )
 
@@ -153,6 +165,7 @@ def downgrade() -> None:
             FROM jsonb_array_elements(set_targets::jsonb) AS item(value)
         )
         WHERE set_targets IS NOT NULL
+          AND jsonb_typeof(set_targets::jsonb) = 'array'
           AND EXISTS (
               SELECT 1 FROM jsonb_array_elements(set_targets::jsonb) AS item(value)
               WHERE item.value ? 'duration_minutes'
