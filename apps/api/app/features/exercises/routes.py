@@ -148,7 +148,7 @@ async def personal_records(
         Exercise.id,
         PerformedSet.duration_minutes.desc().nulls_last(),  # pyright: ignore[reportOptionalMemberAccess]
         PerformedSet.weight.desc().nulls_last(),  # pyright: ignore[reportOptionalMemberAccess]
-        PerformedSet.reps.desc(),
+        PerformedSet.reps.desc(),  # pyright: ignore[reportOptionalMemberAccess]
         WorkoutSession.session_date.desc(),
         PerformedSet.id.desc(),
     )
@@ -222,7 +222,7 @@ async def exercise_progress(
             func.max(PerformedSet.reps),
             func.max(PerformedSet.duration_minutes),
             func.sum(
-                case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)  # pyright: ignore[reportOptionalOperand]
+                case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)  # pyright: ignore[reportOptionalOperand, reportOperatorIssue]
             ),
             func.count(PerformedSet.id),
         )

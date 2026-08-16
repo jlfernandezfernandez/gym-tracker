@@ -9,6 +9,7 @@ import {
 } from "../../lib/helpers";
 import { useApp } from "../../app/App";
 import { Empty, Stat } from "../../components/feedback";
+import { SetProgress } from "../../components/visualizations";
 
 export function Home() {
   const app = useApp();
@@ -33,6 +34,7 @@ export function Home() {
   const activeExercise = plan ? currentExercise(plan, currentState) : null;
 
   const openPlan = (goToExercise: boolean) => {
+    if (!activeData?.session) return;
     // Seed the session cache so the plan screen paints instantly.
     queryClient.setQueryData(
       ["session", activeData.session.id],
@@ -77,7 +79,7 @@ export function Home() {
       </div>
 
       {!activeQuery.isLoading && (
-        <div class="my-3 rounded-card bg-surface p-5 shadow-card">
+        <div class="card !p-5">
           {!plan ? (
             <Empty icon="🏋️">Sin sesión activa.</Empty>
           ) : (
@@ -89,7 +91,7 @@ export function Home() {
               {/* During a workout the landing IS the workout: the upcoming set, grouped as one inset card. */}
               <div class="mt-[14px] rounded-[18px] bg-surface-2 p-[14px] shadow-[inset_0_0_0_1px_var(--color-edge)]">
                 <div class="grid grid-cols-[88px_1fr] items-center gap-[13px]">
-                  <div class="relative grid h-[88px] place-items-center overflow-hidden rounded-2xl bg-white text-[1.7rem] shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
+                  <div class="media-thumb h-[88px] text-[1.7rem]">
                     {mediaSrc ? <img src={mediaSrc} alt={activeExercise?.name || 'Ejercicio actual'} loading="eager" /> : "🏋️"}
                   </div>
                   <div>
@@ -101,23 +103,14 @@ export function Home() {
                     </h3>
                   </div>
                 </div>
-                <div
-                  class="my-[13px] flex gap-[5px] [&>span]:h-[5px] [&>span]:flex-1 [&>span]:rounded-[9px] [&>span]:bg-track-dim"
-                  aria-label={`Serie ${doneSetCount + 1} de ${totalSetCount}`}
-                >
-                  {Array.from({ length: totalSetCount }, (_, setIndex) => (
-                    <span
-                      key={setIndex}
-                      class={
-                        setIndex < doneSetCount
-                          ? "!bg-ok-bright"
-                          : setIndex === doneSetCount
-                            ? "!bg-accent"
-                            : ""
-                      }
-                    />
-                  ))}
-                </div>
+                <SetProgress
+                  total={totalSetCount}
+                  completedSetNumbers={new Set(Array.from({ length: doneSetCount }, (_, i) => i + 1))}
+                  currentSetNumber={doneSetCount + 1}
+                  showCurrent={doneSetCount < totalSetCount}
+                  class="my-[13px]"
+                  ariaLabel={`Serie ${doneSetCount + 1} de ${totalSetCount}`}
+                />
                 {activeExercise?.activity_type === 'cardio' ? (
                   <Stat surface label="Minutos" value={nextDuration} />
                 ) : (
@@ -127,7 +120,7 @@ export function Home() {
                   </div>
                 )}
               </div>
-              <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(true)}>
+              <button class="btn-primary mt-3 bg-ink text-canvas" onClick={() => openPlan(true)}>
                 Continuar entreno
               </button>
               <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(false)}>

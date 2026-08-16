@@ -113,6 +113,11 @@ def _request(
     }
     if COACH_KEY:
         headers["X-Coach-Key"] = COACH_KEY
+        if user_id is None:
+            raise ValueError(
+                "telegram_user_id is required when COACH_KEY is set; "
+                "pass the athlete id from the current chat."
+            )
     if user_id is not None:
         headers["X-Telegram-User-Id"] = str(user_id)
     if payload is not None:
@@ -593,6 +598,9 @@ def update_planned_exercise(
     status: Literal["pending", "in_progress", "completed", "skipped"] | None = None,
     new_exercise_id: int | None = None,
     target_sets: int | None = None,
+    target_reps: int | None = None,
+    target_duration_minutes: int | None = None,
+    suggested_weight: float | None = None,
     notes: str | None = None,
     set_targets: list[dict[str, Any]] | None = None,
     unilateral: bool | None = None,
@@ -615,6 +623,12 @@ def update_planned_exercise(
         payload["new_exercise_id"] = int(new_exercise_id)
     if target_sets is not None:
         payload["target_sets"] = int(target_sets)
+    if target_reps is not None:
+        payload["target_reps"] = int(target_reps)
+    if target_duration_minutes is not None:
+        payload["target_duration_minutes"] = int(target_duration_minutes)
+    if suggested_weight is not None:
+        payload["suggested_weight"] = float(suggested_weight)
     if set_targets is not None:
         for target in set_targets:
             _require_one_metric(target)

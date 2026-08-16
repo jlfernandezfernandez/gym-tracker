@@ -77,12 +77,15 @@ class MemorySession:
         self.added.clear()
 
 
-def _exercise(exercise_id: int, equipment: str = "barbell") -> Exercise:
+def _exercise(
+    exercise_id: int, equipment: str = "barbell", activity_type: str = "strength"
+) -> Exercise:
     return Exercise(
         id=exercise_id,
         name=f"Exercise {exercise_id}",
         muscle_group="chest",
         equipment=equipment,
+        activity_type=activity_type,
     )
 
 
@@ -263,6 +266,44 @@ def test_log_cardio_set_rejects_reps_contract() -> None:
 
     assert response.status_code == 422
     assert "Cardio requires duration_minutes" in response.json()["detail"]
+
+
+def test_swap_strength_to_cardio_in_single_update() -> None:
+    workout = _workout(sets=(), target_sets=3)
+    replacement = _exercise(20, "stationary bike", activity_type="cardio")
+    gen = _client(workout, catalog={20: replacement})
+    client, _ = next(gen)
+
+    response = client.put(
+        "/api/sessions/1/exercises/5",
+        json={"new_exercise_id": 20, "target_duration_minutes": 20},
+    )
+
+    assert response.status_code == 200
+    planned = response.json()["planned_exercises"][0]
+    assert planned["exercise_id"] == 20
+    assert planned["target_duration_minutes"] == 20
+    assert planned["target_reps"] is None
+    assert planned["suggested_weight"] is None
+
+
+def test_swap_cardio_to_strength_in_single_update() -> None:
+    workout = _cardio_workout()
+    replacement = _exercise(10, "barbell", activity_type="strength")
+    gen = _client(workout, catalog={10: replacement})
+    client, _ = next(gen)
+
+    response = client.put(
+        "/api/sessions/2/exercises/6",
+        json={"new_exercise_id": 10, "target_reps": 12, "suggested_weight": 40},
+    )
+
+    assert response.status_code == 200
+    planned = response.json()["planned_exercises"][0]
+    assert planned["exercise_id"] == 10
+    assert planned["target_reps"] == 12
+    assert planned["suggested_weight"] == 40
+    assert planned["target_duration_minutes"] is None
 
 
 def test_reclassify_rejects_weighted_history_for_unloaded_exercise() -> None:

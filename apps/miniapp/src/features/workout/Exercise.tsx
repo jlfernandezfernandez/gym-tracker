@@ -20,7 +20,7 @@ import { useApp, useSession } from '../../app/App';
 import { BusyButton, Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
 import { ConfirmSheet } from '../../components/sheet';
-import { BodyMap, ProgressChart } from '../../components/visualizations';
+import { BodyMap, ProgressChart, SetProgress } from '../../components/visualizations';
 
 const targetForSet = (exercise: any, setNumber: number) =>
   exercise.set_targets?.find((target: any) => target.set_number === setNumber) || {
@@ -136,15 +136,13 @@ export function Exercise({ plannedId }: { plannedId: number }) {
             <span>Progreso</span>
             <span>{loggedSetCount}/{exercise.sets} series</span>
           </div>
-          <div class="mt-2 flex gap-[5px] [&>span]:h-[5px] [&>span]:flex-1 [&>span]:rounded-[9px] [&>span]:bg-track-dim" aria-label={`${loggedSetCount} de ${exercise.sets} series completadas`}>
-            {Array.from({ length: exercise.sets || 0 }, (_, setIndex) => (
-              <span key={setIndex} class={performedSetNumbers.has(setIndex + 1) ? '!bg-ok-bright' : setIndex + 1 === currentSetNumber && showEditor ? '!bg-accent' : ''} />
-            ))}
+          <div class="mt-2">
+            <SetProgress total={exercise.sets || 0} completedSetNumbers={performedSetNumbers} currentSetNumber={currentSetNumber} showCurrent={showEditor} ariaLabel={`${loggedSetCount} de ${exercise.sets} series completadas`} />
           </div>
         </div>
       </div>
 
-      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+      <div class="card">
         <div class="mb-3 flex min-h-9 items-center justify-between gap-3">
           <h3>Series</h3>
           {showEditor && <SetCountControl sessionId={plan.id} plannedId={exercise.planned_id} currentSets={exercise.sets || 0} minimumSets={Math.max(...performedSetNumbers, 0)} />}
@@ -190,7 +188,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
 
       <ExerciseProgress exerciseId={exercise.exercise_id} />
 
-      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+      <div class="card">
         <h3>Sobre el ejercicio</h3>
         <details class="mt-2 border-t border-edge pt-2 [&[open]>summary]:mb-2.5">
           <summary>Técnica</summary>
@@ -233,7 +231,7 @@ function ExerciseProgress({ exerciseId }: { exerciseId: number }) {
   const lastValue = progressValue(points[points.length - 1], metric);
 
   return (
-    <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+    <div class="card">
       <h3>Marcas</h3>
       <div class="mt-3 flex items-center">
         <div class="flex-1">
@@ -341,7 +339,7 @@ export function LogSetForm({
       if (isLastSet) {
         showToast('Ejercicio completado', 'ok');
         const pending = (updatedSession.planned_exercises || []).filter(
-          (candidate: any) => candidate.planned_id !== exercise.planned_id && ['pending', 'in_progress'].includes(candidate.status)
+          (candidate: any) => candidate.id !== exercise.planned_id && ['pending', 'in_progress'].includes(candidate.status)
         );
         if (pending.length > 0) onShowPicker();
         else app.pop();
@@ -437,7 +435,7 @@ export function LogSetForm({
           </div>
         </div>
       )}
-      <BusyButton busy={isBusy} busyLabel="Guardando..." class="mt-4 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82] disabled:pointer-events-none disabled:opacity-35" onClick={saveSet}>
+      <BusyButton busy={isBusy} busyLabel="Guardando..." class="btn-primary mt-4 bg-ink text-canvas disabled:pointer-events-none disabled:opacity-35" onClick={saveSet}>
         {isLastSet ? 'Registrar' : 'Continuar'}
       </BusyButton>
       {!isLastSet && (
@@ -473,7 +471,7 @@ function NextExercisePicker({ exercises, onPick, onDismiss }: { exercises: any[]
           const src = mediaUrl(exercise.image_url || exercise.gif_url);
           return (
             <button key={exercise.planned_id} class="grid w-full cursor-pointer grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-3 rounded-2xl border-0 bg-surface-2 p-3 text-left transition active:scale-[.98] focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-surface" onClick={() => onPick(exercise.planned_id)}>
-              <div class="grid size-12 place-items-center overflow-hidden rounded-xl bg-white text-lg shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
+              <div class="media-thumb size-12 text-lg">
                 {src ? <img class="size-full object-contain" src={src} alt="" loading="lazy" /> : '🏋️'}
               </div>
               <div class="min-w-0">

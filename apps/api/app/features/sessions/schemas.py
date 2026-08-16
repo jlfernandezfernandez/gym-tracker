@@ -78,6 +78,9 @@ class PlannedExerciseUpdate(BaseModel):
     status: Literal["pending", "in_progress", "completed", "skipped"] | None = None
     new_exercise_id: int | None = None
     target_sets: int | None = Field(default=None, ge=1, le=20)
+    target_reps: int | None = Field(default=None, ge=1)
+    target_duration_minutes: int | None = Field(default=None, ge=1)
+    suggested_weight: float | None = Field(default=None, gt=0)
     notes: str | None = None
     set_targets: list[SetTarget] | None = None
     unilateral: bool | None = None

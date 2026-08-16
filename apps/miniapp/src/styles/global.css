@@ -47,3 +47,34 @@ details[open] > summary::after { transform: rotate(-90deg); }
 }
 @media (prefers-reduced-transparency: reduce) { .toast { background: var(--color-ink); backdrop-filter: none; } }
 @media (prefers-contrast: more) { :root { --color-edge: #5f5f65; --color-hint: #414146; } }
+
+/* Reusable UI primitives — extract from duplicated Tailwind chains (ponytail). */
+.btn-primary {
+  min-height: 50px;
+  width: 100%;
+  cursor: pointer;
+  border-radius: 1rem;
+  border: 0;
+  padding: 13px 17px;
+  font-size: .94rem;
+  font-weight: 720;
+  transition: transform .15s, opacity .15s;
+}
+.btn-primary:active { transform: scale(.975); opacity: .82; }
+
+.card {
+  margin-block: .75rem;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  padding: 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.media-thumb {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 1rem;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.05);
+}

@@ -51,7 +51,7 @@ export function Plan() {
         onBack={app.readOnly && !app.demoMode ? undefined : app.pop}
         action={!app.readOnly && plan.share_token ? <ShareButton title={plan.title || 'Entrenamiento'} token={plan.share_token} /> : undefined}
       />
-      <div class="my-3 rounded-card bg-surface p-5 shadow-card">
+      <div class="card !p-5">
         <div>
           <div class="mt-[9px] flex flex-wrap gap-1.5">
             <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">{formatStatus(plan.status)}</span>
@@ -81,7 +81,7 @@ export function Plan() {
       ))}
 
       {muscles.length > 0 && (
-        <details class="my-3 rounded-card bg-surface p-[18px] shadow-card [&[open]>summary]:mb-2.5">
+        <details class="card [&[open]>summary]:mb-2.5">
           <summary>Mapa muscular de la sesión</summary>
           <BodyMap muscles={muscles} />
         </details>
@@ -91,7 +91,10 @@ export function Plan() {
 
       {!app.readOnly && plan.status !== 'completed' && (
         <div class="mt-3 flex items-center gap-[9px] [&>button]:min-w-0 [&>button]:flex-1">
-          <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-ink px-[17px] py-[13px] text-[.94rem] font-[720] text-canvas transition active:scale-[.975] active:opacity-[.82]" onClick={() => openExercise(currentExercise(plan, currentQuery.data)?.planned_id)}>
+          <button class="btn-primary bg-ink text-canvas" onClick={() => {
+            const nextId = currentExercise(plan, currentQuery.data)?.planned_id;
+            if (nextId != null) openExercise(nextId);
+          }}>
             Continuar
           </button>
           <FinishButton sessionId={plan.id} energy={plan.energy} discomfort={plan.discomfort} />
@@ -105,7 +108,7 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
   const mediaSrc = mediaUrl(exercise.image_url || exercise.gif_url);
   return (
     <button class={`my-3 grid w-full cursor-pointer grid-cols-[88px_1fr] items-center gap-[13px] rounded-card border-0 bg-surface p-[11px] text-left text-ink shadow-card transition hover:bg-hover active:scale-[.985] active:bg-hover max-[380px]:grid-cols-[76px_1fr] ${isCurrent ? 'ring-2 ring-accent/30 shadow-[0_6px_24px_rgba(0,0,0,.06)]' : ''}`} onClick={onOpen}>
-      <div class="relative grid h-[88px] place-items-center overflow-hidden rounded-2xl bg-white text-[1.7rem] shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] max-[380px]:h-[76px]">{mediaSrc ? <img class="absolute inset-0 size-full object-contain" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}</div>
+      <div class="media-thumb h-[88px] max-[380px]:h-[76px] text-[1.7rem]">{mediaSrc ? <img class="absolute inset-0 size-full object-contain" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}</div>
       <div class="min-w-0">
         <div class="flex items-start justify-between gap-3 [&>div]:min-w-0">
           <h3>{exercise.name || 'Ejercicio'}</h3>
@@ -136,7 +139,7 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
 function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) {
   const totalPerformedSets = exercises.reduce((total, exercise) => total + (exercise.performed_sets || []).length, 0);
   return (
-    <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+    <div class="card">
       <h2>Sesión completada</h2>
       {plan.feedback && <p>{plan.feedback}</p>}
       <div class="mt-2.5 grid grid-cols-3 gap-[9px]">
@@ -197,7 +200,7 @@ function FinishButton({ sessionId, energy, discomfort }: { sessionId: number; en
 
   return (
     <>
-      <button class="min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-surface px-[17px] py-[13px] text-[.94rem] font-[720] text-ink shadow-[inset_0_0_0_1px_var(--color-edge)] transition active:scale-[.975] active:opacity-[.82]" onClick={() => setIsOpen(true)}>
+      <button class="btn-primary bg-surface text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]" onClick={() => setIsOpen(true)}>
         ✓ Finalizar
       </button>
       <ConfirmSheet

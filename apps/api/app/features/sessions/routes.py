@@ -220,11 +220,29 @@ async def update_planned_exercise(
         replacement = await db.get(Exercise, body.new_exercise_id)
         if not replacement:
             raise HTTPException(status_code=404, detail="Exercise not found in catalog")
+        if replacement.is_cardio:
+            effective_reps = None
+            effective_weight = None
+            effective_duration = (
+                body.target_duration_minutes
+                if body.target_duration_minutes is not None
+                else planned_exercise.target_duration_minutes
+            )
+        else:
+            effective_reps = (
+                body.target_reps if body.target_reps is not None else planned_exercise.target_reps
+            )
+            effective_weight = (
+                body.suggested_weight
+                if body.suggested_weight is not None
+                else planned_exercise.suggested_weight
+            )
+            effective_duration = None
         validate_exercise_metrics(
             replacement,
-            reps=planned_exercise.target_reps,
-            duration_minutes=planned_exercise.target_duration_minutes,
-            weight=planned_exercise.suggested_weight,
+            reps=effective_reps,
+            duration_minutes=effective_duration,
+            weight=effective_weight,
             unilateral=planned_exercise.unilateral,
             require_cardio_duration=False,
         )
@@ -237,6 +255,9 @@ async def update_planned_exercise(
             )
         planned_exercise.exercise_id = replacement.id
         planned_exercise.exercise = replacement
+        planned_exercise.target_reps = effective_reps
+        planned_exercise.target_duration_minutes = effective_duration
+        planned_exercise.suggested_weight = effective_weight
     if body.target_sets is not None:
         highest_logged_set = max(performed_set_numbers(planned_exercise), default=0)
         if body.target_sets < highest_logged_set:

@@ -93,9 +93,9 @@ export function Profile() {
     },
   });
 
+  const numFieldKeys = NUMERIC_FIELDS.map((f) => f.key);
   const saveField = (key: string, value: string) => {
-    const numFields = ['weight_kg', 'age', 'height_cm'];
-    const payload: Record<string, unknown> = { [key]: numFields.includes(key) ? Number(value) : value };
+    const payload: Record<string, unknown> = { [key]: numFieldKeys.includes(key as any) ? Number(value) : value };
     patch.mutate(payload);
   };
 
@@ -108,14 +108,14 @@ export function Profile() {
       <TopBar title="Perfil" subtitle="El contexto que utiliza tu coach" />
 
       {/* Athlete identity */}
-      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+      <div class="card">
         <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Atleta</p>
         <h1>{profile.name || 'Atleta'}</h1>
         <p>{profile.onboarding_complete ? 'Perfil deportivo activo' : 'Completa el perfil con tu coach'}</p>
       </div>
 
       {/* Training & body */}
-      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+      <div class="card">
         <h2>Entrenamiento y cuerpo</h2>
         <div class="mt-2.5 grid overflow-hidden rounded-control bg-surface-2">
           {ALL_FIELDS.map((field) => {
@@ -140,14 +140,14 @@ export function Profile() {
 
       {/* Coach notes */}
       {profile.notes && (
-        <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+        <div class="card">
           <h2>Notas del coach</h2>
           <p>{profile.notes}</p>
         </div>
       )}
 
       {/* Measurements with charts */}
-      <div class="my-3 rounded-card bg-surface p-[18px] shadow-card">
+      <div class="card">
         <h2>Mediciones</h2>
         {measurements.length < 2 ? (
           <p>{measurements.length === 0
