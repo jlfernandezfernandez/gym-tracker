@@ -91,10 +91,10 @@ describe('Adversarial UI Test: BodyMap Component Edge Cases', () => {
       }),
     );
 
-    // Selected muscle polygon should have active ink stroke and data-selected="true"
+    // Selected muscle polygon should have active accent stroke and data-selected="true"
     expect(html).toContain('data-muscle="gluteal" data-selected="true"');
-    expect(html).toContain('stroke="var(--color-ink, #ffffff)"');
-    expect(html).toContain('stroke-width="2.5"');
+    expect(html).toContain('stroke="var(--color-accent, #5856d6)"');
+    expect(html).toContain('stroke-width="2.4"');
   });
 });
 

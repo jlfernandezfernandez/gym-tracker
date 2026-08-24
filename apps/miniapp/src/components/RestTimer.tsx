@@ -1,6 +1,25 @@
 import { useEffect, useState } from 'preact/hooks';
 import { haptic } from '../lib/telegram';
 
+function playTimerDoneSound() {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1760, ctx.currentTime + 0.12);
+    gain.gain.setValueAtTime(0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.35);
+  } catch {}
+}
+
 export function RestTimer({
   initialSeconds = 90,
   onFinish,
@@ -16,6 +35,7 @@ export function RestTimer({
   useEffect(() => {
     if (remaining <= 0) {
       haptic('ok');
+      playTimerDoneSound();
       onFinish?.();
       return;
     }
@@ -56,7 +76,7 @@ export function RestTimer({
       </div>
 
       <div class="my-3 flex items-center justify-center">
-        <div class="font-mono text-3xl font-extrabold tracking-tight text-accent">
+        <div class="font-mono text-4xl font-extrabold tracking-tight text-accent tabular-nums">
           {formattedTime}
         </div>
       </div>
@@ -71,19 +91,19 @@ export function RestTimer({
 
       <div class="mt-3.5 flex items-center justify-center gap-2">
         <button
-          class="min-h-9 cursor-pointer rounded-pill border-0 bg-surface-2 px-3.5 py-1.5 text-xs font-semibold text-ink transition active:scale-95"
+          class="min-h-[42px] cursor-pointer rounded-pill border-0 bg-surface-2 px-4 py-2 text-xs font-semibold text-ink transition active:scale-95 hover:bg-hover"
           onClick={() => addTime(-15)}
         >
           -15s
         </button>
         <button
-          class="min-h-9 cursor-pointer rounded-pill border-0 bg-surface-2 px-3.5 py-1.5 text-xs font-semibold text-ink transition active:scale-95"
+          class="min-h-[42px] cursor-pointer rounded-pill border-0 bg-surface-2 px-4 py-2 text-xs font-semibold text-ink transition active:scale-95 hover:bg-hover"
           onClick={() => addTime(30)}
         >
           +30s
         </button>
         <button
-          class="min-h-9 cursor-pointer rounded-pill border-0 bg-accent px-5 py-1.5 text-xs font-bold text-white transition active:scale-95"
+          class="min-h-[42px] cursor-pointer rounded-pill border-0 bg-accent px-6 py-2 text-xs font-bold text-white shadow-sm transition active:scale-95"
           onClick={onDismiss}
         >
           Listo

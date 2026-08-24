@@ -83,10 +83,19 @@ export function Home() {
         </p>
       </div>
 
-      {!activeQuery.isLoading && (
+      {activeQuery.isLoading ? (
+        <div class="card !p-5 animate-pulse">
+          <div class="mb-4 h-6 w-1/3 rounded-md bg-surface-2" />
+          <div class="h-28 rounded-[18px] bg-surface-2" />
+        </div>
+      ) : (
         <div class="card !p-5">
           {!plan ? (
-            <Empty icon="🏋️">Sin sesión activa.</Empty>
+            <Empty icon="🏋️">
+              Sin sesión activa hoy.
+              <br />
+              <span class="text-[.8rem] text-hint">Pide tu plan al coach en Telegram o revisa tu historial.</span>
+            </Empty>
           ) : (
             <>
               <div class="flex items-start justify-between gap-3 [&>div]:min-w-0">

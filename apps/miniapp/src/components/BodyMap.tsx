@@ -164,8 +164,8 @@ export function BodyMap({
                   key={`ant-${item.id}-${idx}`}
                   points={item.points}
                   fill={colorState.fill}
-                  stroke={isSelected ? 'var(--color-ink, #ffffff)' : 'var(--color-surface, #1c1c1e)'}
-                  strokeWidth={isSelected ? '2.5' : '1.4'}
+                  stroke={isSelected ? 'var(--color-accent, #5856d6)' : 'var(--color-canvas, #0c0c0e)'}
+                  strokeWidth={isSelected ? '2.4' : '1.2'}
                   strokeLinejoin="round"
                   class={`transition-all duration-200 ${
                     isClickable ? 'cursor-pointer hover:brightness-110 active:scale-98' : ''
@@ -208,8 +208,8 @@ export function BodyMap({
                   key={`post-${item.id}-${idx}`}
                   points={item.points}
                   fill={colorState.fill}
-                  stroke={isSelected ? 'var(--color-ink, #ffffff)' : 'var(--color-surface, #1c1c1e)'}
-                  strokeWidth={isSelected ? '2.5' : '1.4'}
+                  stroke={isSelected ? 'var(--color-accent, #5856d6)' : 'var(--color-canvas, #0c0c0e)'}
+                  strokeWidth={isSelected ? '2.4' : '1.2'}
                   strokeLinejoin="round"
                   class={`transition-all duration-200 ${
                     isClickable ? 'cursor-pointer hover:brightness-110 active:scale-98' : ''
@@ -259,7 +259,7 @@ export function BodyMap({
                           ? 'bg-ok-bg text-ok'
                           : selectedInfo.recovery.status === 'recovering' || selectedInfo.recovery.readiness_pct >= 45
                           ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                          : 'bg-warn-bg text-warn'
+                          : 'bg-err-bg text-err'
                       }`}
                     >
                       {selectedInfo.recovery.status === 'ready' || selectedInfo.recovery.readiness_pct >= 75

@@ -108,7 +108,7 @@ export function Plan() {
 function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurrent: boolean; onOpen: () => void }) {
   const mediaSrc = mediaUrl(exercise.image_url || exercise.gif_url);
   return (
-    <button class={`my-3 grid w-full cursor-pointer grid-cols-[88px_1fr] items-center gap-[13px] rounded-card border-0 bg-surface p-[11px] text-left text-ink shadow-card transition hover:bg-hover active:scale-[.985] active:bg-hover max-[380px]:grid-cols-[76px_1fr] ${isCurrent ? 'ring-2 ring-accent/30 shadow-[0_6px_24px_rgba(0,0,0,.06)]' : ''}`} onClick={onOpen}>
+    <button class={`my-3 grid w-full cursor-pointer grid-cols-[88px_1fr] items-center gap-3.5 rounded-card border-0 bg-surface p-3.5 text-left text-ink shadow-card transition hover:bg-hover active:scale-[.985] active:bg-hover max-[380px]:grid-cols-[76px_1fr] ${isCurrent ? 'ring-2 ring-accent/30 shadow-[0_6px_24px_rgba(0,0,0,.06)]' : ''}`} onClick={onOpen}>
       <div class="media-thumb size-[88px] max-[380px]:size-[76px] shrink-0 text-[1.7rem]">{mediaSrc ? <img class="size-full object-contain p-1" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}</div>
       <div class="min-w-0">
         <div class="flex items-start justify-between gap-3 [&>div]:min-w-0">
@@ -181,7 +181,9 @@ export function CompletedSummary({ plan, exercises }: { plan: any; exercises: an
                 key={item.muscle}
                 class="h-full first:rounded-l-pill last:rounded-r-pill transition-all"
                 style={{
-                  width: `${Math.max(item.percentage, 3)}%`,
+                  flexGrow: item.load,
+                  flexBasis: `${Math.max(item.percentage, 3)}%`,
+                  minWidth: '4px',
                   backgroundColor: item.color || 'var(--color-accent)',
                 }}
                 title={`${item.name}: ${item.percentage}% (${item.load} kg)`}

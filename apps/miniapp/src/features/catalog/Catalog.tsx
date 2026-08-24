@@ -211,7 +211,7 @@ export function Catalog() {
           {exercises.map((exercise) => (
             <button
               key={exercise.id}
-              class="grid min-h-[68px] w-full cursor-pointer grid-cols-[52px_1fr_auto] items-center gap-3 border-0 border-b border-edge bg-transparent px-[15px] py-2.5 text-left last:border-b-0"
+              class="grid min-h-[68px] w-full cursor-pointer grid-cols-[52px_1fr_auto] items-center gap-3 border-0 border-b border-edge bg-transparent px-[15px] py-2.5 text-left transition-colors duration-150 hover:bg-hover active:bg-hover last:border-b-0"
               onClick={() => app.push({ name: 'catalogExercise', exerciseId: exercise.id })}
             >
               <span class="grid size-[52px] place-items-center overflow-hidden rounded-xl bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">

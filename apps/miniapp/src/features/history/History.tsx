@@ -73,10 +73,29 @@ export function History() {
               <p class="mt-5 mb-0.5 ml-[3px] text-[.68rem] font-bold tracking-[.07em] text-hint uppercase first:mt-2.5">{label}</p>
               <div class="mt-2 overflow-hidden rounded-card bg-surface [content-visibility:auto] [contain-intrinsic-size:auto_500px]">
                 {sessions.map((session: any) => (
-                  <button class="grid min-h-[76px] w-full cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 border-b border-edge bg-transparent px-[15px] py-3 text-left text-ink last:border-b-0 hover:bg-surface-2 active:bg-surface-2" key={session.id} onClick={() => app.openSession(session.id)}>
-                    <span class="text-[.74rem] text-hint">{formatDate(session.session_date)}</span>
-                    <span class="min-w-0"><b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">{session.title || 'Entrenamiento'}</b><small class="mt-[3px] block text-[.72rem] text-hint">{session.exercise_count || 0} ejercicios · {session.total_sets || 0} series{session.duration_actual ? ` · ${session.duration_actual} min` : ''}</small></span>
-                    <span class="text-[1.4rem] text-divider">›</span>
+                  <button
+                    class="group grid min-h-[76px] w-full cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 border-b border-edge bg-transparent px-[15px] py-3 text-left text-ink transition-colors last:border-b-0 hover:bg-hover active:bg-hover"
+                    key={session.id}
+                    onClick={() => app.openSession(session.id)}
+                  >
+                    <span class="text-[.74rem] font-medium text-hint">{formatDate(session.session_date)}</span>
+                    <span class="min-w-0">
+                      <b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">{session.title || 'Entrenamiento'}</b>
+                      <div class="mt-1 flex flex-wrap items-center gap-1.5 text-[.72rem] text-hint">
+                        <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
+                          {session.exercise_count || 0} ejerc.
+                        </span>
+                        <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
+                          {session.total_sets || 0} series
+                        </span>
+                        {session.duration_actual ? (
+                          <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
+                            ⏱️ {session.duration_actual} min
+                          </span>
+                        ) : null}
+                      </div>
+                    </span>
+                    <span class="text-[1.3rem] text-divider transition-transform group-active:translate-x-0.5">›</span>
                   </button>
                 ))}
               </div>

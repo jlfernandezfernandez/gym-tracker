@@ -259,10 +259,10 @@ export function Heatmap({
                           key={day.dateString}
                           type="button"
                           disabled={day.isFuture}
-                          class={`size-[12px] rounded-[2.5px] transition-all p-0 border-0 ${
+                          class={`size-[13px] rounded-[3px] transition-transform duration-100 p-0 border-0 ${
                             day.isFuture
                               ? 'bg-surface-2 opacity-25 cursor-default'
-                              : `${tierColors[day.tier]} ${hasWorkouts ? 'cursor-pointer hover:scale-125' : 'cursor-default'}`
+                              : `${tierColors[day.tier]} ${hasWorkouts ? 'cursor-pointer hover:scale-125 active:scale-95' : 'cursor-default'}`
                           } ${
                             day.isToday
                               ? 'ring-1.5 ring-accent ring-offset-1 ring-offset-surface'

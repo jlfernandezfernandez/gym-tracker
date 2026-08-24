@@ -504,7 +504,7 @@ export function IsometricTimer({
       </div>
 
       <div class="my-2.5 flex flex-col items-center justify-center">
-        <div class="font-mono text-3xl font-extrabold tracking-tight text-accent">
+        <div class="font-mono text-4xl font-extrabold tracking-tight text-accent tabular-nums">
           {formatTimerDisplay(displaySeconds)}
         </div>
         <div class="text-[0.7rem] font-semibold text-hint">
@@ -525,7 +525,15 @@ export function IsometricTimer({
         <div class="flex items-center gap-1.5">
           <button
             type="button"
-            class="cursor-pointer rounded-pill border-0 bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition active:scale-95 hover:bg-hover"
+            class="min-h-[36px] cursor-pointer rounded-pill border-0 bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition active:scale-95 hover:bg-hover"
+            onClick={() => handleAdjust(5)}
+            aria-label="Añadir 5 segundos"
+          >
+            +5s
+          </button>
+          <button
+            type="button"
+            class="min-h-[36px] cursor-pointer rounded-pill border-0 bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition active:scale-95 hover:bg-hover"
             onClick={() => handleAdjust(10)}
             aria-label="Añadir 10 segundos"
           >
@@ -533,7 +541,7 @@ export function IsometricTimer({
           </button>
           <button
             type="button"
-            class="cursor-pointer rounded-pill border-0 bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition active:scale-95 hover:bg-hover"
+            class="min-h-[36px] cursor-pointer rounded-pill border-0 bg-surface-2 px-2.5 py-1 text-xs font-semibold text-ink transition active:scale-95 hover:bg-hover"
             onClick={() => handleAdjust(30)}
             aria-label="Añadir 30 segundos"
           >
@@ -777,7 +785,7 @@ export function LogSetForm({
             <label for="set-weight">{isBodyweight ? 'Peso corporal' : 'Peso (kg)'}</label>
             <div class="flex items-center gap-1.5">
               {isBodyweight ? (
-                <div class="grid min-h-14 min-w-0 flex-1 place-items-center rounded-control bg-surface text-[1rem] font-[720] tracking-[-.03em] text-hint">Corporal</div>
+                <div class="grid min-h-12 min-w-0 flex-1 place-items-center rounded-control bg-surface text-[1rem] font-[720] tracking-[-.03em] text-hint">Corporal</div>
               ) : (
                 <input id="set-weight" class="bg-surface" type="text" inputmode="decimal" enterkeyhint="done" value={weight} onFocus={(event: any) => event.target.select()} onInput={(event: any) => setWeight(event.target.value)} />
               )}
@@ -838,9 +846,9 @@ export function LogSetForm({
               <button
                 key={option.rir}
                 type="button"
-                class={`cursor-pointer rounded-xl border py-1.5 text-center text-xs font-bold transition active:scale-95 ${
+                class={`min-h-[42px] cursor-pointer rounded-xl border py-2 text-center text-xs font-bold transition active:scale-95 ${
                   selectedRir === option.rir
-                    ? 'border-accent bg-accent text-white'
+                    ? 'border-accent bg-accent text-white shadow-sm'
                     : 'border-edge bg-surface-2 text-hint hover:text-ink'
                 }`}
                 onClick={() => setSelectedRir(selectedRir === option.rir ? null : option.rir)}
