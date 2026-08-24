@@ -18,6 +18,7 @@ import { BusyButton, Empty, Loading, Stat } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
 import { ConfirmSheet } from '../../components/sheet';
 import { BodyMap } from '../../components/visualizations';
+import { calculateMuscleLoadSplit, type MuscleLoadItem } from '../../lib/volume';
 
 export function Plan() {
   const app = useApp();
@@ -122,6 +123,11 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
           {exercise.unilateral ? ' · Unilateral' : ''}
         </p>
         <div class="mt-[9px] flex flex-wrap gap-1.5">
+          {exercise.superset_group && (
+            <span class="rounded-pill bg-accent/15 px-2 py-1 text-[.68rem] font-[650] text-accent">
+              ⚡ Superserie {exercise.superset_group}
+            </span>
+          )}
           <span class="rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
             {exercise.activity_type === 'cardio'
               ? exercise.duration_minutes
@@ -136,17 +142,95 @@ function ExerciseCard({ exercise, isCurrent, onOpen }: { exercise: any; isCurren
   );
 }
 
-function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) {
+export function CompletedSummary({ plan, exercises }: { plan: any; exercises: any[] }) {
   const totalPerformedSets = exercises.reduce((total, exercise) => total + (exercise.performed_sets || []).length, 0);
+  const split = calculateMuscleLoadSplit(exercises);
+
   return (
-    <div class="card">
-      <h2>Sesión completada</h2>
-      {plan.feedback && <p>{plan.feedback}</p>}
-      <div class="mt-2.5 grid grid-cols-3 gap-[9px]">
+    <div class="card !p-5" data-testid="completed-summary">
+      <div class="flex items-center justify-between gap-3">
+        <h2>Sesión completada</h2>
+        <span class="rounded-pill bg-ok-bg px-2.5 py-1 text-[.72rem] font-bold text-ok">✓ Finalizada</span>
+      </div>
+      {plan.feedback && <p class="mt-2 text-hint italic">«{plan.feedback}»</p>}
+      <div class="mt-3.5 grid grid-cols-3 gap-[9px]">
         <Stat label="Series" value={totalPerformedSets} />
-        <Stat label="Volumen" value={`${Math.round(plan.total_volume)} kg`} />
+        <Stat label="Volumen" value={`${Math.round(plan.total_volume || split.totalLoad || 0)} kg`} />
         <Stat label="Duración" value={plan.duration_actual || plan.duration_estimated ? `${plan.duration_actual || plan.duration_estimated} min` : '—'} />
       </div>
+
+      {/* Post-Workout Muscle Load Split (Requirement R5) */}
+      {split.muscles.length > 0 && (
+        <div class="mt-5 pt-4 border-t border-edge" data-testid="muscle-load-split">
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="text-[.92rem] font-bold text-ink">Distribución de carga muscular</h3>
+            <span class="text-[.7rem] text-hint font-medium">{split.muscles.length} grupos</span>
+          </div>
+          <p class="mt-0.5 text-[.72rem] text-hint">
+            Porcentaje de volumen efectivo absorbido (excluye series de calentamiento).
+          </p>
+
+          {/* Multi-segment proportional stacked split bar */}
+          <div
+            class="mt-3 flex h-[14px] w-full overflow-hidden rounded-pill bg-surface-2 p-[2px] shadow-inner"
+            aria-label="Barra proporcional de carga muscular"
+            data-testid="split-progress-bar"
+          >
+            {split.muscles.map((item) => (
+              <div
+                key={item.muscle}
+                class="h-full first:rounded-l-pill last:rounded-r-pill transition-all"
+                style={{
+                  width: `${Math.max(item.percentage, 3)}%`,
+                  backgroundColor: item.color || 'var(--color-accent)',
+                }}
+                title={`${item.name}: ${item.percentage}% (${item.load} kg)`}
+              />
+            ))}
+          </div>
+
+          {/* Ranked muscle breakdown rows */}
+          <div class="mt-3.5 space-y-2.5" data-testid="muscle-split-list">
+            {split.muscles.map((item) => (
+              <div key={item.muscle} class="rounded-xl bg-surface-2 p-2.5 shadow-xs">
+                <div class="flex items-center justify-between text-[.82rem]">
+                  <div class="flex items-center gap-2 min-w-0">
+                    <span
+                      class="size-2.5 shrink-0 rounded-full"
+                      style={{ backgroundColor: item.color || 'var(--color-accent)' }}
+                      aria-hidden="true"
+                    />
+                    <span class="font-bold text-ink truncate">{item.name}</span>
+                  </div>
+                  <div class="flex items-center gap-1.5 shrink-0 text-[.8rem]">
+                    <span class="font-bold text-accent">{item.percentage}%</span>
+                    <span class="text-[.72rem] text-hint">({item.load} kg)</span>
+                  </div>
+                </div>
+
+                {/* Individual progress track */}
+                <div class="mt-1.5 h-[5px] w-full overflow-hidden rounded-pill bg-track-dim">
+                  <div
+                    class="h-full rounded-pill transition-all"
+                    style={{
+                      width: `${item.percentage}%`,
+                      backgroundColor: item.color || 'var(--color-accent)',
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Session BodyMap visualization */}
+          <div class="mt-4 rounded-card bg-surface-2 p-3">
+            <p class="text-[.7rem] font-bold uppercase tracking-wider text-hint mb-1">
+              Mapa de absorción
+            </p>
+            <BodyMap mode="balance" volumeData={split.volumeMap} showLegend={false} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

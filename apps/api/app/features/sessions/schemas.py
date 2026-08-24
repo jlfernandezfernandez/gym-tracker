@@ -4,16 +4,28 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 
+def _sync_rpe_rir(rpe: float | None, rir: float | None) -> tuple[float | None, float | None]:
+    if rpe is not None and rir is None:
+        return rpe, max(0.0, min(10.0, round(10.0 - rpe, 1)))
+    if rir is not None and rpe is None:
+        return max(1.0, min(10.0, round(10.0 - rir, 1))), rir
+    return rpe, rir
+
+
 class SetTarget(BaseModel):
     set_number: int = Field(ge=1)
     weight: float | None = Field(default=None, gt=0)
     reps: int | None = Field(default=None, ge=1)
     duration_minutes: int | None = Field(default=None, ge=1)
+    is_warmup: bool = False
+    rpe: float | None = Field(default=None, ge=1, le=10)
+    rir: float | None = Field(default=None, ge=0, le=10)
 
     @model_validator(mode="after")
     def validate_metric(self) -> "SetTarget":
         if (self.reps is None) == (self.duration_minutes is None):
             raise ValueError("exactly one of reps or duration_minutes is required")
+        self.rpe, self.rir = _sync_rpe_rir(self.rpe, self.rir)
         return self
 
 
@@ -37,6 +49,7 @@ class PlannedExerciseCreate(BaseModel):
     target_duration_minutes: int | None = Field(default=None, ge=1)
     suggested_weight: float | None = Field(default=None, gt=0)
     unilateral: bool = False
+    superset_group: str | None = None
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
@@ -51,13 +64,16 @@ class PerformedSetCreate(BaseModel):
     weight: float | None = Field(default=None, gt=0)
     reps: int | None = Field(default=None, ge=1)
     duration_minutes: int | None = Field(default=None, ge=1)
+    is_warmup: bool = False
     rpe: float | None = Field(default=None, ge=1, le=10)
+    rir: float | None = Field(default=None, ge=0, le=10)
     sensation: str = ""
     notes: str = ""
 
     @model_validator(mode="after")
     def validate_metric(self) -> "PerformedSetCreate":
         _require_one_metric(self.reps, self.duration_minutes)
+        self.rpe, self.rir = _sync_rpe_rir(self.rpe, self.rir)
         return self
 
 
@@ -84,6 +100,7 @@ class PlannedExerciseUpdate(BaseModel):
     notes: str | None = None
     set_targets: list[SetTarget] | None = None
     unilateral: bool | None = None
+    superset_group: str | None = None
 
     @model_validator(mode="after")
     def validate_set_targets(self) -> "PlannedExerciseUpdate":
@@ -99,6 +116,7 @@ class AddExerciseRequest(BaseModel):
     target_duration_minutes: int | None = Field(default=None, ge=1)
     suggested_weight: float | None = Field(default=None, gt=0)
     unilateral: bool = False
+    superset_group: str | None = None
     notes: str = ""
     set_targets: list[SetTarget] | None = None
 
@@ -146,12 +164,15 @@ class ImportSet(BaseModel):
     weight: float | None = Field(default=None, gt=0)
     reps: int | None = Field(default=None, ge=1)
     duration_minutes: int | None = Field(default=None, ge=1)
+    is_warmup: bool = False
     rpe: float | None = Field(default=None, ge=1, le=10)
+    rir: float | None = Field(default=None, ge=0, le=10)
     notes: str = ""
 
     @model_validator(mode="after")
     def validate_metric(self) -> "ImportSet":
         _require_one_metric(self.reps, self.duration_minutes)
+        self.rpe, self.rir = _sync_rpe_rir(self.rpe, self.rir)
         return self
 
 
@@ -160,6 +181,7 @@ class ImportExercise(BaseModel):
     order: int = Field(default=0, ge=0)
     notes: str = ""
     unilateral: bool = False
+    superset_group: str | None = None
     sets: list[ImportSet] = Field(min_length=1)
 
 
@@ -204,7 +226,9 @@ class PerformedSetOut(BaseModel):
     weight_mode: Literal["bodyweight", "unloaded", "weighted"] | None
     reps: int | None
     duration_minutes: int | None
+    is_warmup: bool = False
     rpe: float | None = None
+    rir: float | None = None
     sensation: str
     notes: str
     timestamp: datetime
@@ -219,6 +243,7 @@ class PlannedExerciseOut(BaseModel):
     target_duration_minutes: int | None
     suggested_weight: float | None
     unilateral: bool
+    superset_group: str | None = None
     activity_type: Literal["strength", "cardio"]
     weight_mode: Literal["bodyweight", "unloaded", "weighted"] | None
     notes: str

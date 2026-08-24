@@ -6,16 +6,13 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from gym_tracker_mcp import mcp
-
+# fastmcp reads host/port from global settings at server construction,
+# so set them via env before importing the module that builds FastMCP.
+os.environ.setdefault("FASTMCP_HOST", "0.0.0.0")
 port = int(os.getenv("MCP_PORT", "8001"))
+os.environ.setdefault("FASTMCP_PORT", str(port))
 
-# FastMCP's current API takes host/port on the server settings, not on run().
-# Bind to all interfaces for Coolify/Traefik and disable localhost-only host
-# checks because requests arrive with the public app hostname.
-mcp.settings.host = "0.0.0.0"
-mcp.settings.port = port
-mcp.settings.transport_security.enable_dns_rebinding_protection = False
+from gym_tracker_mcp import mcp
 
 print(f"Starting gym-tracker MCP on port {port} (streamable-http)", flush=True)
 mcp.run(transport="streamable-http")

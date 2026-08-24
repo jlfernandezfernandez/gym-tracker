@@ -7,6 +7,7 @@ from sqlmodel import col
 
 from app.core.auth import current_user_id
 from app.core.database import get_session as get_db_session
+from app.features.coach.onerm import calculate_1rm
 from app.features.exercises.schemas import ExerciseFacets
 from app.features.profile.routes import _get_or_create_profile
 from app.features.sessions.schemas import ExerciseOut
@@ -135,6 +136,7 @@ async def personal_records(
             PerformedSet.weight,
             PerformedSet.reps,
             PerformedSet.duration_minutes,
+            PerformedSet.is_warmup,
             WorkoutSession.session_date,
             WorkoutSession.id,
         )
@@ -164,10 +166,12 @@ async def personal_records(
         weight,
         reps,
         duration_minutes,
+        is_warmup,
         session_date,
         session_id,
     ) in rows:
         record = records.get(exercise_id)
+        e1rm = None if is_warmup or activity_type == "cardio" else calculate_1rm(weight, reps)
         if record is None:
             records[exercise_id] = {
                 "exercise_id": exercise_id,
@@ -182,6 +186,7 @@ async def personal_records(
                 "max_duration_minutes": (
                     int(duration_minutes or 0) if activity_type == "cardio" else None
                 ),
+                "estimated_1rm": e1rm,
                 "weight_mode": (
                     None
                     if activity_type == "cardio"
@@ -193,6 +198,9 @@ async def personal_records(
         else:
             record["sessions"].add(session_id)
             record["last_date"] = max(record["last_date"], session_date)
+            if e1rm and (record.get("estimated_1rm") is None or e1rm > record["estimated_1rm"]):
+                record["estimated_1rm"] = e1rm
+
     return [
         {
             **record,
@@ -238,8 +246,17 @@ async def exercise_progress(
         .limit(limit)
     )
     rows = (await db.execute(statement)).all()
-    return [
-        {
+    progress_list = []
+    for (
+        session_id,
+        session_date,
+        top_weight,
+        top_reps,
+        top_duration_minutes,
+        volume,
+        set_count,
+    ) in reversed(rows):
+        item = {
             "session_id": session_id,
             "date": session_date.isoformat(),
             "top_weight": float(top_weight) if top_weight is not None else None,
@@ -254,16 +271,10 @@ async def exercise_progress(
             ),
             "sets": set_count,
         }
-        for (
-            session_id,
-            session_date,
-            top_weight,
-            top_reps,
-            top_duration_minutes,
-            volume,
-            set_count,
-        ) in reversed(rows)
-    ]
+        if not exercise.is_cardio and top_weight and top_reps:
+            item["estimated_1rm"] = calculate_1rm(float(top_weight), int(top_reps))
+        progress_list.append(item)
+    return progress_list
 
 
 @router.get("/{exercise_id}", response_model=ExerciseOut)

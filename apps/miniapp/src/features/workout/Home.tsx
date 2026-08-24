@@ -9,7 +9,7 @@ import {
 } from "../../lib/helpers";
 import { useApp } from "../../app/App";
 import { Empty, Stat } from "../../components/feedback";
-import { SetProgress } from "../../components/visualizations";
+import { Heatmap, SetProgress } from "../../components/visualizations";
 
 export function Home() {
   const app = useApp();
@@ -26,6 +26,11 @@ export function Home() {
     staleTime: 0,
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
+  });
+  const sessionsQuery = useQuery({
+    queryKey: ["sessions"],
+    queryFn: () => apiFetch("GET", "/sessions"),
+    retry: 0,
   });
 
   const activeData = activeQuery.data;
@@ -131,6 +136,16 @@ export function Home() {
         </div>
       )}
 
+      {/* Training Consistency Heatmap & Streak (Requirement R4) */}
+      <Heatmap
+        sessions={sessionsQuery.data || []}
+        onSelectDate={(_date, daySessions) => {
+          if (daySessions?.[0]?.id) {
+            app.openSession(daySessions[0].id);
+          }
+        }}
+        className="mt-4"
+      />
     </>
   );
 }

@@ -107,6 +107,7 @@ class WorkoutSession(SQLModel, table=True):
             max(performed_set.weight or 0, 0) * (performed_set.reps or 0)
             for planned_exercise in self.planned_exercises or []
             for performed_set in planned_exercise.performed_sets or []
+            if not performed_set.is_warmup
         )
 
 
@@ -137,6 +138,7 @@ class PlannedExercise(SQLModel, table=True):
     target_duration_minutes: int | None = Field(default=None)
     suggested_weight: float | None = Field(default=None)
     unilateral: bool = Field(default=False)
+    superset_group: str | None = Field(default=None)
     notes: str = Field(default="")
     status: str = Field(default="pending")
     set_targets: list | None = Field(default=None, sa_type=sa.JSON)
@@ -180,7 +182,9 @@ class PerformedSet(SQLModel, table=True):
     weight: float | None = Field(default=None)
     reps: int | None = Field(default=None)
     duration_minutes: int | None = Field(default=None)
+    is_warmup: bool = Field(default=False)
     rpe: float | None = Field(default=None, ge=1.0, le=10.0)
+    rir: float | None = Field(default=None, ge=0.0, le=10.0)
     sensation: str = Field(default="")
     notes: str = Field(default="")
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))

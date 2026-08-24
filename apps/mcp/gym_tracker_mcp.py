@@ -15,7 +15,7 @@ import urllib.parse
 import urllib.request
 from typing import Any, Literal
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -33,25 +33,24 @@ Operating rules:
 1. Start each coaching turn with training_snapshot. If onboarding_complete is false, don't plan yet —
    ask like a real trainer (goal, experience, days/time and preferences) in short
    blocks and save with patch_athlete_profile (finish with {"onboarding_complete": true}).
-2. Never invent weight, height, preferences or history. Read the profile, check
+2. Check muscle readiness: training_snapshot includes active_fatigue and muscle_recovery (36h decay).
+   Never schedule high-volume work for fatigued muscle groups unless doing an intentional overload block.
+3. Progressive Overload: use get_progression_recommendation to get mathematically sound weight/rep jumps
+   (linear, Greyskull LP double jumps, rep ranges, or deloads) based on exact historical performance.
+4. Never invent weight, height, preferences or history. Read the profile, check
    list_sessions / exercise_progress / list_measurements, or ask.
-3. Pick exercises yourself: call list_exercise_facets for valid filters, use list_exercises,
+5. Pick exercises yourself: call list_exercise_facets for valid filters, use list_exercises,
    then send returned exercise ids in create_plan exercises. Never invent catalog ids.
-4. Preview before training: create_plan leaves the session as 'planned'; send session_web_url.
+6. Preview before training: create_plan leaves the session as 'planned'; send session_web_url.
    Not convincing? delete_session and create another.
-5. During the workout update state, don't just chat: "did 12 reps" → log_set; pain →
+7. During the workout update state: "did 12 reps @ 80kg (2 RIR)" → log_set; pain →
    alternative + session feedback; machine busy → update_planned_exercise with
-   new_exercise_id. Current position: get_active_session / get_current_state.
-6. When done: finish_session with feedback (let the backend measure duration from
-   started_at — do not send duration_actual unless the athlete states it). Use it
-   and list_sessions to adapt the next plan.
-7. Body data (weight, composition, scans): record_body_measurement, never overwrite notes.
-8. Sharing: share_web_url(share_token) gives a read-only link for a companion.
-   Migrating history from another tracker: import_completed_session, one call per past workout.
-9. Multi-user: always pass telegram_user_id (Telegram id of the chat) on profile/session tools.
-
-Persistence split: physical/trainable facts → app profile. Your own agent memory → only
-stable human preferences. Never duplicate workout logs outside the app."""
+   new_exercise_id. Ramp-up sets should be marked with is_warmup=True.
+8. When done: finish_session with feedback (let the backend measure duration from
+   started_at — do not send duration_actual unless the athlete states it).
+9. Body data: record_body_measurement, never overwrite notes.
+10. Migrating history: use import_tracker_csv when the athlete sends a Hevy, Strong, or FitNotes CSV export.
+11. Multi-user: always pass telegram_user_id (Telegram id of the chat) on profile/session tools."""
 
 mcp = FastMCP("gym-tracker", instructions=COACH_GUIDE)
 
@@ -78,7 +77,7 @@ def _require_telegram_user_id(telegram_user_id: int | None, tool_name: str) -> i
     """Fail before any HTTP call when a correction would be unscoped."""
     if telegram_user_id is None:
         raise ValueError(
-            f"telegram_user_id is required for {tool_name}; pass the athlete id from the current chat."
+            f"telegram_user_id is required on {tool_name} to scope mutations and reads to the current athlete"
         )
     return int(telegram_user_id)
 
@@ -100,6 +99,8 @@ def _request(
     path: str,
     payload: dict[str, Any] | None = None,
     user_id: int | None = None,
+    raw_body: str | bytes | None = None,
+    content_type: str | None = None,
 ) -> Any:
     """Send an HTTP request to the gym-tracker API and return parsed JSON.
 
@@ -120,9 +121,12 @@ def _request(
             )
     if user_id is not None:
         headers["X-Telegram-User-Id"] = str(user_id)
-    if payload is not None:
+    if raw_body is not None:
+        data = raw_body.encode("utf-8") if isinstance(raw_body, str) else raw_body
+        headers["Content-Type"] = content_type or "text/plain; charset=utf-8"
+    elif payload is not None:
         data = json.dumps(payload).encode("utf-8")
-        headers["Content-Type"] = "application/json"
+        headers["Content-Type"] = content_type or "application/json"
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
         with urllib.request.urlopen(req, timeout=30) as resp:
@@ -421,11 +425,282 @@ def import_completed_session(
     )
 
 
+def format_compact_set(performed_set: dict[str, Any]) -> str:
+    """Format a single performed set into compact high-density notation.
+
+    Examples:
+      - 10 reps @ 80kg (2 RIR) -> "10@80kg (2RIR)"
+      - Warm-up 12 reps @ 50kg -> "W:12@50kg"
+      - Bodyweight 15 reps -> "15@BW"
+      - Timed cardio/isometric 25 min -> "25m"
+      - Weighted with RPE -> "10@80kg (@8RPE)"
+    """
+    if not isinstance(performed_set, dict):
+        return str(performed_set)
+
+    is_warmup = bool(performed_set.get("is_warmup", False))
+    prefix = "W:" if is_warmup else ""
+
+    reps = performed_set.get("reps")
+    duration = performed_set.get("duration_minutes")
+    weight = performed_set.get("weight")
+    rir = performed_set.get("rir")
+    rpe = performed_set.get("rpe")
+
+    if reps is not None:
+        if weight is not None and float(weight) > 0:
+            w = float(weight)
+            w_str = f"{int(w)}" if w.is_integer() else f"{w}"
+            core = f"{prefix}{reps}@{w_str}kg"
+        else:
+            core = f"{prefix}{reps}@BW" if not prefix else f"{prefix}{reps} reps"
+    elif duration is not None:
+        core = f"{prefix}{duration}m"
+    else:
+        core = f"{prefix}0 reps"
+
+    tag = ""
+    if not is_warmup:
+        if rir is not None:
+            r = float(rir)
+            r_str = f"{int(r)}" if r.is_integer() else f"{r}"
+            tag = f" ({r_str}RIR)"
+        elif rpe is not None:
+            r = float(rpe)
+            r_str = f"{int(r)}" if r.is_integer() else f"{r}"
+            tag = f" (@{r_str}RPE)"
+
+    return f"{core}{tag}"
+
+
+def format_target_notation(planned_exercise: dict[str, Any]) -> str:
+    """Format target sets/reps/weight or duration into compact string notation.
+
+    Examples:
+      - 3 sets of 10 reps @ 80kg -> "3x10@80kg"
+      - 3 sets of 10 reps bodyweight -> "3x10@BW"
+      - 1 set of 20 min -> "1x20m"
+    """
+    if not isinstance(planned_exercise, dict):
+        return ""
+    target_sets = planned_exercise.get("target_sets", 3)
+    target_reps = planned_exercise.get("target_reps")
+    target_dur = planned_exercise.get("target_duration_minutes")
+    suggested_weight = planned_exercise.get("suggested_weight")
+
+    if target_reps is not None:
+        if suggested_weight is not None and float(suggested_weight) > 0:
+            w = float(suggested_weight)
+            w_str = f"{int(w)}" if w.is_integer() else f"{w}"
+            return f"{target_sets}x{target_reps}@{w_str}kg"
+        return f"{target_sets}x{target_reps}@BW"
+    if target_dur is not None:
+        return f"{target_sets}x{target_dur}m"
+    return f"{target_sets} sets"
+
+
+def _extract_active_fatigue(
+    muscle_recovery_data: dict[str, Any] | None,
+) -> list[dict[str, Any]]:
+    """Extract dense active fatigue info for muscles not fully recovered.
+
+    Filters out resting unworked muscles with zero fatigue so LLM context isn't polluted
+    with 20+ identical 100% readiness objects.
+    """
+    if not isinstance(muscle_recovery_data, dict):
+        return []
+
+    raw_muscles = muscle_recovery_data.get("muscles") or {}
+    active_fatigue: list[dict[str, Any]] = []
+
+    if isinstance(raw_muscles, dict):
+        for muscle_name, info in raw_muscles.items():
+            if not isinstance(info, dict):
+                continue
+            status = info.get("status")
+            readiness_pct = info.get("readiness_pct", 100)
+            hours_ago = info.get("hours_since_trained")
+
+            if (
+                status in ("fatigued", "recovering")
+                or readiness_pct < 100
+                or hours_ago is not None
+            ):
+                item: dict[str, Any] = {
+                    "muscle": info.get("muscle") or muscle_name,
+                    "status": status
+                    or (
+                        "fatigued"
+                        if readiness_pct < 45
+                        else ("recovering" if readiness_pct < 75 else "ready")
+                    ),
+                    "readiness_pct": readiness_pct,
+                }
+                if hours_ago is not None:
+                    item["hours_since_trained"] = round(float(hours_ago), 1)
+                active_fatigue.append(item)
+
+    active_fatigue.sort(key=lambda x: x.get("readiness_pct", 100))
+    return active_fatigue
+
+
+def format_dense_snapshot(raw_snapshot: dict[str, Any]) -> dict[str, Any]:
+    """Transform raw snapshot into dense, high-signal JSON for Telegram AI coach."""
+    if not isinstance(raw_snapshot, dict):
+        return raw_snapshot
+
+    # 1. Compact Profile
+    raw_profile = raw_snapshot.get("profile") or {}
+    compact_profile: dict[str, Any] = {}
+    if isinstance(raw_profile, dict):
+        for k in (
+            "name",
+            "age",
+            "height_cm",
+            "weight_kg",
+            "goal",
+            "experience_level",
+            "notes",
+            "preferred_exercises",
+            "onboarding_complete",
+            "telegram_user_id",
+        ):
+            val = raw_profile.get(k)
+            if val is not None and val != "":
+                compact_profile[k] = val
+
+    # 2. Recovery & Active Fatigue
+    active_fatigue = _extract_active_fatigue(raw_snapshot.get("muscle_recovery"))
+
+    # 3. Active Session
+    raw_active = raw_snapshot.get("active_session")
+    compact_active = None
+    if isinstance(raw_active, dict) and raw_active:
+        raw_sess = raw_active.get("session")
+        session_obj: dict[str, Any] = (
+            raw_sess if isinstance(raw_sess, dict) else raw_active
+        )
+        raw_curr = raw_active.get("current")
+        current_obj: dict[str, Any] = (
+            raw_curr if isinstance(raw_curr, dict) else {}
+        )
+
+        exercises_raw = (
+            session_obj.get("planned_exercises")
+            or session_obj.get("exercises")
+            or []
+        )
+        formatted_planned = []
+        for pe in sorted(exercises_raw, key=lambda x: x.get("order", 0)):
+            pe_name = pe.get("name") or (
+                pe.get("exercise", {}).get("name")
+                if isinstance(pe.get("exercise"), dict)
+                else ""
+            )
+            performed = pe.get("performed_sets") or []
+            pe_dict: dict[str, Any] = {
+                "id": pe.get("id"),
+                "exercise_id": pe.get("exercise_id"),
+                "name": pe_name,
+                "target": format_target_notation(pe),
+                "status": pe.get("status", "planned"),
+                "sets": [format_compact_set(s) for s in performed],
+            }
+            formatted_planned.append(pe_dict)
+
+        compact_active = {
+            "id": session_obj.get("id"),
+            "title": session_obj.get("title") or "Workout",
+            "status": session_obj.get("status"),
+            "session_date": session_obj.get("session_date"),
+            "exercises_done": current_obj.get("exercises_completed", 0),
+            "exercises_total": current_obj.get(
+                "total_exercises", len(formatted_planned)
+            ),
+            "current_exercise": current_obj.get("current_exercise_name")
+            or (formatted_planned[0]["name"] if formatted_planned else None),
+            "current_set": current_obj.get("current_set_number", 1),
+            "next_target": format_target_notation(current_obj)
+            if current_obj
+            else None,
+            "next_action": current_obj.get("next_action"),
+            "exercises": formatted_planned,
+        }
+
+    # 4. Recent History
+    raw_recent = raw_snapshot.get("recent_sessions") or []
+    formatted_recent = []
+    for sess in raw_recent:
+        sess_date = sess.get("session_date")
+        title = sess.get("title") or "Workout"
+        ex_list = sess.get("exercises") or sess.get("planned_exercises") or []
+        sets_summary = []
+        for ex in sorted(ex_list, key=lambda x: x.get("order", 0)):
+            ex_name = ex.get("name") or (
+                ex.get("exercise", {}).get("name")
+                if isinstance(ex.get("exercise"), dict)
+                else f"Ex {ex.get('exercise_id')}"
+            )
+            performed = ex.get("performed_sets") or []
+            if performed:
+                set_strs = [format_compact_set(s) for s in performed]
+                sets_summary.append(f"{ex_name}: [{', '.join(set_strs)}]")
+            else:
+                target_str = format_target_notation(ex)
+                sets_summary.append(f"{ex_name}: {target_str}")
+
+        sess_entry: dict[str, Any] = {
+            "id": sess.get("id"),
+            "session_date": sess_date,
+            "title": title,
+            "status": sess.get("status"),
+            "sets": sets_summary,
+        }
+        if sess.get("energy") is not None:
+            sess_entry["energy"] = sess.get("energy")
+        if sess.get("duration_actual") is not None:
+            sess_entry["duration_actual"] = sess.get("duration_actual")
+        formatted_recent.append(sess_entry)
+
+    # 5. Recent Measurements
+    raw_measurements = raw_snapshot.get("recent_measurements") or []
+    formatted_measurements = []
+    for m in raw_measurements:
+        if isinstance(m, dict):
+            compact_m = {
+                k: v
+                for k, v in m.items()
+                if v is not None and v != "" and k not in ("id", "telegram_user_id")
+            }
+            formatted_measurements.append(compact_m)
+
+    return {
+        "profile": compact_profile,
+        "active_session": compact_active,
+        "active_fatigue": active_fatigue,
+        "muscle_recovery": raw_snapshot.get("muscle_recovery"),
+        "recent_sessions": formatted_recent,
+        "recent_measurements": formatted_measurements,
+    }
+
+
 @mcp.tool()
-def training_snapshot(telegram_user_id: int, session_limit: int = 5) -> dict[str, Any]:
-    """Read the athlete context for one coach turn: profile, active workout, recent sessions and measurements."""
+def training_snapshot(
+    telegram_user_id: int, session_limit: int = 5
+) -> dict[str, Any]:
+    """Read dense, high-signal athlete context for one coach turn.
+
+    Includes profile, active workout state, active muscle fatigue / recovery readiness,
+    and recent session history with compact set notation.
+    """
+    user_id = _require_telegram_user_id(telegram_user_id, "training_snapshot")
     qs = urllib.parse.urlencode({"limit": max(1, min(int(session_limit), 10))})
-    return _request("GET", f"/coach/snapshot?{qs}", user_id=telegram_user_id)
+    raw = _request("GET", f"/coach/snapshot?{qs}", user_id=user_id)
+    return format_dense_snapshot(raw)
+    user_id = _require_telegram_user_id(telegram_user_id, "training_snapshot")
+    qs = urllib.parse.urlencode({"limit": max(1, min(int(session_limit), 10))})
+    raw = _request("GET", f"/coach/snapshot?{qs}", user_id=user_id)
+    return format_dense_snapshot(raw)
 
 
 @mcp.tool()
@@ -436,7 +711,9 @@ def log_set(
     reps: int | None = None,
     duration_minutes: int | None = None,
     weight: float | None = None,
+    is_warmup: bool = False,
     rpe: float | None = None,
+    rir: float | None = None,
     sensation: str = "",
     notes: str = "",
     telegram_user_id: int | None = None,
@@ -445,9 +722,12 @@ def log_set(
 
     Strength requires reps and optional kg. Cardio requires duration_minutes and
     rejects reps/weight. Exactly one execution metric must be supplied.
+    Set is_warmup=True for ramp-up / warm-up sets (excluded from PRs/progression).
+    rir: Reps In Reserve (0 = failure, 1 = 1 rep left, 2 = 2 reps left).
     """
     payload: dict[str, Any] = {
         "set_number": int(set_number),
+        "is_warmup": bool(is_warmup),
         "sensation": sensation,
         "notes": notes,
     }
@@ -460,6 +740,8 @@ def log_set(
     _require_one_metric(payload)
     if rpe is not None:
         payload["rpe"] = float(rpe)
+    if rir is not None:
+        payload["rir"] = float(rir)
     return _request(
         "POST",
         f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets",
@@ -491,7 +773,9 @@ def restore_set(
     reps: int | None = None,
     duration_minutes: int | None = None,
     weight: float | None = None,
+    is_warmup: bool = False,
     rpe: float | None = None,
+    rir: float | None = None,
     sensation: str = "",
     notes: str = "",
     telegram_user_id: int | None = None,
@@ -503,6 +787,7 @@ def restore_set(
     user_id = _require_telegram_user_id(telegram_user_id, "restore_set")
     payload: dict[str, Any] = {
         "set_number": int(set_number),
+        "is_warmup": bool(is_warmup),
         "sensation": sensation,
         "notes": notes,
     }
@@ -515,6 +800,8 @@ def restore_set(
     _require_one_metric(payload)
     if rpe is not None:
         payload["rpe"] = float(rpe)
+    if rir is not None:
+        payload["rir"] = float(rir)
     return _request(
         "POST",
         f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets/restore",
@@ -805,9 +1092,51 @@ def undislike_exercise(exercise_id: int, telegram_user_id: int) -> dict[str, Any
 
 
 @mcp.tool()
-def list_disliked_exercises(telegram_user_id: int) -> list[dict[str, Any]]:
-    """List all exercises the athlete has marked as disliked."""
-    return _request("GET", "/disliked-exercises", user_id=telegram_user_id)
+def get_progression_recommendation(
+    exercise_id: int,
+    policy: Literal["linear", "greyskull", "double", "bodyweight"] = "linear",
+    target_reps: int = 10,
+    reps_min: int = 8,
+    reps_max: int = 12,
+    telegram_user_id: int | None = None,
+) -> dict[str, Any]:
+    """Get mathematically sound progressive overload advice based on the athlete's history.
+
+    policy:
+      - linear: +2.5kg upper / +5kg lower on hit, 10% deload after 3 stalls.
+      - greyskull: 2x target reps on AMRAP -> double jump; 1 miss -> 10% deload.
+      - double: work within rep range (reps_min to reps_max), increase weight at top of range.
+      - bodyweight: rep increments up to ceiling, then add set, then suggest load.
+    """
+    params = {
+        "policy": policy,
+        "target_reps": int(target_reps),
+        "reps_min": int(reps_min),
+        "reps_max": int(reps_max),
+    }
+    qs = urllib.parse.urlencode(params)
+    return _request(
+        "GET",
+        f"/coach/progression/{int(exercise_id)}?{qs}",
+        user_id=telegram_user_id,
+    )
+
+
+@mcp.tool()
+def import_tracker_csv(csv_content: str, telegram_user_id: int) -> dict[str, Any]:
+    """Bulk import historical workouts from Hevy, Strong, or FitNotes CSV export files.
+
+    Fuzzy matches exercise names against the 1,324 exercise catalog, preserves set dates,
+    weights, reps, RPE, and warmup tags.
+    """
+    user_id = _require_telegram_user_id(telegram_user_id, "import_tracker_csv")
+    return _request(
+        "POST",
+        "/coach/import-csv",
+        raw_body=csv_content,
+        content_type="text/plain; charset=utf-8",
+        user_id=user_id,
+    )
 
 
 if __name__ == "__main__":

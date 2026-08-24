@@ -5,6 +5,7 @@ import { formatDate } from '../../lib/helpers';
 import { useApp } from '../../app/App';
 import { Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
+import { Heatmap } from '../../components/visualizations';
 
 /** Monday 00:00 (local) of the week containing the given date. */
 function weekStart(date: Date): Date {
@@ -46,26 +47,42 @@ export function History() {
       ) : sessionsQuery.isError ? (
         <Empty icon="⚠️">No pude cargar el historial.</Empty>
       ) : !sessionsQuery.data?.length ? (
-        <Empty icon="📊">
-          Sin historial todavía.
-          <br />
-          Empieza a entrenar con el coach.
-        </Empty>
+        <>
+          <Heatmap sessions={[]} className="mt-3" />
+          <Empty icon="📊">
+            Sin historial todavía.
+            <br />
+            Empieza a entrenar con el coach.
+          </Empty>
+        </>
       ) : (
-        groupByWeek(sessionsQuery.data).map(([label, sessions]) => (
-          <section key={label}>
-            <p class="mt-5 mb-0.5 ml-[3px] text-[.68rem] font-bold tracking-[.07em] text-hint uppercase first:mt-2.5">{label}</p>
-            <div class="mt-2 overflow-hidden rounded-card bg-surface [content-visibility:auto] [contain-intrinsic-size:auto_500px]">
-              {sessions.map((session: any) => (
-                <button class="grid min-h-[76px] w-full cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 border-b border-edge bg-transparent px-[15px] py-3 text-left text-ink last:border-b-0 hover:bg-surface-2 active:bg-surface-2" key={session.id} onClick={() => app.openSession(session.id)}>
-                  <span class="text-[.74rem] text-hint">{formatDate(session.session_date)}</span>
-                  <span class="min-w-0"><b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">{session.title || 'Entrenamiento'}</b><small class="mt-[3px] block text-[.72rem] text-hint">{session.exercise_count || 0} ejercicios · {session.total_sets || 0} series{session.duration_actual ? ` · ${session.duration_actual} min` : ''}</small></span>
-                  <span class="text-[1.4rem] text-divider">›</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        ))
+        <>
+          {/* Training Activity Heatmap (Requirement R4) */}
+          <Heatmap
+            sessions={sessionsQuery.data}
+            onSelectDate={(_date, daySessions) => {
+              if (daySessions?.[0]?.id) {
+                app.openSession(daySessions[0].id);
+              }
+            }}
+            className="mt-3 mb-1"
+          />
+
+          {groupByWeek(sessionsQuery.data).map(([label, sessions]) => (
+            <section key={label}>
+              <p class="mt-5 mb-0.5 ml-[3px] text-[.68rem] font-bold tracking-[.07em] text-hint uppercase first:mt-2.5">{label}</p>
+              <div class="mt-2 overflow-hidden rounded-card bg-surface [content-visibility:auto] [contain-intrinsic-size:auto_500px]">
+                {sessions.map((session: any) => (
+                  <button class="grid min-h-[76px] w-full cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 border-b border-edge bg-transparent px-[15px] py-3 text-left text-ink last:border-b-0 hover:bg-surface-2 active:bg-surface-2" key={session.id} onClick={() => app.openSession(session.id)}>
+                    <span class="text-[.74rem] text-hint">{formatDate(session.session_date)}</span>
+                    <span class="min-w-0"><b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">{session.title || 'Entrenamiento'}</b><small class="mt-[3px] block text-[.72rem] text-hint">{session.exercise_count || 0} ejercicios · {session.total_sets || 0} series{session.duration_actual ? ` · ${session.duration_actual} min` : ''}</small></span>
+                    <span class="text-[1.4rem] text-divider">›</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </>
       )}
     </>
   );

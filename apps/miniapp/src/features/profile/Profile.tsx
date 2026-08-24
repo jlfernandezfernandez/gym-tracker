@@ -84,6 +84,13 @@ export function Profile() {
 
   const profile = profileQuery.data;
   const measurements: any[] = measurementsQuery.data || [];
+  const recoveryQuery = useQuery({
+    queryKey: ['recovery'],
+    queryFn: () => apiFetch<any>('GET', '/coach/recovery'),
+    retry: 0,
+    enabled: !app.readOnly,
+  });
+  const recovery = recoveryQuery.data;
 
   const patch = useMutation({
     mutationFn: (payload: Record<string, unknown>) => apiFetch('PATCH', '/profile', payload),
@@ -113,6 +120,58 @@ export function Profile() {
         <h1>{profile.name || 'Atleta'}</h1>
         <p>{profile.onboarding_complete ? 'Perfil deportivo activo' : 'Completa el perfil con tu coach'}</p>
       </div>
+
+      {/* Muscle Recovery & Readiness */}
+      {recovery && Object.keys(recovery.muscles || {}).length > 0 && (
+        <div class="card">
+          <div class="flex items-center justify-between">
+            <h2>Recuperación muscular</h2>
+            <span class="text-[0.7rem] text-hint font-mono">36h half-life</span>
+          </div>
+          <p class="mt-1 text-xs text-hint">
+            Calculado en base al volumen acumulado y tiempo de descanso.
+          </p>
+
+          <div class="mt-3 grid gap-2">
+            {Object.values(recovery.muscles).map((m: any) => {
+              const isReady = m.status === 'ready';
+              const isRec = m.status === 'recovering';
+              const badgeClass = isReady
+                ? 'bg-ok-bg text-ok'
+                : isRec
+                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                : 'bg-warn-bg text-warn';
+              const barClass = isReady
+                ? 'bg-ok'
+                : isRec
+                ? 'bg-amber-500'
+                : 'bg-err';
+
+              return (
+                <div key={m.muscle} class="rounded-control bg-surface-2 p-3">
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm font-bold capitalize text-ink">{m.muscle}</span>
+                    <span class={`rounded-pill px-2 py-0.5 text-xs font-bold ${badgeClass}`}>
+                      {isReady ? 'Listo' : isRec ? 'Recuperando' : 'Fatigado'} ({m.readiness_pct}%)
+                    </span>
+                  </div>
+                  <div class="mt-2 h-1.5 w-full rounded-pill bg-surface overflow-hidden">
+                    <div
+                      class={`h-full rounded-pill transition-all duration-500 ${barClass}`}
+                      style={{ width: `${m.readiness_pct}%` }}
+                    />
+                  </div>
+                  {m.hours_since_trained != null && (
+                    <span class="mt-1 block text-[0.68rem] text-hint">
+                      Entrenado hace {Math.round(m.hours_since_trained)}h
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Training & body */}
       <div class="card">

@@ -1,14 +1,8 @@
 import { useEffect, useRef } from 'preact/hooks';
-import { renderBodyMap } from '../lib/bodymap';
 import { renderProgressChart, renderMeasurementChart, type ProgressPoint, type MeasurementPoint } from '../lib/chart';
-
-export function BodyMap({ muscles }: { muscles: string[] }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (containerRef.current) renderBodyMap(containerRef.current, muscles);
-  }, [muscles.join(',')]);
-  return <div ref={containerRef} />;
-}
+export { BodyMap, type BodyMapProps } from './BodyMap';
+export { Heatmap, type HeatmapProps } from './Heatmap';
+export type { BodyMapMode, MuscleRecoveryInfo } from '../lib/bodymap';
 
 export function ProgressChart({ points }: { points: ProgressPoint[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

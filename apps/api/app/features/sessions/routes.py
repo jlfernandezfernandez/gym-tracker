@@ -258,6 +258,8 @@ async def update_planned_exercise(
         planned_exercise.target_reps = effective_reps
         planned_exercise.target_duration_minutes = effective_duration
         planned_exercise.suggested_weight = effective_weight
+    if body.superset_group is not None:
+        planned_exercise.superset_group = body.superset_group
     if body.target_sets is not None:
         highest_logged_set = max(performed_set_numbers(planned_exercise), default=0)
         if body.target_sets < highest_logged_set:
@@ -375,6 +377,7 @@ async def add_planned_exercise(
             target_duration_minutes=body.target_duration_minutes,
             suggested_weight=body.suggested_weight,
             unilateral=body.unilateral,
+            superset_group=body.superset_group,
             notes=body.notes,
             set_targets=set_targets_data,
         )
@@ -483,7 +486,9 @@ async def log_set(
         weight=body.weight,
         reps=body.reps,
         duration_minutes=body.duration_minutes,
+        is_warmup=body.is_warmup,
         rpe=body.rpe,
+        rir=body.rir,
         sensation=body.sensation,
         notes=body.notes,
     )
@@ -584,7 +589,9 @@ async def restore_set(
         weight=body.weight,
         reps=body.reps,
         duration_minutes=body.duration_minutes,
+        is_warmup=body.is_warmup,
         rpe=body.rpe,
+        rir=body.rir,
         sensation=body.sensation,
         notes=body.notes,
     )
