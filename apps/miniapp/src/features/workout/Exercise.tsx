@@ -36,16 +36,7 @@ export function isTimedOrIsometricExercise(exercise: any): boolean {
   if (exercise.is_isometric === true || exercise.is_timed === true) return true;
   if (exercise.mode === 'time' || exercise.mode === 'timed') return true;
 
-  const text = [
-    exercise.name,
-    exercise.name_en,
-    exercise.name_es,
-    exercise.notes,
-    exercise.instructions,
-    exercise.instructions_es,
-    exercise.target,
-    exercise.body_part,
-  ]
+  const nameText = [exercise.name, exercise.name_en, exercise.name_es]
     .filter(Boolean)
     .join(' ')
     .toLowerCase();
@@ -72,7 +63,15 @@ export function isTimedOrIsometricExercise(exercise: any): boolean {
     'isometría',
   ];
 
-  return isometricKeywords.some((keyword) => text.includes(keyword));
+  if (isometricKeywords.some((keyword) => nameText.includes(keyword))) return true;
+
+  // Cues like "Hold for 30 seconds" only count with an explicit duration;
+  // a bare "Hold the barbell" grip cue must not turn a strength set into timed.
+  const cueText = [exercise.notes, exercise.instructions, exercise.instructions_es]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /(hold|aguanta|aguantar|isom[eé]tric)/.test(cueText) && /\d+\s*(s\b|sec|seg)/.test(cueText);
 }
 
 const targetForSet = (exercise: any, setNumber: number) =>
