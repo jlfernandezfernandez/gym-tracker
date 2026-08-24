@@ -126,7 +126,9 @@ export function Profile() {
         <div class="card">
           <div class="flex items-center justify-between">
             <h2>Recuperación muscular</h2>
-            <span class="text-[0.7rem] text-hint font-mono">36h half-life</span>
+            <span class="rounded-pill bg-surface-2 px-2.5 py-0.5 text-[0.7rem] font-semibold text-hint">
+              Decaimiento 36h
+            </span>
           </div>
           <p class="mt-1 text-xs text-hint">
             Calculado en base al volumen acumulado y tiempo de descanso.
@@ -150,7 +152,7 @@ export function Profile() {
               return (
                 <div key={m.muscle} class="rounded-control bg-surface-2 p-3">
                   <div class="flex items-center justify-between">
-                    <span class="text-sm font-bold capitalize text-ink">{m.muscle}</span>
+                    <span class="text-sm font-bold text-ink">{formatMuscle(m.muscle)}</span>
                     <span class={`rounded-pill px-2 py-0.5 text-xs font-bold ${badgeClass}`}>
                       {isReady ? 'Listo' : isRec ? 'Recuperando' : 'Fatigado'} ({m.readiness_pct}%)
                     </span>

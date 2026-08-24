@@ -3,6 +3,7 @@ import {
   canEditWorkout,
   currentExercise,
   executionMetricPayload,
+  formatMuscle,
   formatWeight,
   missingSetNumbers,
   normalizeSession,
@@ -115,6 +116,28 @@ describe('currentExercise', () => {
   it('does not treat a backend pending pointer as in progress', () => {
     const pendingExercises = exercises.filter((exercise) => exercise.planned_id !== 2);
     expect(currentExercise({ exercises: pendingExercises }, { current_planned_exercise_id: 3 })?.planned_id).toBe(3);
+  });
+});
+
+describe('formatMuscle', () => {
+  it('translates English muscle keys and aliases into Spanish', () => {
+    expect(formatMuscle('abs')).toBe('Abdominales');
+    expect(formatMuscle('shoulders')).toBe('Hombros');
+    expect(formatMuscle('chest')).toBe('Pecho');
+    expect(formatMuscle('hip flexors')).toBe('Flexores de cadera');
+    expect(formatMuscle('hip_flexors')).toBe('Flexores de cadera');
+    expect(formatMuscle('lower back')).toBe('Espalda baja');
+    expect(formatMuscle('lower_back')).toBe('Espalda baja');
+    expect(formatMuscle('quads')).toBe('Cuádriceps');
+    expect(formatMuscle('hamstrings')).toBe('Isquiotibiales');
+    expect(formatMuscle('glutes')).toBe('Glúteos');
+    expect(formatMuscle('calves')).toBe('Gemelos');
+  });
+
+  it('handles empty and already formatted strings', () => {
+    expect(formatMuscle('')).toBe('');
+    expect(formatMuscle('Pecho')).toBe('Pecho');
+    expect(formatMuscle('Abdominales')).toBe('Abdominales');
   });
 });
 

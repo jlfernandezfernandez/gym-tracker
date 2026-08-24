@@ -1,6 +1,6 @@
-/** Session data helpers and small UI utilities. */
 import taxonomy from './exercise-taxonomy.json';
 import { EQUIPMENT_ES, STATUS_ES } from './translations';
+import { normalizeMuscle, MUSCLE_LABELS_ES } from './body-paths';
 
 type TaxonomyTerm = { es: string; bodyMap: string[] };
 export const EXERCISE_TAXONOMY = taxonomy as Record<string, TaxonomyTerm>;
@@ -9,7 +9,12 @@ export const formatStatus = (status: string) => STATUS_ES[status] || status;
 
 export const formatMuscle = (muscle: string) => {
   const value = String(muscle || '').trim();
-  return EXERCISE_TAXONOMY[value.toLowerCase()]?.es || (value ? value[0].toUpperCase() + value.slice(1) : '');
+  if (!value) return '';
+  const norm = normalizeMuscle(value);
+  if (norm && MUSCLE_LABELS_ES[norm]) {
+    return MUSCLE_LABELS_ES[norm];
+  }
+  return EXERCISE_TAXONOMY[value.toLowerCase()]?.es || (value[0].toUpperCase() + value.slice(1));
 };
 
 export const formatWeight = (weight: number | null | undefined, mode: string | null) =>

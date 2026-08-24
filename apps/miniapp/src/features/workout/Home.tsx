@@ -96,8 +96,8 @@ export function Home() {
               {/* During a workout the landing IS the workout: the upcoming set, grouped as one inset card. */}
               <div class="mt-[14px] rounded-[18px] bg-surface-2 p-[14px] shadow-[inset_0_0_0_1px_var(--color-edge)]">
                 <div class="grid grid-cols-[88px_1fr] items-center gap-[13px]">
-                  <div class="media-thumb h-[88px] text-[1.7rem]">
-                    {mediaSrc ? <img src={mediaSrc} alt={activeExercise?.name || 'Ejercicio actual'} loading="eager" /> : "🏋️"}
+                  <div class="media-thumb size-[88px] shrink-0 text-[1.7rem]">
+                    {mediaSrc ? <img class="size-full object-contain p-1" src={mediaSrc} alt={activeExercise?.name || 'Ejercicio actual'} loading="eager" /> : "🏋️"}
                   </div>
                   <div>
                     <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Serie actual</p>

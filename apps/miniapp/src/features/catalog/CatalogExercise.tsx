@@ -51,8 +51,8 @@ export function CatalogExercise({ exerciseId }: { exerciseId: number }) {
     <>
       <TopBar title="Catálogo" onBack={app.pop} />
       <div class="my-3 overflow-hidden rounded-card bg-surface shadow-card min-[720px]:grid min-[720px]:grid-cols-[1.12fr_.88fr]">
-        <div class="grid h-[235px] place-items-center bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] min-[720px]:h-auto min-[720px]:min-h-[280px]">
-          {mediaSrc ? <img class="size-[180px] object-contain" src={mediaSrc} alt={exercise.name} loading="eager" width="180" height="180" /> : '🏋️'}
+        <div class="relative grid h-[235px] w-full place-items-center overflow-hidden bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] min-[720px]:h-auto min-[720px]:min-h-[280px]">
+          {mediaSrc ? <img class="h-[180px] w-[180px] max-h-[190px] max-w-[190px] object-contain p-1" src={mediaSrc} alt={exercise.name} loading="eager" width="180" height="180" /> : '🏋️'}
         </div>
         <div class="p-[18px] min-[720px]:flex min-[720px]:flex-col min-[720px]:justify-center">
           <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">{formatMuscle(exercise.body_part)}</p>

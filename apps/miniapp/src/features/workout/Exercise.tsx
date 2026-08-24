@@ -206,9 +206,9 @@ export function Exercise({ plannedId }: { plannedId: number }) {
     <>
       <TopBar title={plan.title || 'Entrenamiento'} onBack={app.pop} />
       <div class="my-3 overflow-hidden rounded-card bg-surface shadow-card min-[720px]:grid min-[720px]:grid-cols-[1.05fr_.95fr]">
-        {/* Dataset media is 180×180: render at native size, never upscale. */}
-        <div class="grid h-[200px] place-items-center bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] min-[720px]:h-auto min-[720px]:min-h-[280px]">
-          {mediaSrc ? <img class="size-[180px] object-contain" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="eager" width="180" height="180" /> : '🏋️'}
+        {/* Dataset media is 180×180: render at native size, never upscale or overflow. */}
+        <div class="relative grid h-[200px] w-full place-items-center overflow-hidden bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] min-[720px]:h-auto min-[720px]:min-h-[280px]">
+          {mediaSrc ? <img class="h-[180px] w-[180px] max-h-[190px] max-w-[190px] object-contain p-1" src={mediaSrc} alt={exercise.name || 'Ejercicio'} loading="eager" width="180" height="180" /> : '🏋️'}
         </div>
         <div class="p-[18px] min-[720px]:flex min-[720px]:flex-col min-[720px]:justify-center">
           <div class="flex items-center gap-2 flex-wrap">

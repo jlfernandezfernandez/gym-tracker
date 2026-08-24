@@ -189,6 +189,19 @@ export function normalizeMuscle(raw: string | null | undefined): CanonicalMuscle
   if (key in MUSCLE_ALIASES) {
     return MUSCLE_ALIASES[key];
   }
+  // Try hyphenated and spaced keys
+  const hyphenated = key.replace(/[_\s]+/g, '-');
+  if (CANONICAL_MUSCLES.includes(hyphenated as CanonicalMuscle)) {
+    return hyphenated as CanonicalMuscle;
+  }
+  if (hyphenated in MUSCLE_ALIASES) {
+    return MUSCLE_ALIASES[hyphenated];
+  }
+  const spaced = key.replace(/[_-]+/g, ' ');
+  if (spaced in MUSCLE_ALIASES) {
+    return MUSCLE_ALIASES[spaced];
+  }
+
   // Try stripped diacritics
   const stripped = key.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   if (CANONICAL_MUSCLES.includes(stripped as CanonicalMuscle)) {
@@ -196,6 +209,13 @@ export function normalizeMuscle(raw: string | null | undefined): CanonicalMuscle
   }
   if (stripped in MUSCLE_ALIASES) {
     return MUSCLE_ALIASES[stripped];
+  }
+  const strippedHyphenated = stripped.replace(/[_\s]+/g, '-');
+  if (CANONICAL_MUSCLES.includes(strippedHyphenated as CanonicalMuscle)) {
+    return strippedHyphenated as CanonicalMuscle;
+  }
+  if (strippedHyphenated in MUSCLE_ALIASES) {
+    return MUSCLE_ALIASES[strippedHyphenated];
   }
   return null;
 }

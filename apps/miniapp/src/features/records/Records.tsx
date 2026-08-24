@@ -42,8 +42,8 @@ export function Records() {
                 key={record.exercise_id}
                 onClick={() => app.push({ name: 'recordDetail', exerciseId: record.exercise_id, title: record.name })}
               >
-                <div class="relative grid h-[88px] place-items-center overflow-hidden rounded-2xl bg-white text-[1.7rem] shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] max-[380px]:h-[76px]">
-                  {record.image_url ? <img src={mediaUrl(record.image_url)} alt={record.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}
+                <div class="relative grid size-[88px] max-[380px]:size-[76px] shrink-0 place-items-center overflow-hidden rounded-2xl bg-white text-[1.7rem] shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)]">
+                  {record.image_url ? <img class="size-full object-contain p-1" src={mediaUrl(record.image_url)} alt={record.name || 'Ejercicio'} loading="lazy" /> : '🏋️'}
                 </div>
                 <div class="min-w-0">
                   <h3>{record.name}</h3>
