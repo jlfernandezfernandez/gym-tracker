@@ -494,7 +494,7 @@ class AdditionalMcpToolsTests(unittest.TestCase):
     def test_health_check(self) -> None:
         with patch.object(gym_tracker_mcp, "_request", return_value={"status": "ok"}) as req:
             res = gym_tracker_mcp.health()
-        req.assert_called_once_with("GET", "/health")
+        req.assert_called_once_with("GET", "/health", require_user=False)
         self.assertEqual(res, {"status": "ok"})
 
     def test_athlete_profile_tools(self) -> None:
@@ -513,11 +513,11 @@ class AdditionalMcpToolsTests(unittest.TestCase):
 
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as req:
             gym_tracker_mcp.get_exercise(42)
-        req.assert_called_once_with("GET", "/exercises/42")
+        req.assert_called_once_with("GET", "/exercises/42", require_user=False)
 
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as req:
             gym_tracker_mcp.list_exercise_facets()
-        req.assert_called_once_with("GET", "/exercises/facets")
+        req.assert_called_once_with("GET", "/exercises/facets", require_user=False)
 
         with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
             gym_tracker_mcp.exercise_progress(12, limit=10, telegram_user_id=7)
