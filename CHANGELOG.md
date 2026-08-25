@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.7.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.6.0...v2.7.0) (2026-08-25)
+
+
+### Features
+
+* enhance fitness tracking UX, 36h recovery, interactive BodyMap, and token-efficient MCP ([3888bcd](https://github.com/jlfernandezfernandez/gym-tracker/commit/3888bcdf714ecb2d854a8f0b34774333aed5a9aa))
+* make workout corrections reversible ([1e7a484](https://github.com/jlfernandezfernandez/gym-tracker/commit/1e7a48416883e132ef9d3aa5ddce72e54a9d06da))
+* model cardio with duration metrics ([d0329d4](https://github.com/jlfernandezfernandez/gym-tracker/commit/d0329d40793dddd75cef7b6c572e640e277cd6b7))
+
+
+### Bug Fixes
+
+* harden reversible workout corrections ([914ec2a](https://github.com/jlfernandezfernandez/gym-tracker/commit/914ec2a36649d0190e1aa4972752c22d90797e19))
+* migrate cardio set targets on postgres ([c093867](https://github.com/jlfernandezfernandez/gym-tracker/commit/c093867fda6ea72f910b2a0c90bd30a039933913))
+* normalize legacy cardio targets during migration ([a07fc0c](https://github.com/jlfernandezfernandez/gym-tracker/commit/a07fc0ca3144a08c00b49e61cdfa1ed68d298782))
+* require telegram_user_id in MCP, allow strength/cardio swap, harden miniapp UX ([720b6b9](https://github.com/jlfernandezfernandez/gym-tracker/commit/720b6b9ffe1069d3a56e23b3bebbf7069b7510f6))
+* return list from _load_recent_completed_sessions (pyright CI) ([132b1f0](https://github.com/jlfernandezfernandez/gym-tracker/commit/132b1f065ac6d90c7931c8c5948b761eadb0500d))
+* translate muscle names to Spanish and constrain exercise media containers ([c422c5a](https://github.com/jlfernandezfernandez/gym-tracker/commit/c422c5a238eb8d0a630e5ee71109fbfb9db1a472))
+* **workout:** refine isometric exercise cue detection ([eeda17e](https://github.com/jlfernandezfernandez/gym-tracker/commit/eeda17e3cd6ab3f55339474d280e3a10a62f03b3))
+
 ## [2.6.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.5.2...v2.6.0) (2026-07-28)
 
 
