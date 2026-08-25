@@ -42,7 +42,7 @@ async def _load_recent_completed_sessions(
     db: AsyncSession, user_id: int | None, limit: int = 30
 ) -> list[WorkoutSession]:
     """Fetch recent completed sessions with exercises and performed sets."""
-    return (
+    return list(
         (
             await db.execute(
                 select(WorkoutSession)
