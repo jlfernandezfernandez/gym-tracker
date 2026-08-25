@@ -65,7 +65,7 @@ async def health_check(_: Request) -> JSONResponse:
 async def readiness_check(_: Request) -> JSONResponse:
     """Readiness means the API dependency can serve a request too."""
     try:
-        _request("GET", "/ready")
+        _request("GET", "/ready", require_user=False)
     except RuntimeError as error:
         return JSONResponse(
             {"status": "not ready", "detail": str(error)}, status_code=503
@@ -101,6 +101,7 @@ def _request(
     user_id: int | None = None,
     raw_body: str | bytes | None = None,
     content_type: str | None = None,
+    require_user: bool = True,
 ) -> Any:
     """Send an HTTP request to the gym-tracker API and return parsed JSON.
 
@@ -114,7 +115,7 @@ def _request(
     }
     if COACH_KEY:
         headers["X-Coach-Key"] = COACH_KEY
-        if user_id is None:
+        if require_user and user_id is None:
             raise ValueError(
                 "telegram_user_id is required when COACH_KEY is set; "
                 "pass the athlete id from the current chat."
@@ -144,7 +145,7 @@ def _request(
 @mcp.tool()
 def health() -> dict[str, Any]:
     """Check if the gym-tracker API is online and healthy."""
-    return _request("GET", "/health")
+    return _request("GET", "/health", require_user=False)
 
 
 @mcp.tool()
@@ -207,13 +208,13 @@ def list_exercises(
 @mcp.tool()
 def get_exercise(exercise_id: int) -> dict[str, Any]:
     """Get full detail of one catalog exercise: instructions, muscles, equipment, image."""
-    return _request("GET", f"/exercises/{int(exercise_id)}")
+    return _request("GET", f"/exercises/{int(exercise_id)}", require_user=False)
 
 
 @mcp.tool()
 def list_exercise_facets() -> dict[str, list[str]]:
     """List valid muscle_group, body_part, equipment, and activity_type values."""
-    return _request("GET", "/exercises/facets")
+    return _request("GET", "/exercises/facets", require_user=False)
 
 
 @mcp.tool()
