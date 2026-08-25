@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.7.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.7.0...v2.7.1) (2026-08-25)
+
+
+### Bug Fixes
+
+* **mcp:** exempt health/catalog/readiness from telegram_user_id guard ([7cf791a](https://github.com/jlfernandezfernandez/gym-tracker/commit/7cf791addb3b227778ec9df06124bf09233d2e54))
+
 ## [2.7.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.6.0...v2.7.0) (2026-08-25)
 
 
