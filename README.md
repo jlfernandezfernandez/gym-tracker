@@ -17,6 +17,7 @@ series y mediciones. La Mini App sirve para ver y registrar el entrenamiento.
 | Publicarlo con Docker | [Docker en producción](docs/install-docker.md) | App HTTPS mediante tu proxy |
 | Usar Coolify | [Coolify](docs/install-coolify.md) | Un recurso Compose portable |
 | Abrirlo desde Telegram | [Telegram](docs/setup-telegram.md) | Botón Mini App autenticado |
+| Registrar series sin conexión | [Entrenamiento sin conexión](docs/offline-workouts.md) | Series locales que se sincronizan al volver la red |
 | Conectar mi agente | [MCP](docs/agent-setup.md) | Agente con herramientas de gimnasio |
 | Recibir eventos | [Webhooks](docs/webhooks.md) | Transporte HTTP agnóstico y opcional |
 

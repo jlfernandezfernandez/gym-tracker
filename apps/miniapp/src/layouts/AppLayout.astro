@@ -26,6 +26,11 @@ const { title = 'Gym Coach' } = Astro.props;
 		/>
 		<title>{title}</title>
 		<script is:inline src="https://telegram.org/js/telegram-web-app.js"></script>
+		<script is:inline>
+			if ('serviceWorker' in navigator) {
+				window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+			}
+		</script>
 	</head>
 	<body>
 		<main class="mx-auto max-w-[540px] px-4 pt-[calc(12px+env(safe-area-inset-top))] pb-[calc(104px+env(safe-area-inset-bottom))] min-[720px]:max-w-[720px] min-[720px]:px-6 min-[720px]:pt-[30px] min-[720px]:pb-[110px] max-[380px]:px-3">

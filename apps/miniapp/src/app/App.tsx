@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-quer
 import { createContext } from 'preact';
 import { useContext, useMemo, useState } from 'preact/hooks';
 import { apiFetch } from '../lib/api';
+import { PendingWrites, useWorkoutSync } from './WorkoutSync';
 import { isDemoMode } from '../lib/demo';
 import { normalizeSession } from '../lib/helpers';
 import { inTelegram } from '../lib/telegram';
@@ -40,6 +41,7 @@ interface AppContextValue {
   readOnly: boolean;
   demoMode: boolean;
   selectTab: (name: string) => void;
+  workoutSync?: ReturnType<typeof useWorkoutSync>;
 }
 
 const AppContext = createContext<AppContextValue>(null as any);
@@ -47,18 +49,31 @@ export const useApp = () => useContext(AppContext);
 
 /** Session for the currently open plan (by id, or by share token for companions). */
 export function useSession() {
-  const { sessionId, shareToken } = useApp();
+  const { sessionId, shareToken, workoutSync } = useApp();
+  const journal = workoutSync?.journal;
+  let cached: any;
+  try { cached = sessionId ? journal?.read().sessions[sessionId] : undefined; } catch {}
   return useQuery({
     queryKey: shareToken ? ['session', 'share', shareToken] : ['session', sessionId],
-    queryFn: () =>
-      shareToken
+    queryFn: async () => {
+      const session = await (shareToken
         ? apiFetch('GET', '/sessions/share/' + encodeURIComponent(shareToken))
-        : apiFetch('GET', '/sessions/' + sessionId),
+        : apiFetch('GET', '/sessions/' + sessionId));
+      if (!shareToken && journal) {
+        try { await journal.remember(session); } catch (error: any) { workoutSync?.setError(error.message); }
+      }
+      return session;
+    },
+    initialData: cached,
+    initialDataUpdatedAt: 0,
     enabled: !!(shareToken || sessionId),
     staleTime: 0,
     refetchOnWindowFocus: !shareToken,
     refetchOnReconnect: !shareToken,
-    select: normalizeSession,
+    select: (session: any) => {
+      try { return normalizeSession(sessionId && journal ? journal.view(sessionId, session) : session); }
+      catch { return normalizeSession(session); }
+    },
   });
 }
 
@@ -88,6 +103,8 @@ function Router() {
   const demoMode = isDemoMode();
   const shareToken = route.share_token;
   const readOnly = demoMode || !!shareToken;
+  const workoutSync = useWorkoutSync(readOnly);
+  const restoredId = workoutSync.state?.activeId;
 
   const [viewStack, setViewStack] = useState<View[]>(() => {
     if (shareToken) {
@@ -95,9 +112,9 @@ function Router() {
       if (route.exercise_id) initialStack.push({ name: 'exercise', plannedId: Number(route.exercise_id) });
       return initialStack;
     }
-    return [{ name: 'landing' }];
+    return restoredId ? [{ name: 'landing' }, { name: 'plan' }] : [{ name: 'landing' }];
   });
-  const [sessionId, setSessionId] = useState<number>();
+  const [sessionId, setSessionId] = useState<number | undefined>(restoredId);
 
   const appContext: AppContextValue = {
     push: (view) => setViewStack((stack) => [...stack, view]),
@@ -108,6 +125,7 @@ function Router() {
       setViewStack((stack) => [...stack, { name: 'plan' }]);
     },
     sessionId,
+    workoutSync,
     shareToken,
     readOnly,
     demoMode,
@@ -145,6 +163,7 @@ function Router() {
           Modo demo · datos ficticios
         </div>
       )}
+      {!readOnly && <PendingWrites sync={workoutSync} />}
       {screens[activeView.name]}
       {(!readOnly || demoMode) && rootTabs.includes(activeView.name) && (
         <TabBar active={activeView.name} onSelect={appContext.selectTab} />

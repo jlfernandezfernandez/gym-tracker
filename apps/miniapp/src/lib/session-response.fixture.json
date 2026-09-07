@@ -1,0 +1,51 @@
+{
+  "id": 1,
+  "session_date": "2026-09-07",
+  "title": "",
+  "goal": "",
+  "status": "in_progress",
+  "energy": 5,
+  "discomfort": "",
+  "duration_estimated": 0,
+  "duration_actual": 0,
+  "feedback": "",
+  "coach_summary": "",
+  "share_token": "cb42cfaa63b04bbbaf8af3b36ebaa36c",
+  "total_volume": 0.0,
+  "planned_exercises": [
+    {
+      "id": 5,
+      "exercise_id": 10,
+      "order": 0,
+      "target_sets": 3,
+      "target_reps": 10,
+      "target_duration_minutes": null,
+      "suggested_weight": 40.0,
+      "unilateral": false,
+      "superset_group": null,
+      "activity_type": "strength",
+      "weight_mode": "weighted",
+      "notes": "",
+      "status": "in_progress",
+      "set_targets": null,
+      "exercise": {
+        "id": 10,
+        "external_id": "",
+        "name": "Exercise 10",
+        "name_en": "",
+        "name_es": "",
+        "muscle_group": "chest",
+        "secondary_muscles": "",
+        "target": "",
+        "body_part": "",
+        "equipment": "barbell",
+        "instructions": "",
+        "instructions_es": "",
+        "image_url": "",
+        "gif_url": "",
+        "activity_type": "strength"
+      },
+      "performed_sets": []
+    }
+  ]
+}

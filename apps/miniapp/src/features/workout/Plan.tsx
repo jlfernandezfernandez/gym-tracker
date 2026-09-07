@@ -27,7 +27,7 @@ export function Plan() {
   const currentQuery = useCurrent(plan?.id);
 
   if (sessionQuery.isLoading) return <Loading message="Cargando plan..." />;
-  if (sessionQuery.isError || !plan)
+  if (!plan)
     return (
       <>
         {!app.readOnly && <TopBar title="Plan" onBack={app.pop} />}
@@ -259,6 +259,8 @@ function ShareButton({ title, token }: { title: string; token: string }) {
 
 function FinishButton({ sessionId, energy, discomfort }: { sessionId: number; energy: number; discomfort: string }) {
   const queryClient = useQueryClient();
+  const app = useApp();
+  const unresolved = app.workoutSync?.state?.pending.some(item => item.sessionId === sessionId);
   const [isOpen, setIsOpen] = useState(false);
   const feedbackRef = useRef<HTMLTextAreaElement>(null);
 
@@ -286,7 +288,7 @@ function FinishButton({ sessionId, energy, discomfort }: { sessionId: number; en
 
   return (
     <>
-      <button class="btn-primary bg-surface text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]" onClick={() => setIsOpen(true)}>
+      <button disabled={unresolved} class="btn-primary bg-surface text-ink shadow-[inset_0_0_0_1px_var(--color-edge)] disabled:opacity-35" onClick={() => setIsOpen(true)}>
         ✓ Finalizar
       </button>
       <ConfirmSheet

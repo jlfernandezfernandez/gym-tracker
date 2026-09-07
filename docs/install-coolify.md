@@ -76,3 +76,17 @@ la IP del agente. No expongas MCP directamente a Internet.
 2. Comprueba `/ready`, MCP `/health` y una Mini App abierta desde Telegram.
 
 Para actualizar el catálogo, cambia también `EXERCISE_DATASET_VERSION`.
+
+## Un deploy falla con HTTP 302
+
+Si el paso **Trigger deployment** informa `server=cloudflare`, `content-type=text/html`
+y `HTTP 302`, comprueba la cabecera `Location` del host de Coolify sin enviar
+credenciales. Una redirección a una página de login de Cloudflare Access significa
+que Access interceptó la petición antes de que llegara a la API de Coolify.
+
+La corrección está en la política de Cloudflare: permite que la automatización llegue
+tanto al webhook como a `/api/v1/deployments/*`, mediante una política de servicio o
+un origen dedicado protegido para automatización. El token Bearer de Coolify no
+autentica contra Cloudflare Access. No uses `--location` como atajo: la página de
+login no es una respuesta de la API. Tampoco uses `--location-trusted`, que podría
+reenviar el token Bearer a un host distinto.
