@@ -1,35 +1,41 @@
 /** App island: query client, session source and a tiny stack router. */
-import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { createContext } from 'preact';
-import { useContext, useMemo, useState } from 'preact/hooks';
-import { apiFetch } from '../lib/api';
-import { PendingWrites, useWorkoutSync } from './WorkoutSync';
-import { isDemoMode } from '../lib/demo';
-import { normalizeSession } from '../lib/helpers';
-import { inTelegram } from '../lib/telegram';
-import { parseLaunchRoute } from './routes';
-import { Empty } from '../components/feedback';
-import { TabBar } from '../components/navigation';
-import { Catalog } from '../features/catalog/Catalog';
-import { CatalogExercise } from '../features/catalog/CatalogExercise';
-import { History } from '../features/history/History';
-import { Profile } from '../features/profile/Profile';
-import { RecordDetail } from '../features/records/RecordDetail';
-import { Records } from '../features/records/Records';
-import { Exercise } from '../features/workout/Exercise';
-import { Home } from '../features/workout/Home';
-import { Plan } from '../features/workout/Plan';
+import {
+  QueryClient,
+  QueryClientProvider,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { RotateCcw } from "lucide-preact";
+import { createContext, Fragment } from "preact";
+import { useContext, useMemo, useRef, useState } from "preact/hooks";
+import { apiFetch } from "../lib/api";
+import { PendingWrites, useWorkoutSync } from "./WorkoutSync";
+import { isDemoMode } from "../lib/demo";
+import { normalizeSession } from "../lib/helpers";
+import { inTelegram } from "../lib/telegram";
+import { parseLaunchRoute } from "./routes";
+import { Empty } from "../components/feedback";
+import { TabBar } from "../components/navigation";
+import { Catalog } from "../features/catalog/Catalog";
+import { CatalogExercise } from "../features/catalog/CatalogExercise";
+import { History } from "../features/history/History";
+import { Profile } from "../features/profile/Profile";
+import { RecordDetail } from "../features/records/RecordDetail";
+import { Records } from "../features/records/Records";
+import { Exercise } from "../features/workout/Exercise";
+import { Home } from "../features/workout/Home";
+import { Plan } from "../features/workout/Plan";
 
 type View =
-  | { name: 'landing' }
-  | { name: 'plan' }
-  | { name: 'exercise'; plannedId: number }
-  | { name: 'catalog' }
-  | { name: 'catalogExercise'; exerciseId: number }
-  | { name: 'history' }
-  | { name: 'records' }
-  | { name: 'recordDetail'; exerciseId: number; title: string }
-  | { name: 'profile' };
+  | { name: "landing" }
+  | { name: "plan" }
+  | { name: "exercise"; plannedId: number }
+  | { name: "catalog" }
+  | { name: "catalogExercise"; exerciseId: number }
+  | { name: "history" }
+  | { name: "records" }
+  | { name: "recordDetail"; exerciseId: number; title: string }
+  | { name: "profile" };
 
 interface AppContextValue {
   push: (view: View) => void;
@@ -53,15 +59,23 @@ export function useSession() {
   const { sessionId, shareToken, workoutSync } = useApp();
   const journal = workoutSync?.journal;
   let cached: any;
-  try { cached = sessionId ? journal?.read().sessions[sessionId] : undefined; } catch {}
+  try {
+    cached = sessionId ? journal?.read().sessions[sessionId] : undefined;
+  } catch {}
   return useQuery({
-    queryKey: shareToken ? ['session', 'share', shareToken] : ['session', sessionId],
+    queryKey: shareToken
+      ? ["session", "share", shareToken]
+      : ["session", sessionId],
     queryFn: async () => {
       const session = await (shareToken
-        ? apiFetch('GET', '/sessions/share/' + encodeURIComponent(shareToken))
-        : apiFetch('GET', '/sessions/' + sessionId));
+        ? apiFetch("GET", "/sessions/share/" + encodeURIComponent(shareToken))
+        : apiFetch("GET", "/sessions/" + sessionId));
       if (!shareToken && journal) {
-        try { await journal.remember(session); } catch (error: any) { workoutSync?.setError(error.message); }
+        try {
+          await journal.remember(session);
+        } catch (error: any) {
+          workoutSync?.setError(error.message);
+        }
       }
       return session;
     },
@@ -75,13 +89,24 @@ export function useSession() {
       ? false
       : (query) => {
           const session = query.state.data as any;
-          const isVisible = typeof document === 'undefined' || document.visibilityState === 'visible';
-          return session && ['planned', 'in_progress'].includes(session.status) && isVisible ? 15000 : false;
+          const isVisible =
+            typeof document === "undefined" ||
+            document.visibilityState === "visible";
+          return session &&
+            ["planned", "in_progress"].includes(session.status) &&
+            isVisible
+            ? 15000
+            : false;
         },
     refetchIntervalInBackground: false,
     select: (session: any) => {
-      try { return normalizeSession(sessionId && journal ? journal.view(sessionId, session) : session); }
-      catch { return normalizeSession(session); }
+      try {
+        return normalizeSession(
+          sessionId && journal ? journal.view(sessionId, session) : session,
+        );
+      } catch {
+        return normalizeSession(session);
+      }
     },
   });
 }
@@ -90,8 +115,8 @@ export function useSession() {
 export function useCurrent(sessionId?: number, sessionStatus?: string) {
   const { readOnly } = useApp();
   return useQuery({
-    queryKey: ['current', sessionId],
-    queryFn: () => apiFetch('GET', `/sessions/${sessionId}/current`),
+    queryKey: ["current", sessionId],
+    queryFn: () => apiFetch("GET", `/sessions/${sessionId}/current`),
     enabled: !!sessionId && !readOnly,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
@@ -99,8 +124,13 @@ export function useCurrent(sessionId?: number, sessionStatus?: string) {
       !sessionId || readOnly
         ? false
         : () => {
-            const isVisible = typeof document === 'undefined' || document.visibilityState === 'visible';
-            return isVisible && ['planned', 'in_progress'].includes(String(sessionStatus || '')) ? 15000 : false;
+            const isVisible =
+              typeof document === "undefined" ||
+              document.visibilityState === "visible";
+            return isVisible &&
+              ["planned", "in_progress"].includes(String(sessionStatus || ""))
+              ? 15000
+              : false;
           },
     refetchIntervalInBackground: false,
   });
@@ -110,32 +140,78 @@ function Router() {
   const route = useMemo(() => parseLaunchRoute(location.pathname), []);
   const demoMode = isDemoMode();
   const shareToken = route.shareToken;
-  const readOnly = demoMode || route.readOnly;
-  const workoutSync = useWorkoutSync(readOnly);
+  const readOnly = route.readOnly;
+  const workoutSync = useWorkoutSync(readOnly || demoMode);
   const restoredId = workoutSync.state?.activeId;
+  const queryClient = useQueryClient();
+  const resetPending = useRef(false);
+  const [demoReset, setDemoReset] = useState({
+    pending: false,
+    error: "",
+    revision: 0,
+  });
 
   const [viewStack, setViewStack] = useState<View[]>(() => {
     if (shareToken) {
-      const initialStack: View[] = [{ name: 'plan' }];
-      if (route.plannedExerciseId) initialStack.push({ name: 'exercise', plannedId: route.plannedExerciseId });
+      const initialStack: View[] = [{ name: "plan" }];
+      if (route.plannedExerciseId)
+        initialStack.push({
+          name: "exercise",
+          plannedId: route.plannedExerciseId,
+        });
       return initialStack;
     }
     if (route.sessionId) {
-      const initialStack: View[] = [{ name: 'plan' }];
-      if (route.plannedExerciseId) initialStack.push({ name: 'exercise', plannedId: route.plannedExerciseId });
+      const initialStack: View[] = [{ name: "plan" }];
+      if (route.plannedExerciseId)
+        initialStack.push({
+          name: "exercise",
+          plannedId: route.plannedExerciseId,
+        });
       return initialStack;
     }
-    return restoredId ? [{ name: 'landing' }, { name: 'plan' }] : [{ name: 'landing' }];
+    return restoredId
+      ? [{ name: "landing" }, { name: "plan" }]
+      : [{ name: "landing" }];
   });
-  const [sessionId, setSessionId] = useState<number | undefined>(route.sessionId ?? restoredId);
+  const [sessionId, setSessionId] = useState<number | undefined>(
+    route.sessionId ?? restoredId,
+  );
+
+  const resetDemo = async () => {
+    if (!demoMode || readOnly || resetPending.current) return;
+    resetPending.current = true;
+    setDemoReset((state) => ({ ...state, pending: true, error: "" }));
+    try {
+      await queryClient.cancelQueries();
+      await apiFetch("POST", "/demo/reset");
+      queryClient.clear();
+      setSessionId(undefined);
+      setViewStack([{ name: "landing" }]);
+      setDemoReset((state) => ({
+        pending: false,
+        error: "",
+        revision: state.revision + 1,
+      }));
+    } catch (error) {
+      setDemoReset((state) => ({
+        ...state,
+        pending: false,
+        error: error instanceof Error ? error.message : "No se pudo reiniciar la demo.",
+      }));
+    } finally {
+      resetPending.current = false;
+    }
+  };
 
   const appContext: AppContextValue = {
     push: (view) => setViewStack((stack) => [...stack, view]),
-    pop: () => setViewStack((stack) => (stack.length > 1 ? stack.slice(0, -1) : stack)),
+    pop: () =>
+      setViewStack((stack) => (stack.length > 1 ? stack.slice(0, -1) : stack)),
     replace: (view) => setViewStack((stack) => [...stack.slice(0, -1), view]),
     openSession: (id) => {
       setSessionId(id);
-      setViewStack((stack) => [...stack, { name: 'plan' }]);
+      setViewStack((stack) => [...stack, { name: "plan" }]);
     },
     sessionId,
     workoutSync,
@@ -145,7 +221,12 @@ function Router() {
     selectTab: (name) => setViewStack([{ name } as View]),
   };
 
-  if (!demoMode && !shareToken && !inTelegram() && location.hostname !== 'localhost') {
+  if (
+    !demoMode &&
+    !shareToken &&
+    !inTelegram() &&
+    location.hostname !== "localhost"
+  ) {
     return (
       <Empty icon="📱">
         Esta app vive dentro de Telegram.
@@ -165,19 +246,36 @@ function Router() {
     catalogExercise: <CatalogExercise exerciseId={view.exerciseId} />,
     history: <History />,
     records: <Records />,
-    recordDetail: <RecordDetail exerciseId={view.exerciseId} title={view.title} />,
+    recordDetail: (
+      <RecordDetail exerciseId={view.exerciseId} title={view.title} />
+    ),
     profile: <Profile />,
   };
-  const rootTabs = ['landing', 'catalog', 'history', 'records', 'profile'];
+  const rootTabs = ["landing", "catalog", "history", "records", "profile"];
   return (
     <AppContext.Provider value={appContext}>
       {demoMode && (
-        <div class="mb-2 rounded-pill bg-accent-bg px-3 py-2 text-center text-[.72rem] font-[680] text-accent">
-          Modo demo · datos ficticios
+        <div class="mb-2 flex items-center justify-center gap-2 rounded-pill bg-accent-bg px-3 py-2 text-center text-[.72rem] font-[680] text-accent">
+          <span>Modo demo · datos ficticios</span>
+          {!readOnly && (
+            <button
+              type="button"
+              class="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full disabled:opacity-50"
+              title="Reiniciar demo"
+              aria-label="Reiniciar demo"
+              disabled={demoReset.pending}
+              onClick={resetDemo}
+            >
+              <RotateCcw size={16} aria-hidden="true" />
+            </button>
+          )}
         </div>
       )}
-      {!readOnly && <PendingWrites sync={workoutSync} />}
-      {screens[activeView.name]}
+      {demoMode && demoReset.error && <p role="alert">{demoReset.error}</p>}
+      {!demoMode && !readOnly && <PendingWrites sync={workoutSync} />}
+      {!demoReset.pending && (
+        <Fragment key={demoReset.revision}>{screens[activeView.name]}</Fragment>
+      )}
       {(!readOnly || demoMode) && rootTabs.includes(activeView.name) && (
         <TabBar active={activeView.name} onSelect={appContext.selectTab} />
       )}
@@ -189,7 +287,9 @@ export default function App() {
   const [queryClient] = useState(
     () =>
       new QueryClient({
-        defaultOptions: { queries: { retry: 1, staleTime: 30_000, refetchOnWindowFocus: false } },
+        defaultOptions: {
+          queries: { retry: 1, staleTime: 30_000, refetchOnWindowFocus: false },
+        },
       }),
   );
   return (

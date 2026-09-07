@@ -36,7 +36,6 @@ describe('Adversarial UI Test: BodyMap Component Edge Cases', () => {
       h(BodyMap, {
         recoveryData: null,
         volumeData: null,
-        recordsData: null,
         muscles: undefined,
         selectedMuscle: null,
       }),
@@ -105,7 +104,6 @@ describe('Adversarial UI Test: Heatmap Edge Renders', () => {
     const html = render(
       h(Heatmap, {
         sessions: [],
-        weeksCount: 52,
         today: fixedToday,
       }),
     );
@@ -146,7 +144,7 @@ describe('Adversarial UI Test: Isometric Timer Controls', () => {
 
     expect(html).toContain('01:00');
     expect(html).toContain('Objetivo: 60s');
-    expect(html).toContain('▶ Iniciar');
+    expect(html).toContain('Iniciar');
     expect(html).toContain('+10s');
     expect(html).toContain('+30s');
   });

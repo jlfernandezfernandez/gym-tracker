@@ -1,62 +1,62 @@
-import { h } from 'preact';
-import render from 'preact-render-to-string';
-import { describe, expect, it, vi } from 'vitest';
-import { BodyMap } from './BodyMap';
+import { h } from "preact";
+import render from "preact-render-to-string";
+import { describe, expect, it, vi } from "vitest";
+import { BodyMap } from "./BodyMap";
 
 const BodyMapView = BodyMap as any;
 
-describe('BodyMap component rendering', () => {
-  it('renders front (anterior) and back (posterior) SVG diagrams', () => {
+describe("BodyMap component rendering", () => {
+  it("renders front (anterior) and back (posterior) SVG diagrams", () => {
     const html = render(h(BodyMapView, {}));
-    expect(html).toContain('Vista frontal');
-    expect(html).toContain('Vista dorsal');
-    expect(html).toContain('Frente');
-    expect(html).toContain('Espalda');
+    expect(html).toContain("Vista frontal");
+    expect(html).toContain("Vista dorsal");
+    expect(html).toContain("Frente");
+    expect(html).toContain("Espalda");
     expect(html).toContain('data-muscle="chest"');
     expect(html).toContain('data-muscle="quadriceps"');
     expect(html).toContain('data-muscle="upper-back"');
     expect(html).toContain('data-muscle="gluteal"');
   });
 
-  it('renders simple highlighted muscles in accent color', () => {
-    const html = render(h(BodyMapView, { muscles: ['chest', 'biceps'] }));
+  it("renders simple highlighted muscles in accent color", () => {
+    const html = render(h(BodyMapView, { muscles: ["chest", "biceps"] }));
     expect(html).toContain('data-muscle="chest"');
     expect(html).toContain('data-muscle="biceps"');
   });
 
-  it('renders in Mode 1 (Fatigue / Recovery) with status colors', () => {
+  it("renders in Mode 1 (Fatigue / Recovery) with status colors", () => {
     const recoveryData = {
       quadriceps: {
-        muscle: 'quadriceps',
+        muscle: "quadriceps",
         readiness_pct: 85,
         fatigue_pct: 15,
-        status: 'ready' as const,
+        status: "ready" as const,
         hours_since_trained: 36,
       },
       chest: {
-        muscle: 'chest',
+        muscle: "chest",
         readiness_pct: 35,
         fatigue_pct: 65,
-        status: 'fatigued' as const,
+        status: "fatigued" as const,
         hours_since_trained: 12,
       },
     };
 
     const html = render(
       h(BodyMapView, {
-        mode: 'fatigue',
+        mode: "fatigue",
         recoveryData,
-        selectedMuscle: 'quadriceps',
+        selectedMuscle: "quadriceps",
         showPopover: true,
       }),
     );
 
-    expect(html).toContain('Cuádriceps');
-    expect(html).toContain('Listo');
-    expect(html).toContain('85%');
+    expect(html).toContain("Cuádriceps");
+    expect(html).toContain("Listo");
+    expect(html).toContain("85%");
   });
 
-  it('renders in Mode 2 (Balance / Volume) with volume tiers and legend', () => {
+  it("renders in Mode 2 (Balance / Volume) with volume tiers and legend", () => {
     const volumeData = {
       chest: 8,
       deltoids: 4,
@@ -65,38 +65,38 @@ describe('BodyMap component rendering', () => {
 
     const html = render(
       h(BodyMapView, {
-        mode: 'balance',
+        mode: "balance",
         volumeData,
-        selectedMuscle: 'chest',
+        selectedMuscle: "chest",
         showLegend: true,
         showPopover: true,
       }),
     );
 
-    expect(html).toContain('Pecho');
-    expect(html).toContain('8 series');
-    expect(html).toContain('Mayor volumen');
+    expect(html).toContain("Pecho");
+    expect(html).toContain("8 series");
+    expect(html).toContain("Mayor volumen");
   });
 
-  it('renders mode selector buttons when showModeSelector is true', () => {
+  it("renders mode selector buttons when showModeSelector is true", () => {
     const html = render(
       h(BodyMapView, {
         showModeSelector: true,
       }),
     );
 
-    expect(html).toContain('Recuperación');
-    expect(html).toContain('Volumen');
+    expect(html).toContain("Recuperación");
+    expect(html).toContain("Volumen");
   });
 
-  it('highlights the selected muscle with an active outline', () => {
+  it("highlights the selected muscle with an active outline", () => {
     const html = render(
       h(BodyMapView, {
-        selectedMuscle: 'abs',
+        selectedMuscle: "abs",
       }),
     );
 
     expect(html).toContain('data-muscle="abs" data-selected="true"');
-    expect(html).toContain('Abdominales');
+    expect(html).toContain("Abdominales");
   });
 });

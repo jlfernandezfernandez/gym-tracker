@@ -1,5 +1,6 @@
 /** Catalog detail: demonstration, muscles and technique — no logging. */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ThumbsDown } from 'lucide-preact';
 import { apiFetch } from '../../lib/api';
 import { formatEquipment, formatMuscle, mediaUrl, sessionMuscles, showToast } from '../../lib/helpers';
 import { useApp } from '../../app/App';
@@ -69,7 +70,10 @@ export function CatalogExercise({ exerciseId }: { exerciseId: number }) {
           disabled={dislikedQuery.isLoading || preferenceMutation.isPending}
           onClick={() => preferenceMutation.mutate()}
         >
-          {isDisliked ? 'Quitar de no me gusta' : '👎 No me gusta'}
+          <span class="inline-flex items-center gap-2">
+            <ThumbsDown class="size-4" strokeWidth={2} aria-hidden="true" />
+            {isDisliked ? 'Quitar de no me gusta' : 'No me gusta'}
+          </span>
         </button>
       )}
       {(instructions || muscles.length > 0) && (

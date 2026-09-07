@@ -24,10 +24,19 @@ export interface MeasurementPoint {
   value: number;
 }
 
+function resolvedColor(token: string, fallback: string): string {
+  const probe = document.createElement('span');
+  probe.style.color = `var(--color-${token}, ${fallback})`;
+  document.documentElement.appendChild(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+}
+
 const COLORS = {
-  accent: () => getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#5856d6',
-  hint: () => getComputedStyle(document.documentElement).getPropertyValue('--color-hint').trim() || '#6b7280',
-  ok: () => getComputedStyle(document.documentElement).getPropertyValue('--color-ok').trim() || '#248a3d',
+  accent: () => resolvedColor('accent', '#5856d6'),
+  hint: () => resolvedColor('hint', '#6b7280'),
+  grid: () => resolvedColor('edge', 'rgba(17,24,39,.08)'),
 };
 
 export const progressValue = (point: ProgressPoint, metric: 'minutes' | 'seconds' | 'weight' | 'reps') =>
@@ -41,8 +50,6 @@ export const progressValue = (point: ProgressPoint, metric: 'minutes' | 'seconds
 
 export const progressUnit = (metric: 'minutes' | 'seconds' | 'weight' | 'reps') =>
   metric === 'minutes' ? 'min' : metric === 'seconds' ? 's' : metric === 'weight' ? 'kg' : 'reps';
-
-const GRID_COLOR = 'rgba(17,24,39,.08)';
 
 /** Bodyweight exercises have no logged weight; the chart (and its labels) fall back to reps. */
 export const chartUsesWeight = (points: ProgressPoint[]) => points.some((point) => point.weight_mode === 'weighted');
@@ -103,7 +110,7 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
         x: { ticks: { color: hintColor, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
         y: {
           ticks: { color: hintColor, font: { size: 10 }, callback: (value) => metric === 'minutes' ? `${value} min` : metric === 'seconds' ? `${value}s` : metric === 'weight' ? `${value}kg` : `${value} reps` },
-          grid: { color: GRID_COLOR },
+          grid: { color: COLORS.grid() },
         },
       },
     },
@@ -136,7 +143,7 @@ export function renderMeasurementChart(canvas: HTMLCanvasElement, points: Measur
       plugins: { legend: { display: false }, tooltip: { displayColors: false } },
       scales: {
         x: { ticks: { color: hintColor, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
-        y: { ticks: { color: hintColor, font: { size: 10 }, callback: (v) => `${v}${unit}` }, grid: { color: GRID_COLOR } },
+        y: { ticks: { color: hintColor, font: { size: 10 }, callback: (v) => `${v}${unit}` }, grid: { color: COLORS.grid() } },
       },
     },
   });

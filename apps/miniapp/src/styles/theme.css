@@ -19,9 +19,10 @@
   --color-divider: light-dark(#aeaeb2, #636366);
 
   /* Brand */
-  --color-accent: #5856d6;
-  --color-accent-soft: rgba(88, 86, 214, .12);
-  --color-accent-soft-hi: rgba(88, 86, 214, .18);
+  --color-accent: light-dark(#5856d6, #a5a3ff);
+  --color-on-accent: light-dark(#fff, #1c1c1e);
+  --color-accent-soft: light-dark(rgba(88, 86, 214, .12), rgba(165, 163, 255, .12));
+  --color-accent-soft-hi: light-dark(rgba(88, 86, 214, .18), rgba(165, 163, 255, .18));
   --color-accent-bg: light-dark(#eeedff, #2d2a52);
 
   /* Status */
@@ -50,4 +51,10 @@
 
   /* Font */
   --font-sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+}
+
+@layer utilities {
+  .bg-accent.text-white {
+    color: var(--color-on-accent);
+  }
 }

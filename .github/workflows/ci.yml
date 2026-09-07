@@ -7,6 +7,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: |
+            apps/miniapp/package-lock.json
+            apps/site/package-lock.json
       - uses: actions/setup-python@v6
         with: {python-version: "3.13"}
       - uses: astral-sh/setup-uv@v8.3.2
@@ -24,8 +31,23 @@ jobs:
           ENVIRONMENT=development DATABASE_URL=postgresql+asyncpg://x:x@localhost/x uv run alembic heads
       - name: Compile MCP
         run: python -m compileall -q apps/mcp
-      - name: Frontend build
-        run: cd apps/miniapp && npm ci && npm run build
+      - name: Install miniapp dependencies
+        working-directory: apps/miniapp
+        run: npm ci
+      - name: Miniapp checks
+        working-directory: apps/miniapp
+        run: |
+          npm run test
+          npm run typecheck
+          npm run build
+      - name: Install site dependencies
+        working-directory: apps/site
+        run: npm ci
+      - name: Site checks
+        working-directory: apps/site
+        run: |
+          npm run typecheck
+          npm run build
       - name: Docker builds
         run: docker build -t gym-tracker .
       - name: Build MCP image

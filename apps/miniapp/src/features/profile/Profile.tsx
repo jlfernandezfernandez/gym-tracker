@@ -1,49 +1,100 @@
 /** Profile: athlete data with inline editing. Apple-style: tap a field, confirm, done. */
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'preact/hooks';
-import { apiFetch } from '../../lib/api';
-import { formatMuscle, showToast } from '../../lib/helpers';
-import { useApp } from '../../app/App';
-import { Empty, Loading } from '../../components/feedback';
-import { TopBar } from '../../components/navigation';
-import { MeasurementChart } from '../../components/visualizations';
-import { buildProfileFieldPatch } from './profile-input';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "preact/hooks";
+import { apiFetch } from "../../lib/api";
+import { formatMuscle, showToast } from "../../lib/helpers";
+import { useApp } from "../../app/App";
+import { Empty, Loading } from "../../components/feedback";
+import { TopBar } from "../../components/navigation";
+import { MeasurementChart } from "../../components/visualizations";
+import { buildProfileFieldPatch } from "./profile-input";
 
 const MEASURES = [
-  { key: 'weight_kg', label: 'Peso corporal', unit: ' kg' },
-  { key: 'muscle_kg', label: 'Músculo', unit: ' kg' },
-  { key: 'fat_kg', label: 'Grasa', unit: ' kg' },
-  { key: 'body_fat_pct', label: '% grasa', unit: '%' },
-  { key: 'visceral_fat', label: 'Grasa visceral', unit: '' },
+  { key: "weight_kg", label: "Peso corporal", unit: " kg" },
+  { key: "muscle_kg", label: "Músculo", unit: " kg" },
+  { key: "fat_kg", label: "Grasa", unit: " kg" },
+  { key: "body_fat_pct", label: "% grasa", unit: "%" },
+  { key: "visceral_fat", label: "Grasa visceral", unit: "" },
 ] as const;
 
-const GOALS = ['Fuerza', 'Hipertrofia', 'Resistencia', 'Pérdida de grasa', 'Salud', 'Rendimiento deportivo'];
-const EXPERIENCE = ['Principiante', 'Intermedio', 'Avanzado'];
+const GOALS = [
+  "Fuerza",
+  "Hipertrofia",
+  "Resistencia",
+  "Pérdida de grasa",
+  "Salud",
+  "Rendimiento deportivo",
+];
+const EXPERIENCE = ["Principiante", "Intermedio", "Avanzado"];
 
 const SELECT_FIELDS = [
-  { key: 'goal', label: 'Objetivo', options: GOALS },
-  { key: 'experience_level', label: 'Experiencia', options: EXPERIENCE },
+  { key: "goal", label: "Objetivo", options: GOALS },
+  { key: "experience_level", label: "Experiencia", options: EXPERIENCE },
 ] as const;
 
 const NUMERIC_FIELDS = [
-  { key: 'weight_kg', label: 'Peso (kg)', suffix: ' kg', placeholder: '72', inputMode: 'decimal' },
-  { key: 'age', label: 'Edad', suffix: ' años', placeholder: '30', inputMode: 'numeric' },
-  { key: 'height_cm', label: 'Altura (cm)', suffix: ' cm', placeholder: '178', inputMode: 'numeric' },
+  {
+    key: "weight_kg",
+    label: "Peso (kg)",
+    suffix: " kg",
+    placeholder: "72",
+    inputMode: "decimal",
+  },
+  {
+    key: "age",
+    label: "Edad",
+    suffix: " años",
+    placeholder: "30",
+    inputMode: "numeric",
+  },
+  {
+    key: "height_cm",
+    label: "Altura (cm)",
+    suffix: " cm",
+    placeholder: "178",
+    inputMode: "numeric",
+  },
 ] as const;
 
 const ALL_FIELDS = [...SELECT_FIELDS, ...NUMERIC_FIELDS];
 
-function InlineSelect({ value, options, onSave }: { value: string; options: readonly string[]; onSave: (v: string) => void }) {
+function InlineSelect({
+  value,
+  options,
+  onSave,
+}: {
+  value: string;
+  options: readonly string[];
+  onSave: (v: string) => void;
+}) {
   return (
-    <select class="min-h-9 cursor-pointer border-0 bg-transparent pr-1 text-right text-[.85rem] font-[580] text-hint outline-none" value={value} onChange={(e: any) => onSave(e.target.value)}>
-      {(value ? [] : ['']).concat([...options]).map((opt) => (
-        <option key={opt} value={opt}>{opt || '—'}</option>
+    <select
+      class="min-h-9 cursor-pointer border-0 bg-transparent pr-1 text-right text-[.85rem] font-[580] text-hint outline-none"
+      value={value}
+      onChange={(e: any) => onSave(e.target.value)}
+    >
+      {(value ? [] : [""]).concat([...options]).map((opt) => (
+        <option key={opt} value={opt}>
+          {opt || "—"}
+        </option>
       ))}
     </select>
   );
 }
 
-function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value: string; placeholder: string; suffix: string; inputMode: 'decimal' | 'numeric'; onSave: (v: string) => void }) {
+function InlineNumber({
+  value,
+  placeholder,
+  suffix,
+  inputMode,
+  onSave,
+}: {
+  value: string;
+  placeholder: string;
+  suffix: string;
+  inputMode: "decimal" | "numeric";
+  onSave: (v: string) => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   if (editing) {
@@ -62,14 +113,20 @@ function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value
           if (draft && draft !== value) onSave(draft);
         }}
         onKeyDown={(e: any) => {
-          if (e.key === 'Enter') (e.target as HTMLInputElement).blur();
+          if (e.key === "Enter") (e.target as HTMLInputElement).blur();
         }}
       />
     );
   }
   return (
-    <button class="min-h-9 cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1 text-right text-[.85rem] font-[580] text-hint transition active:bg-hover" onClick={() => { setDraft(value); setEditing(true); }}>
-      {value ? `${value}${suffix}` : '—'}
+    <button
+      class="min-h-9 cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1 text-right text-[.85rem] font-[580] text-hint transition active:bg-hover"
+      onClick={() => {
+        setDraft(value);
+        setEditing(true);
+      }}
+    >
+      {value ? `${value}${suffix}` : "—"}
     </button>
   );
 }
@@ -77,92 +134,104 @@ function InlineNumber({ value, placeholder, suffix, inputMode, onSave }: { value
 export function Profile() {
   const app = useApp();
   const queryClient = useQueryClient();
-  const profileQuery = useQuery({ queryKey: ['profile'], queryFn: () => apiFetch('GET', '/profile') });
+  const profileQuery = useQuery({
+    queryKey: ["profile"],
+    queryFn: () => apiFetch("GET", "/profile"),
+  });
   const measurementsQuery = useQuery({
-    queryKey: ['measurements'],
-    queryFn: () => apiFetch('GET', '/profile/measurements?limit=8'),
+    queryKey: ["measurements"],
+    queryFn: () => apiFetch("GET", "/profile/measurements?limit=8"),
     retry: 0,
   });
 
   const profile = profileQuery.data;
   const measurements: any[] = measurementsQuery.data || [];
   const recoveryQuery = useQuery({
-    queryKey: ['recovery'],
-    queryFn: () => apiFetch<any>('GET', '/coach/recovery'),
+    queryKey: ["recovery"],
+    queryFn: () => apiFetch<any>("GET", "/coach/recovery"),
     retry: 0,
     enabled: !app.readOnly,
   });
   const recovery = recoveryQuery.data;
 
   const patch = useMutation({
-    mutationFn: (payload: Record<string, unknown>) => apiFetch('PATCH', '/profile', payload),
+    mutationFn: (payload: Record<string, unknown>) =>
+      apiFetch("PATCH", "/profile", payload),
     onSuccess: (updated) => {
-      queryClient.setQueryData(['profile'], updated);
-      queryClient.invalidateQueries({ queryKey: ['measurements'] });
-      showToast('Perfil actualizado', 'ok');
+      queryClient.setQueryData(["profile"], updated);
+      queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      showToast("Perfil actualizado", "ok");
     },
     onError: (error: any) => {
-      showToast(error.message, 'err');
+      showToast(error.message, "err");
     },
   });
 
   const [measurementDate, setMeasurementDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
-  const [measurementSource, setMeasurementSource] = useState('manual');
-  const [measurementValues, setMeasurementValues] = useState<Record<string, string>>({
-    weight_kg: '',
-    muscle_kg: '',
-    fat_kg: '',
-    body_fat_pct: '',
-    visceral_fat: '',
-    notes: '',
+  const [measurementSource, setMeasurementSource] = useState("manual");
+  const [measurementValues, setMeasurementValues] = useState<
+    Record<string, string>
+  >({
+    weight_kg: "",
+    muscle_kg: "",
+    fat_kg: "",
+    body_fat_pct: "",
+    visceral_fat: "",
+    notes: "",
   });
   const addMeasurement = useMutation({
     mutationFn: async () => {
       const payload: Record<string, unknown> = {
         measured_at: `${measurementDate}T12:00:00`,
-        source: measurementSource || 'manual',
-        notes: measurementValues.notes || '',
+        source: measurementSource || "manual",
+        notes: measurementValues.notes || "",
       };
       let hasValue = false;
-      for (const key of ['weight_kg', 'muscle_kg', 'fat_kg', 'body_fat_pct', 'visceral_fat']) {
+      for (const key of [
+        "weight_kg",
+        "muscle_kg",
+        "fat_kg",
+        "body_fat_pct",
+        "visceral_fat",
+      ]) {
         const raw = measurementValues[key];
         if (!raw) continue;
-        const numeric = Number(raw.replace(',', '.'));
+        const numeric = Number(raw.replace(",", "."));
         if (!Number.isFinite(numeric) || numeric < 0) {
-          throw new Error('Las mediciones deben ser numeros positivos');
+          throw new Error("Las mediciones deben ser numeros positivos");
         }
         payload[key] = numeric;
         hasValue = true;
       }
-      if (!measurementDate) throw new Error('Elige una fecha');
-      if (!hasValue) throw new Error('Añade al menos una medición');
-      return apiFetch('POST', '/profile/measurements', payload);
+      if (!measurementDate) throw new Error("Elige una fecha");
+      if (!hasValue) throw new Error("Añade al menos una medición");
+      return apiFetch("POST", "/profile/measurements", payload);
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['measurements'] });
-      queryClient.invalidateQueries({ queryKey: ['profile'] });
-      setMeasurementSource('manual');
+      queryClient.invalidateQueries({ queryKey: ["measurements"] });
+      queryClient.invalidateQueries({ queryKey: ["profile"] });
+      setMeasurementSource("manual");
       setMeasurementValues({
-        weight_kg: '',
-        muscle_kg: '',
-        fat_kg: '',
-        body_fat_pct: '',
-        visceral_fat: '',
-        notes: '',
+        weight_kg: "",
+        muscle_kg: "",
+        fat_kg: "",
+        body_fat_pct: "",
+        visceral_fat: "",
+        notes: "",
       });
-      showToast('Medición guardada', 'ok');
+      showToast("Medición guardada", "ok");
     },
     onError: (error: any) => {
-      showToast(error.message, 'err');
+      showToast(error.message, "err");
     },
   });
 
   const saveField = (key: string, value: string) => {
     const result = buildProfileFieldPatch(key, value);
     if (result.error) {
-      showToast(result.error, 'err');
+      showToast(result.error, "err");
       return;
     }
     if (!result.payload) {
@@ -171,9 +240,20 @@ export function Profile() {
     patch.mutate(result.payload);
   };
 
-  if (profileQuery.isLoading) return <><TopBar title="Perfil" /><Loading /></>;
+  if (profileQuery.isLoading)
+    return (
+      <>
+        <TopBar title="Perfil" />
+        <Loading />
+      </>
+    );
   if (profileQuery.isError || !profile)
-    return <><TopBar title="Perfil" /><Empty icon="⚠️">No pude cargar el perfil.</Empty></>;
+    return (
+      <>
+        <TopBar title="Perfil" />
+        <Empty icon="⚠️">No pude cargar el perfil.</Empty>
+      </>
+    );
 
   return (
     <>
@@ -181,9 +261,15 @@ export function Profile() {
 
       {/* Athlete identity */}
       <div class="card">
-        <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Atleta</p>
-        <h1>{profile.name || 'Atleta'}</h1>
-        <p>{profile.onboarding_complete ? 'Perfil deportivo activo' : 'Completa el perfil con tu coach'}</p>
+        <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">
+          Atleta
+        </p>
+        <h1>{profile.name || "Atleta"}</h1>
+        <p>
+          {profile.onboarding_complete
+            ? "Perfil deportivo activo"
+            : "Completa el perfil con tu coach"}
+        </p>
       </div>
 
       {/* Muscle Recovery & Readiness */}
@@ -201,25 +287,30 @@ export function Profile() {
 
           <div class="mt-3 grid gap-2">
             {Object.values(recovery.muscles).map((m: any) => {
-              const isReady = m.status === 'ready';
-              const isRec = m.status === 'recovering';
+              const isReady = m.status === "ready";
+              const isRec = m.status === "recovering";
               const badgeClass = isReady
-                ? 'bg-ok-bg text-ok'
+                ? "bg-ok-bg text-ok"
                 : isRec
-                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                : 'bg-warn-bg text-warn';
+                  ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
+                  : "bg-warn-bg text-warn";
               const barClass = isReady
-                ? 'bg-ok'
+                ? "bg-ok"
                 : isRec
-                ? 'bg-amber-500'
-                : 'bg-err';
+                  ? "bg-amber-500"
+                  : "bg-err";
 
               return (
                 <div key={m.muscle} class="rounded-control bg-surface-2 p-3">
                   <div class="flex items-center justify-between">
-                    <span class="text-sm font-bold text-ink">{formatMuscle(m.muscle)}</span>
-                    <span class={`rounded-pill px-2 py-0.5 text-xs font-bold ${badgeClass}`}>
-                      {isReady ? 'Listo' : isRec ? 'Recuperando' : 'Fatigado'} ({m.readiness_pct}%)
+                    <span class="text-sm font-bold text-ink">
+                      {formatMuscle(m.muscle)}
+                    </span>
+                    <span
+                      class={`rounded-pill px-2 py-0.5 text-xs font-bold ${badgeClass}`}
+                    >
+                      {isReady ? "Listo" : isRec ? "Recuperando" : "Fatigado"} (
+                      {m.readiness_pct}%)
                     </span>
                   </div>
                   <div class="mt-2 h-1.5 w-full rounded-pill bg-surface overflow-hidden">
@@ -245,18 +336,35 @@ export function Profile() {
         <h2>Entrenamiento y cuerpo</h2>
         <div class="mt-2.5 grid overflow-hidden rounded-control bg-surface-2">
           {ALL_FIELDS.map((field) => {
-            const raw = String((profile as any)[field.key] ?? '');
+            const raw = String((profile as any)[field.key] ?? "");
             return (
-              <div class="flex min-h-12 items-center justify-between gap-3 border-b border-edge px-[15px] py-[13px] last:border-b-0" key={field.key}>
-                <span class="whitespace-nowrap text-[.85rem] font-[680] text-ink">{field.label}</span>
+              <div
+                class="flex min-h-12 items-center justify-between gap-3 border-b border-edge px-[15px] py-[13px] last:border-b-0"
+                key={field.key}
+              >
+                <span class="whitespace-nowrap text-[.85rem] font-[680] text-ink">
+                  {field.label}
+                </span>
                 {app.readOnly ? (
                   <span class="text-right text-[.85rem] font-[580] text-hint">
-                    {raw ? `${raw}${'suffix' in field ? field.suffix : ''}` : '—'}
+                    {raw
+                      ? `${raw}${"suffix" in field ? field.suffix : ""}`
+                      : "—"}
                   </span>
-                ) : 'options' in field ? (
-                  <InlineSelect value={raw} options={field.options} onSave={(v) => saveField(field.key, v)} />
+                ) : "options" in field ? (
+                  <InlineSelect
+                    value={raw}
+                    options={field.options}
+                    onSave={(v) => saveField(field.key, v)}
+                  />
                 ) : (
-                  <InlineNumber value={raw} placeholder={field.placeholder} suffix={field.suffix} inputMode={field.inputMode} onSave={(v) => saveField(field.key, v)} />
+                  <InlineNumber
+                    value={raw}
+                    placeholder={field.placeholder}
+                    suffix={field.suffix}
+                    inputMode={field.inputMode}
+                    onSave={(v) => saveField(field.key, v)}
+                  />
                 )}
               </div>
             );
@@ -287,23 +395,36 @@ export function Profile() {
             <div class="grid gap-3 min-[720px]:grid-cols-2">
               <div>
                 <label for="measurement-date">Fecha</label>
-                <input id="measurement-date" type="date" value={measurementDate} onInput={(e: any) => setMeasurementDate(e.target.value)} />
+                <input
+                  id="measurement-date"
+                  type="date"
+                  value={measurementDate}
+                  onInput={(e: any) => setMeasurementDate(e.target.value)}
+                />
               </div>
               <div>
                 <label for="measurement-source">Origen</label>
-                <input id="measurement-source" type="text" value={measurementSource} onInput={(e: any) => setMeasurementSource(e.target.value)} placeholder="manual, inbody, dexa..." />
+                <input
+                  id="measurement-source"
+                  type="text"
+                  value={measurementSource}
+                  onInput={(e: any) => setMeasurementSource(e.target.value)}
+                  placeholder="manual, inbody, dexa..."
+                />
               </div>
             </div>
             <div class="mt-3 grid gap-3 min-[720px]:grid-cols-2">
               {MEASURES.map((metric) => (
                 <div key={metric.key}>
-                  <label for={`measurement-${metric.key}`}>{metric.label}</label>
+                  <label for={`measurement-${metric.key}`}>
+                    {metric.label}
+                  </label>
                   <input
                     id={`measurement-${metric.key}`}
                     type="text"
                     inputmode="decimal"
-                    value={measurementValues[metric.key] || ''}
-                    placeholder={metric.unit.trim() || '0'}
+                    value={measurementValues[metric.key] || ""}
+                    placeholder={metric.unit.trim() || "0"}
                     onInput={(e: any) =>
                       setMeasurementValues((current) => ({
                         ...current,
@@ -328,15 +449,21 @@ export function Profile() {
                 placeholder="Ayunas, despues de entrenar, bascula del gimnasio..."
               />
             </div>
-            <button class="btn-primary mt-3 bg-ink text-canvas" disabled={addMeasurement.isPending} onClick={() => addMeasurement.mutate()}>
-              {addMeasurement.isPending ? 'Guardando...' : 'Guardar medición'}
+            <button
+              class="btn-primary mt-3 bg-ink text-canvas"
+              disabled={addMeasurement.isPending}
+              onClick={() => addMeasurement.mutate()}
+            >
+              {addMeasurement.isPending ? "Guardando..." : "Guardar medición"}
             </button>
           </div>
         )}
         {measurements.length < 2 ? (
-          <p>{measurements.length === 0
-            ? 'Aquí irán peso, grasa, músculo, perímetros o cualquier medición por fecha cuando el coach las añada.'
-            : 'Necesitas al menos 2 mediciones para ver la evolución.'}</p>
+          <p>
+            {measurements.length === 0
+              ? "Aquí irán peso, grasa, músculo, perímetros o cualquier medición por fecha cuando el coach las añada."
+              : "Necesitas al menos 2 mediciones para ver la evolución."}
+          </p>
         ) : (
           <div class="mt-2.5 grid gap-3">
             {MEASURES.map((metric) => {
@@ -351,13 +478,21 @@ export function Profile() {
               const latest = points[points.length - 1].value;
               const first = points[0].value;
               const delta = latest - first;
-              const trend = delta > 0 ? '↑' : delta < 0 ? '↓' : '→';
+              const trend = delta > 0 ? "↑" : delta < 0 ? "↓" : "→";
               return (
-                <div class="rounded-control bg-surface-2 px-[15px] py-[14px]" key={metric.key}>
+                <div
+                  class="min-w-0 rounded-control bg-surface-2 px-[15px] py-[14px]"
+                  key={metric.key}
+                >
                   <div class="mb-1 flex items-center justify-between">
                     <h3>{metric.label}</h3>
-                    <span class={`rounded-pill px-2 py-1 text-[.68rem] font-[650] ${delta > 0 ? 'bg-ok-bg text-ok' : delta < 0 ? 'bg-warn-bg text-warn' : 'bg-surface text-hint'}`}>
-                      {trend} {delta !== 0 ? `${Math.abs(delta).toFixed(1)}${metric.unit}` : 'igual'}
+                    <span
+                      class={`rounded-pill px-2 py-1 text-[.68rem] font-[650] ${delta > 0 ? "bg-ok-bg text-ok" : delta < 0 ? "bg-warn-bg text-warn" : "bg-surface text-hint"}`}
+                    >
+                      {trend}{" "}
+                      {delta !== 0
+                        ? `${Math.abs(delta).toFixed(1)}${metric.unit}`
+                        : "igual"}
                     </span>
                   </div>
                   <MeasurementChart points={points} unit={metric.unit} />

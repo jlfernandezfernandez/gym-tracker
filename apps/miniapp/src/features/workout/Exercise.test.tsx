@@ -1,9 +1,22 @@
-import { h } from "preact";
+import { useMutation } from "@tanstack/react-query";
+import { h, options } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
 import render from "preact-render-to-string";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { apiFetch } from "../../lib/api";
+
+vi.mock("preact/hooks", async (importOriginal) => {
+  const hooks = await importOriginal<typeof import("preact/hooks")>();
+  return {
+    ...hooks,
+    useEffect: vi.fn(hooks.useEffect),
+    useRef: vi.fn(hooks.useRef),
+    useState: vi.fn(hooks.useState),
+  };
+});
 
 vi.mock("@tanstack/react-query", () => ({
-  useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useQuery: vi.fn(),
   useQueryClient: () => ({
     invalidateQueries: vi.fn(),
@@ -25,6 +38,83 @@ import {
   SetRow,
   targetValue,
 } from "./Exercise";
+
+afterEach(() => {
+  vi.mocked(useState).mockReset();
+  vi.mocked(useRef).mockReset();
+  vi.mocked(useEffect).mockReset();
+  vi.mocked(useMutation).mockClear();
+  vi.mocked(apiFetch).mockClear();
+});
+
+const storedSet = {
+  id: 1,
+  set_number: 1,
+  weight: 60,
+  reps: 10,
+  is_warmup: false,
+  rir: 3,
+  notes: "Stored notes",
+  sensation: "Stored sensation",
+};
+
+function renderSetEditor(
+  props: Partial<Parameters<typeof SetRow>[0]> = {},
+  previous = { identity: "1:2:1:strength:false", open: true },
+  open = true,
+  draftSource = storedSet,
+) {
+  const fields: any[] = [
+    open,
+    "72.5",
+    "9",
+    true,
+    2,
+    "Local notes",
+    "Local sensation",
+    draftSource,
+  ];
+  fields.forEach((value, index) => {
+    vi.mocked(useState).mockReturnValueOnce([
+      value,
+      (next: any) => {
+        fields[index] = next;
+      },
+    ]);
+  });
+  vi.mocked(useRef).mockReturnValueOnce({ current: previous });
+  let synchronize: (() => void) | undefined;
+  vi.mocked(useEffect).mockImplementationOnce((effect) => {
+    synchronize = effect;
+  });
+  let reload: (() => void) | undefined;
+  const previousVNode = options.vnode;
+  options.vnode = (vnode) => {
+    previousVNode?.(vnode);
+    if (
+      vnode.type === "button" &&
+      vnode.props["aria-label"] === "Recargar valores guardados"
+    ) {
+      reload = (vnode.props as any).onClick;
+    }
+  };
+  try {
+    const html = render(
+      h(SetRow, {
+        set: { ...storedSet },
+        target: { reps: 10, weight: 60 },
+        sessionId: 1,
+        plannedId: 2,
+        exerciseId: 3,
+        activityType: "strength",
+        ...props,
+      }),
+    );
+    return { html, fields, synchronize: () => synchronize?.(), reload };
+  } finally {
+    options.vnode = previousVNode;
+  }
+}
 
 function renderForm(exercise: Record<string, unknown>) {
   return render(
@@ -178,9 +268,145 @@ describe("IsometricTimer component", () => {
     expect(html).toContain("Cronómetro isométrico");
     expect(html).toContain("00:45");
     expect(html).toContain("Objetivo: 45s");
-    expect(html).toContain("▶ Iniciar");
+    expect(html).toContain("Iniciar");
     expect(html).toContain("+10s");
     expect(html).toContain("+30s");
+  });
+});
+
+describe("SetRow draft synchronization", () => {
+  it("preserves the draft on an RPE-only refetch until explicit remote reload", () => {
+    const draftSource = { ...storedSet, rpe: 8, rir: 2 };
+    const remoteSet = { ...draftSource, rpe: 9 };
+    const editor = renderSetEditor(
+      { set: remoteSet },
+      undefined,
+      true,
+      draftSource,
+    );
+    editor.synchronize();
+
+    expect(editor.fields.slice(1, 7)).toEqual([
+      "72.5",
+      "9",
+      true,
+      2,
+      "Local notes",
+      "Local sensation",
+    ]);
+    expect(editor.fields[7]).toBe(draftSource);
+    expect(editor.html).toContain("La serie ha cambiado");
+    expect(editor.reload).toBeTypeOf("function");
+
+    editor.reload!();
+
+    expect(editor.fields.slice(1, 7)).toEqual([
+      "60",
+      "10",
+      false,
+      2,
+      "Stored notes",
+      "Stored sensation",
+    ]);
+    expect(editor.fields[7]).toBe(remoteSet);
+  });
+
+  it.each([false, true])(
+    "preserves all draft fields on refetch (remote changes: %s)",
+    (changed) => {
+      const editor = renderSetEditor({
+        set: { ...storedSet, weight: changed ? 65 : 60 },
+      });
+      editor.synchronize();
+
+      expect(editor.fields.slice(1, 7)).toEqual([
+        "72.5",
+        "9",
+        true,
+        2,
+        "Local notes",
+        "Local sensation",
+      ]);
+      expect(Boolean(editor.reload)).toBe(changed);
+    },
+  );
+
+  it.each([
+    { identity: "1:2:1:strength:false", open: false },
+    { identity: "1:2:9:strength:false", open: true },
+    { identity: "1:9:1:strength:false", open: true },
+    { identity: "9:2:1:strength:false", open: true },
+  ])(
+    "initializes current values on opening or identity change: %j",
+    (previous) => {
+      const editor = renderSetEditor({}, previous);
+      editor.synchronize();
+
+      expect(editor.fields.slice(1, 7)).toEqual([
+        "60",
+        "10",
+        false,
+        3,
+        "Stored notes",
+        "Stored sensation",
+      ]);
+    },
+  );
+
+  it("refreshes a closed editor from the latest set", () => {
+    const editor = renderSetEditor({}, undefined, false);
+    editor.synchronize();
+
+    expect(editor.fields.slice(1, 7)).toEqual([
+      "60",
+      "10",
+      false,
+      3,
+      "Stored notes",
+      "Stored sensation",
+    ]);
+  });
+
+  it("reloads remote values only after an explicit action", () => {
+    const remoteSet = { ...storedSet, weight: 65, notes: "Remote notes" };
+    const editor = renderSetEditor({ set: remoteSet });
+    editor.synchronize();
+
+    expect(editor.html).toContain("La serie ha cambiado");
+    expect(editor.fields[1]).toBe("72.5");
+    expect(editor.reload).toBeTypeOf("function");
+    editor.reload?.();
+
+    expect(editor.fields.slice(1, 7)).toEqual([
+      "65",
+      "10",
+      false,
+      3,
+      "Remote notes",
+      "Stored sensation",
+    ]);
+    expect(editor.fields[7]).toEqual(remoteSet);
+  });
+
+  it("saves the local draft after a remote update", async () => {
+    const editor = renderSetEditor({ set: { ...storedSet, weight: 65 } });
+    editor.synchronize();
+    const correction = vi.mocked(useMutation).mock.calls[0][0] as any;
+    await correction.mutationFn();
+
+    expect(apiFetch).toHaveBeenCalledWith(
+      "PATCH",
+      "/sessions/1/exercises/2/sets/1",
+      {
+        weight: 72.5,
+        reps: 9,
+        is_warmup: true,
+        rir: 2,
+        rpe: 8,
+        notes: "Local notes",
+        sensation: "Local sensation",
+      },
+    );
   });
 });
 
@@ -287,7 +513,7 @@ describe("LogSetForm exercise metrics and isometric support", () => {
     expect(html).toContain('value="45"');
     expect(html).toContain("Cronómetro isométrico");
     expect(html).toContain("00:45");
-    expect(html).toContain("▶ Iniciar");
+    expect(html).toContain("Iniciar");
     expect(html).toContain("+10s");
     expect(html).toContain("+30s");
     expect(html).not.toContain("Minutos");
@@ -305,7 +531,7 @@ describe("LogSetForm exercise metrics and isometric support", () => {
     expect(html).toContain("Segundos (s)");
     expect(html).toContain("Cronómetro isométrico");
     expect(html).toContain("00:30");
-    expect(html).toContain("▶ Iniciar");
+    expect(html).toContain("Iniciar");
   });
 
   it("prefills target seconds from previous set or set targets", () => {

@@ -72,14 +72,16 @@ export function Home() {
   const executionMetric =
     activeExercise?.execution_metric ||
     currentState?.execution_metric ||
-    (activeExercise?.activity_type === 'cardio' ? 'duration_minutes' : 'reps');
+    (activeExercise?.activity_type === "cardio" ? "duration_minutes" : "reps");
   const doneSetCount = completedSetNumbers.size;
   const totalSetCount = activeExercise?.sets || currentState?.target_sets || 0;
 
   return (
     <>
       <div class="px-0.5 pt-[26px] pb-[17px]">
-        <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Gym Coach</p>
+        <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">
+          Gym Tracker
+        </p>
         <h1 class="mt-[5px]">
           {profileQuery.data?.name ? `Hola, ${profileQuery.data.name}` : "Hola"}
         </h1>
@@ -103,22 +105,37 @@ export function Home() {
             <Empty icon="🏋️">
               Sin sesión activa hoy.
               <br />
-              <span class="text-[.8rem] text-hint">Pide tu plan al coach en Telegram o revisa tu historial.</span>
+              <span class="text-[.8rem] text-hint">
+                Pide tu plan al coach en Telegram o revisa tu historial.
+              </span>
             </Empty>
           ) : (
             <>
               <div class="flex items-start justify-between gap-3 [&>div]:min-w-0">
-                <h2>{plan.title || 'Entrenamiento'}</h2>
-                <span class="shrink-0 rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">Progreso {progressPct}%</span>
+                <h2>{plan.title || "Entrenamiento"}</h2>
+                <span class="shrink-0 rounded-pill bg-accent-bg px-2 py-1 text-[.68rem] font-[650] text-accent">
+                  Progreso {progressPct}%
+                </span>
               </div>
               {/* During a workout the landing IS the workout: the upcoming set, grouped as one inset card. */}
               <div class="mt-[14px] rounded-[18px] bg-surface-2 p-[14px] shadow-[inset_0_0_0_1px_var(--color-edge)]">
                 <div class="grid grid-cols-[88px_1fr] items-center gap-[13px]">
                   <div class="media-thumb size-[88px] shrink-0 text-[1.7rem]">
-                    {mediaSrc ? <img class="size-full object-contain p-1" src={mediaSrc} alt={activeExercise?.name || 'Ejercicio actual'} loading="eager" /> : "🏋️"}
+                    {mediaSrc ? (
+                      <img
+                        class="size-full object-contain p-1"
+                        src={mediaSrc}
+                        alt={activeExercise?.name || "Ejercicio actual"}
+                        loading="eager"
+                      />
+                    ) : (
+                      "🏋️"
+                    )}
                   </div>
                   <div>
-                    <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">Serie actual</p>
+                    <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">
+                      Serie actual
+                    </p>
                     <h3>
                       {currentState?.current_exercise_name ||
                         activeExercise?.name ||
@@ -131,29 +148,62 @@ export function Home() {
                   completedSetNumbers={completedSetNumbers}
                   currentSetNumber={currentSetNumber ?? undefined}
                   showCurrent={
-                    currentSetNumber != null && !completedSetNumbers.has(currentSetNumber)
+                    currentSetNumber != null &&
+                    !completedSetNumbers.has(currentSetNumber)
                   }
                   class="my-[13px]"
                   ariaLabel={`Serie ${currentSetNumber ?? doneSetCount} de ${totalSetCount}`}
                 />
-                {executionMetric === 'duration_minutes' ? (
-                  <Stat surface label="Minutos" value={currentTarget?.duration_minutes ?? '—'} />
-                ) : executionMetric === 'duration_seconds' ? (
+                {executionMetric === "duration_minutes" ? (
+                  <Stat
+                    surface
+                    label="Minutos"
+                    value={currentTarget?.duration_minutes ?? "—"}
+                  />
+                ) : executionMetric === "duration_seconds" ? (
                   <div class="grid grid-cols-2 gap-[9px]">
-                    <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode) || '—'} />
-                    <Stat surface label="Segundos" value={currentTarget?.duration_seconds ?? '—'} />
+                    <Stat
+                      surface
+                      label="Carga"
+                      value={
+                        formatWeight(nextWeight, activeExercise?.weight_mode) ||
+                        "—"
+                      }
+                    />
+                    <Stat
+                      surface
+                      label="Segundos"
+                      value={currentTarget?.duration_seconds ?? "—"}
+                    />
                   </div>
                 ) : (
                   <div class="grid grid-cols-2 gap-[9px]">
-                    <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode) || '—'} />
-                    <Stat surface label="Reps" value={currentTarget?.reps ?? '-'} />
+                    <Stat
+                      surface
+                      label="Carga"
+                      value={
+                        formatWeight(nextWeight, activeExercise?.weight_mode) ||
+                        "—"
+                      }
+                    />
+                    <Stat
+                      surface
+                      label="Reps"
+                      value={currentTarget?.reps ?? "-"}
+                    />
                   </div>
                 )}
               </div>
-              <button class="btn-primary mt-3 bg-ink text-canvas" onClick={() => openPlan(true)}>
+              <button
+                class="btn-primary mt-3 bg-ink text-canvas"
+                onClick={() => openPlan(true)}
+              >
                 Continuar entreno
               </button>
-              <button class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975] active:opacity-[.82]" onClick={() => openPlan(false)}>
+              <button
+                class="mt-3 min-h-[50px] w-full cursor-pointer rounded-2xl border-0 bg-transparent px-[17px] py-[13px] text-[.94rem] font-[720] text-accent transition hover:bg-accent-bg active:scale-[.975] active:opacity-[.82]"
+                onClick={() => openPlan(false)}
+              >
                 Ver plan completo
               </button>
             </>

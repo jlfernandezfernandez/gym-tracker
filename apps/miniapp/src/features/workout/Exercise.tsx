@@ -1,12 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Pause, Play, RotateCcw, Square } from "lucide-preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { apiFetch } from "../../lib/api";
-import {
-  progressMetric,
-  progressUnit,
-  progressValue,
-  type ProgressPoint,
-} from "../../lib/chart";
+import { progressMetric, progressUnit, progressValue } from "../../lib/chart";
 import {
   canEditWorkout,
   completedSetCount,
@@ -80,14 +76,16 @@ export const targetValue = (target: any, exercise: any) => {
   return weight ? `${weight} × ${target.reps}` : `${target.reps} reps`;
 };
 
-export function progressSummaryText(metric: 'minutes' | 'seconds' | 'weight' | 'reps') {
-  return metric === 'minutes'
-    ? 'Minutos máximos por sesión'
-    : metric === 'seconds'
-      ? 'Duración máxima en segundos por sesión'
-      : metric === 'weight'
-        ? 'Peso máximo por sesión'
-        : 'Repeticiones máximas por sesión';
+export function progressSummaryText(
+  metric: "minutes" | "seconds" | "weight" | "reps",
+) {
+  return metric === "minutes"
+    ? "Minutos máximos por sesión"
+    : metric === "seconds"
+      ? "Duración máxima en segundos por sesión"
+      : metric === "weight"
+        ? "Peso máximo por sesión"
+        : "Repeticiones máximas por sesión";
 }
 
 function refreshWorkoutQueries(
@@ -132,33 +130,64 @@ export function SetRow({
   const [metricValue, setMetricValue] = useState(
     String(
       activityType === "cardio"
-        ? set.duration_minutes ?? ""
+        ? (set.duration_minutes ?? "")
         : isTimed
-          ? set.duration_seconds ?? ""
-          : set.reps ?? "",
+          ? (set.duration_seconds ?? "")
+          : (set.reps ?? ""),
     ),
   );
   const [isWarmup, setIsWarmup] = useState(Boolean(set.is_warmup));
-  const [selectedRir, setSelectedRir] = useState<number | null>(set.rir ?? null);
+  const [selectedRir, setSelectedRir] = useState<number | null>(
+    set.rir ?? null,
+  );
   const [notes, setNotes] = useState(set.notes || "");
   const [sensation, setSensation] = useState(set.sensation || "");
+  const [draftSource, setDraftSource] = useState(set);
+  const identity = `${sessionId}:${plannedId}:${set.id}:${activityType}:${Boolean(isTimed)}`;
+  const editSession = useRef({ identity, open: false });
+  const remoteChanged =
+    editOpen &&
+    editSession.current.identity === identity &&
+    [
+      "weight",
+      "reps",
+      "duration_minutes",
+      "duration_seconds",
+      "is_warmup",
+      "rir",
+      "rpe",
+      "notes",
+      "sensation",
+    ].some((field) => (set[field] ?? null) !== (draftSource[field] ?? null));
 
-  useEffect(() => {
+  const resetDraft = (open = editOpen) => {
+    editSession.current = { identity, open };
     setWeight(String(set.weight ?? ""));
     setMetricValue(
       String(
         activityType === "cardio"
-          ? set.duration_minutes ?? ""
+          ? (set.duration_minutes ?? "")
           : isTimed
-            ? set.duration_seconds ?? ""
-            : set.reps ?? "",
+            ? (set.duration_seconds ?? "")
+            : (set.reps ?? ""),
       ),
     );
     setIsWarmup(Boolean(set.is_warmup));
     setSelectedRir(set.rir ?? null);
     setNotes(set.notes || "");
     setSensation(set.sensation || "");
-  }, [activityType, isTimed, set]);
+    setDraftSource(set);
+  };
+
+  useEffect(() => {
+    if (
+      editOpen &&
+      editSession.current.open &&
+      editSession.current.identity === identity
+    )
+      return;
+    resetDraft();
+  }, [activityType, isTimed, set, editOpen, identity]);
 
   const update = useMutation({
     mutationFn: () => {
@@ -313,7 +342,10 @@ export function SetRow({
           <button
             class="min-h-10 cursor-pointer rounded-pill border-0 bg-surface-2 px-3 text-[.72rem] font-[700] text-ink disabled:opacity-30"
             disabled={update.isPending || del.isPending || restore.isPending}
-            onClick={() => setEditOpen(true)}
+            onClick={() => {
+              resetDraft(true);
+              setEditOpen(true);
+            }}
             aria-label={`Editar serie ${set.set_number}`}
           >
             Editar
@@ -344,6 +376,21 @@ export function SetRow({
         onConfirm={() => update.mutate()}
         onCancel={() => setEditOpen(false)}
       >
+        {remoteChanged && (
+          <div class="mt-3 text-sm text-hint" role="status">
+            <p>La serie ha cambiado en otro lugar. Tu borrador se conserva.</p>
+            <button
+              type="button"
+              class="mt-2 inline-flex min-h-10 items-center gap-2 rounded-control border-0 bg-surface-2 px-3 text-sm font-semibold text-ink disabled:opacity-30"
+              aria-label="Recargar valores guardados"
+              disabled={update.isPending}
+              onClick={() => resetDraft()}
+            >
+              <RotateCcw class="size-4 shrink-0" aria-hidden="true" />
+              Recargar valores guardados
+            </button>
+          </div>
+        )}
         {activityType === "cardio" ? (
           <div class="mt-3">
             <label for={`edit-set-${set.id}-duration`}>Minutos</label>
@@ -370,7 +417,9 @@ export function SetRow({
               />
             </div>
             <div>
-              <label for={`edit-set-${set.id}-metric`}>{isTimed ? 'Segundos' : 'Reps'}</label>
+              <label for={`edit-set-${set.id}-metric`}>
+                {isTimed ? "Segundos" : "Reps"}
+              </label>
               <input
                 id={`edit-set-${set.id}-metric`}
                 class="bg-surface"
@@ -406,9 +455,11 @@ export function SetRow({
                       ? "border-accent bg-accent text-white shadow-sm"
                       : "border-edge bg-surface-2 text-hint hover:text-ink"
                   }`}
-                  onClick={() => setSelectedRir(selectedRir === option ? null : option)}
+                  onClick={() =>
+                    setSelectedRir(selectedRir === option ? null : option)
+                  }
                 >
-                  {option === 0 ? '0' : option === 3 ? '3+' : option}
+                  {option === 0 ? "0" : option === 3 ? "3+" : option}
                 </button>
               ))}
             </div>
@@ -416,7 +467,11 @@ export function SetRow({
         )}
         <div class="mt-3">
           <label for={`edit-set-${set.id}-notes`}>Notas</label>
-          <textarea id={`edit-set-${set.id}-notes`} value={notes} onInput={(event: any) => setNotes(event.target.value)} />
+          <textarea
+            id={`edit-set-${set.id}-notes`}
+            value={notes}
+            onInput={(event: any) => setNotes(event.target.value)}
+          />
         </div>
       </ConfirmSheet>
     </div>
@@ -845,7 +900,7 @@ export function IsometricTimer({
                 : "bg-accent/15 text-accent"
             }`}
           >
-            ⏱️
+            <Square class="size-3.5" strokeWidth={2} aria-hidden="true" />
           </span>
           <div>
             <h4 class="text-xs font-bold text-ink">
@@ -872,7 +927,7 @@ export function IsometricTimer({
             aria-label="Reiniciar cronómetro"
             title="Reiniciar"
           >
-            ↺
+            <RotateCcw class="size-3.5" strokeWidth={2} aria-hidden="true" />
           </button>
         )}
       </div>
@@ -933,7 +988,10 @@ export function IsometricTimer({
               onClick={handleStart}
               aria-label="Iniciar cronómetro"
             >
-              ▶ Iniciar
+              <span class="inline-flex items-center gap-1.5">
+                <Play class="size-3.5" strokeWidth={2.4} aria-hidden="true" />
+                Iniciar
+              </span>
             </button>
           )}
           {timerState === "running" && (
@@ -944,7 +1002,14 @@ export function IsometricTimer({
                 onClick={handlePause}
                 aria-label="Pausar cronómetro"
               >
-                ⏸ Pausar
+                <span class="inline-flex items-center gap-1.5">
+                  <Pause
+                    class="size-3.5"
+                    strokeWidth={2.4}
+                    aria-hidden="true"
+                  />
+                  Pausar
+                </span>
               </button>
               <button
                 type="button"
@@ -952,7 +1017,14 @@ export function IsometricTimer({
                 onClick={handleStop}
                 aria-label="Parar y registrar tiempo actual"
               >
-                ✓ Parar ({elapsedSec}s)
+                <span class="inline-flex items-center gap-1.5">
+                  <Square
+                    class="size-3.5"
+                    strokeWidth={2.4}
+                    aria-hidden="true"
+                  />
+                  Parar ({elapsedSec}s)
+                </span>
               </button>
             </>
           )}
@@ -964,7 +1036,10 @@ export function IsometricTimer({
                 onClick={handleStart}
                 aria-label="Reanudar cronómetro"
               >
-                ▶ Reanudar
+                <span class="inline-flex items-center gap-1.5">
+                  <Play class="size-3.5" strokeWidth={2.4} aria-hidden="true" />
+                  Reanudar
+                </span>
               </button>
               {elapsedSec > 0 && (
                 <button
@@ -985,7 +1060,14 @@ export function IsometricTimer({
               onClick={handleReset}
               aria-label="Reiniciar cronómetro"
             >
-              ↺ Repetir
+              <span class="inline-flex items-center gap-1.5">
+                <RotateCcw
+                  class="size-3.5"
+                  strokeWidth={2.4}
+                  aria-hidden="true"
+                />
+                Repetir
+              </span>
             </button>
           )}
         </div>
@@ -1017,21 +1099,11 @@ export function LogSetForm({
   const isBodyweight = exercise.weight_mode === "bodyweight";
   const isCardio = exercise.activity_type === "cardio";
 
-  const initialTimedSeconds =
-    setTarget?.duration_seconds ??
-    30;
+  const initialTimedSeconds = setTarget?.duration_seconds ?? 30;
 
-  const [weight, setWeight] = useState(
-    String(
-      setTarget?.weight ?? "",
-    ),
-  );
+  const [weight, setWeight] = useState(String(setTarget?.weight ?? ""));
   const [reps, setReps] = useState(
-    String(
-      isTimed
-        ? initialTimedSeconds
-        : (setTarget?.reps ?? ""),
-    ),
+    String(isTimed ? initialTimedSeconds : (setTarget?.reps ?? "")),
   );
   const [durationMinutes, setDurationMinutes] = useState(
     String(setTarget?.duration_minutes ?? ""),

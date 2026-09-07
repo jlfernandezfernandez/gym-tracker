@@ -1,6 +1,6 @@
 # Agent-first product implementation
 
-Approved direction: improve the existing Telegram miniapp, API and MCP without a rewrite. Agents plan and interpret; people can execute and correct ordinary actions directly. Work is incremental in the current workspace. User authorized local commits after each reviewed, passing task on 2026-09-07; no pushes or production writes.
+Approved direction: improve the existing Telegram miniapp, API and MCP without a rewrite. Agents plan and interpret; people can execute and correct ordinary actions directly. Work is incremental in the current workspace. User authorized local commits after each reviewed, passing task on 2026-09-07 and a final GPT-6 Astra review, corrections and branch push on 2026-09-08. No production writes or merge authorized.
 
 ## Global constraints
 
@@ -42,10 +42,10 @@ Status: complete; two portable skill bundles reviewed, official OpenClaw/Hermes 
 
 Polish existing app with restrained Apple-like hierarchy, accessible controls, consistent sheets, primary action placement and pending/error feedback. Reuse styles and avoid a redesign framework. Make public demo mutable in memory, resettable and completely isolated from real API/auth/journal writes; demonstrate a full set/finish flow. Fix landing base link and naming, show real product rather than a misleading mockup, clarify external agent prerequisite. Add frontend typecheck and tests to CI; resolve relevant type errors without weakening compiler rules. Check desktop/mobile with Playwright and start a local preview for user review.
 
-Status: pending.
+Status: complete with documented limits. Demo is editable and resettable without real API or journal writes. GPT-6 Astra reviewed mobile/desktop in light/dark, set logging/editing, finish/repeat/reset and the real landing iframe. Fixed dark text contrast (minimum checked accent ratio 5.93:1) and Profile chart resize overflow. Frontend: 184 tests, typecheck and build pass; site typecheck/build pass. Existing nested-card styling and some type/cleanup debt remain; no claim of a complete design-system rewrite.
 
 ### Task 6: Integration and final review
 
 Review all changes for ownership, offline journal regressions, timed metric integrity, read-only sharing, unknown import handling and installation safety. Run backend/MCP/frontend tests, frontend typecheck, builds, migration graph and relevant lint. Perform browser workflow checks for demo, manual controls and viewport overflow. Run isolated Compose smoke when environment allows, without touching existing production volumes. Report precisely any remaining limitations.
 
-Status: pending.
+Status: complete for available local checks; deployment verification remains pending. Final review used GPT-6 Astra and closed metric/history integrity, stale replacement targets, pagination, draft refresh, partial effort PATCH and demo UI regressions. API: 189 tests, Ruff format/check and Pyright pass. MCP: 51 tests pass. Alembic has one head, r8i9j0k1l2m3. Portable diagnostic tests pass. Docker builds/Compose smoke and real PostgreSQL migration were not run because the local daemon is unavailable; real Telegram/Hermes/OpenClaw and physical devices remain untested. CI retains Docker gates. Frontend has 12 non-blocking hints; global MCP lint has a pre-existing E402 in run_mcp.py outside the modified slice.

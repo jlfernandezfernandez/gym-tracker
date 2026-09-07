@@ -1,3 +1,5 @@
+import { ArrowLeft } from 'lucide-preact';
+
 const tabs = [
   { name: 'landing', label: 'Hoy', path: 'M4 13h3l2-7 4 14 2-7h5' },
   { name: 'catalog', label: 'Ejercicios', path: 'M2 12h2 M20 12h2 M4 9v6 M20 9v6 M6 7v10h3V7z M15 7v10h3V7z M9 12h6' },
@@ -21,7 +23,7 @@ export function TopBar({
     <div class="sticky top-0 z-10 -mx-4 mb-2 flex min-h-12 items-center gap-2 bg-canvas/88 px-4 py-1 backdrop-blur-2xl backdrop-saturate-150 motion-reduce:bg-canvas max-[380px]:-mx-3 max-[380px]:px-3 min-[720px]:-mx-6 min-[720px]:px-6">
       {onBack && (
         <button class="grid size-11 cursor-pointer place-items-center rounded-pill border-0 bg-surface text-xl text-ink shadow-[inset_0_0_0_1px_var(--color-edge)] transition-transform duration-150 ease-[cubic-bezier(.23,1,.32,1)] active:scale-[.94]" aria-label="Volver" onClick={onBack}>
-          ←
+          <ArrowLeft class="size-5" strokeWidth={2.2} aria-hidden="true" />
         </button>
       )}
       <div class="min-w-0 flex-1">
