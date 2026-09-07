@@ -7,6 +7,7 @@ import { PendingWrites, useWorkoutSync } from './WorkoutSync';
 import { isDemoMode } from '../lib/demo';
 import { normalizeSession } from '../lib/helpers';
 import { inTelegram } from '../lib/telegram';
+import { parseLaunchRoute } from './routes';
 import { Empty } from '../components/feedback';
 import { TabBar } from '../components/navigation';
 import { Catalog } from '../features/catalog/Catalog';
@@ -68,8 +69,16 @@ export function useSession() {
     initialDataUpdatedAt: 0,
     enabled: !!(shareToken || sessionId),
     staleTime: 0,
-    refetchOnWindowFocus: !shareToken,
-    refetchOnReconnect: !shareToken,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval: shareToken
+      ? false
+      : (query) => {
+          const session = query.state.data as any;
+          const isVisible = typeof document === 'undefined' || document.visibilityState === 'visible';
+          return session && ['planned', 'in_progress'].includes(session.status) && isVisible ? 15000 : false;
+        },
+    refetchIntervalInBackground: false,
     select: (session: any) => {
       try { return normalizeSession(sessionId && journal ? journal.view(sessionId, session) : session); }
       catch { return normalizeSession(session); }
@@ -78,43 +87,47 @@ export function useSession() {
 }
 
 /** Derived current-exercise state; skipped on read-only share views. */
-export function useCurrent(sessionId?: number) {
+export function useCurrent(sessionId?: number, sessionStatus?: string) {
   const { readOnly } = useApp();
   return useQuery({
     queryKey: ['current', sessionId],
     queryFn: () => apiFetch('GET', `/sessions/${sessionId}/current`),
     enabled: !!sessionId && !readOnly,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchInterval:
+      !sessionId || readOnly
+        ? false
+        : () => {
+            const isVisible = typeof document === 'undefined' || document.visibilityState === 'visible';
+            return isVisible && ['planned', 'in_progress'].includes(String(sessionStatus || '')) ? 15000 : false;
+          },
+    refetchIntervalInBackground: false,
   });
 }
 
-function shareRouteParams() {
-  const params: Record<string, string> = {};
-  const pathSegments = location.pathname.split('/').filter(Boolean).map(decodeURIComponent);
-  // /session/share/:token[/exercise/:plannedExerciseId]
-  if (pathSegments[0] === 'session' && pathSegments[1] === 'share' && pathSegments[2]) {
-    params.share_token = pathSegments[2];
-    if (pathSegments[3] === 'exercise' && pathSegments[4]) params.exercise_id = pathSegments[4];
-  }
-  return params;
-}
-
 function Router() {
-  const route = useMemo(shareRouteParams, []);
+  const route = useMemo(() => parseLaunchRoute(location.pathname), []);
   const demoMode = isDemoMode();
-  const shareToken = route.share_token;
-  const readOnly = demoMode || !!shareToken;
+  const shareToken = route.shareToken;
+  const readOnly = demoMode || route.readOnly;
   const workoutSync = useWorkoutSync(readOnly);
   const restoredId = workoutSync.state?.activeId;
 
   const [viewStack, setViewStack] = useState<View[]>(() => {
     if (shareToken) {
       const initialStack: View[] = [{ name: 'plan' }];
-      if (route.exercise_id) initialStack.push({ name: 'exercise', plannedId: Number(route.exercise_id) });
+      if (route.plannedExerciseId) initialStack.push({ name: 'exercise', plannedId: route.plannedExerciseId });
+      return initialStack;
+    }
+    if (route.sessionId) {
+      const initialStack: View[] = [{ name: 'plan' }];
+      if (route.plannedExerciseId) initialStack.push({ name: 'exercise', plannedId: route.plannedExerciseId });
       return initialStack;
     }
     return restoredId ? [{ name: 'landing' }, { name: 'plan' }] : [{ name: 'landing' }];
   });
-  const [sessionId, setSessionId] = useState<number | undefined>(restoredId);
+  const [sessionId, setSessionId] = useState<number | undefined>(route.sessionId ?? restoredId);
 
   const appContext: AppContextValue = {
     push: (view) => setViewStack((stack) => [...stack, view]),

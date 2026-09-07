@@ -200,6 +200,18 @@ describe('calculateWeeklyStreak', () => {
     expect(result.maxStreak).toBe(4);
     expect(result.totalWorkouts).toBe(6);
   });
+
+  it('sums workout_count instead of counting one row per aggregated day', () => {
+    const sessions = [
+      { session_date: '2026-08-24', workout_count: 2 },
+      { session_date: '2026-08-18', workout_count: 3 },
+    ];
+
+    const result = calculateWeeklyStreak(sessions, new Date('2026-08-24T12:00:00'));
+    expect(result.currentStreak).toBe(2);
+    expect(result.activeWeeksCount).toBe(2);
+    expect(result.totalWorkouts).toBe(5);
+  });
 });
 
 describe('calculateQuantileThresholds & resolveHeatTier', () => {

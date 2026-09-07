@@ -112,6 +112,10 @@ export function Heatmap({
         const isToday = dateString === todayStr;
         const isSelected = selectedDate === dateString;
         const daySessions = sessionsByDate.get(dateString) || [];
+        const dayWorkoutCount = daySessions.reduce((count, session) => {
+          const workoutCount = Number(session?.workout_count ?? 1);
+          return count + (Number.isFinite(workoutCount) && workoutCount > 0 ? workoutCount : 1);
+        }, 0);
 
         let dayDuration = 0;
         let dayVolume = 0;
@@ -120,7 +124,7 @@ export function Heatmap({
           dayVolume += Number(s.total_volume || 0);
         }
 
-        const value = dayDuration > 0 ? dayDuration : (dayVolume > 0 ? dayVolume : (daySessions.length > 0 ? 30 : 0));
+        const value = dayDuration > 0 ? dayDuration : (dayVolume > 0 ? dayVolume : (dayWorkoutCount > 0 ? 30 : 0));
         if (value > 0 && !isFuture) {
           activeValues.push(value);
         }
@@ -131,8 +135,8 @@ export function Heatmap({
           year: 'numeric',
         });
 
-        const label = daySessions.length > 0
-          ? `${shortDateFormatted}: ${daySessions.length} entreno${daySessions.length > 1 ? 's' : ''}${dayDuration ? ` · ${dayDuration} min` : ''}${dayVolume ? ` · ${Math.round(dayVolume)} kg` : ''}`
+        const label = dayWorkoutCount > 0
+          ? `${shortDateFormatted}: ${dayWorkoutCount} entreno${dayWorkoutCount > 1 ? 's' : ''}${dayDuration ? ` · ${dayDuration} min` : ''}${dayVolume ? ` · ${Math.round(dayVolume)} kg` : ''}`
           : isFuture
             ? `${shortDateFormatted}`
             : `${shortDateFormatted}: Descanso`;
@@ -253,7 +257,11 @@ export function Heatmap({
                 {weeks.map((week) => (
                   <div key={week.weekIndex} class="flex flex-col gap-[3px]">
                     {week.days.map((day) => {
-                      const hasWorkouts = day.sessions.length > 0;
+                      const workoutCount = day.sessions.reduce((count, session) => {
+                        const value = Number(session?.workout_count ?? 1);
+                        return count + (Number.isFinite(value) && value > 0 ? value : 1);
+                      }, 0);
+                      const hasWorkouts = workoutCount > 0;
                       return (
                         <button
                           key={day.dateString}
@@ -276,7 +284,7 @@ export function Heatmap({
                           aria-label={day.label}
                           data-date={day.dateString}
                           data-tier={day.tier}
-                          data-workouts={day.sessions.length}
+                          data-workouts={workoutCount}
                           onClick={() => {
                             if (!day.isFuture && onSelectDate) {
                               onSelectDate(day.dateString, day.sessions);

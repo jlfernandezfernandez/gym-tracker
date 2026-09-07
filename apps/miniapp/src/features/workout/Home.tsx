@@ -29,9 +29,9 @@ export function Home() {
     refetchOnWindowFocus: true,
     refetchOnReconnect: true,
   });
-  const sessionsQuery = useQuery({
-    queryKey: ["sessions"],
-    queryFn: () => apiFetch("GET", "/sessions"),
+  const activityQuery = useQuery({
+    queryKey: ["session-activity"],
+    queryFn: () => apiFetch("GET", "/sessions/activity?days=365"),
     retry: 0,
   });
 
@@ -163,7 +163,7 @@ export function Home() {
 
       {/* Training Consistency Heatmap & Streak (Requirement R4) */}
       <Heatmap
-        sessions={sessionsQuery.data || []}
+        sessions={activityQuery.data || []}
         onSelectDate={(_date, daySessions) => {
           if (daySessions?.[0]?.id) {
             app.openSession(daySessions[0].id);

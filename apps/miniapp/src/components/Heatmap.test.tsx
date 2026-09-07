@@ -63,6 +63,19 @@ describe('Heatmap component', () => {
     expect(html).toContain('data-tier="4"');
   });
 
+  it('preserves aggregated workout_count from activity rows', () => {
+    const html = render(
+      h(Heatmap, {
+        sessions: [{ session_date: '2026-08-24', workout_count: 3, duration_actual: 48 }],
+        today: fixedToday,
+      }),
+    );
+
+    expect(html).toContain('data-date="2026-08-24"');
+    expect(html).toContain('data-workouts="3"');
+    expect(html).toContain('3 entrenamientos');
+  });
+
   it('highlights today cell with active ring', () => {
     const html = render(
       h(Heatmap, {

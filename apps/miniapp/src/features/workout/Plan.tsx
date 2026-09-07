@@ -1,6 +1,6 @@
 /** Plan: session overview, exercise list, share and finish. */
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useRef, useState } from 'preact/hooks';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
 import {
   completedSetCount,
@@ -8,6 +8,8 @@ import {
   formatExerciseTargetBadge,
   formatEquipment,
   formatMuscle,
+  formatWeight,
+  parseWeight,
   formatStatus,
   mediaUrl,
   sessionMuscles,
@@ -21,11 +23,40 @@ import { ConfirmSheet } from '../../components/sheet';
 import { BodyMap } from '../../components/visualizations';
 import { calculateMuscleLoadSplit, type MuscleLoadItem } from '../../lib/volume';
 
+function refreshPlanQueries(queryClient: any, sessionId: number, updatedSession: any) {
+  queryClient.setQueryData(['session', sessionId], updatedSession);
+  queryClient.invalidateQueries({ queryKey: ['current', sessionId] });
+  queryClient.invalidateQueries({ queryKey: ['active'] });
+  queryClient.invalidateQueries({ queryKey: ['sessions'] });
+  queryClient.invalidateQueries({ queryKey: ['session-activity'] });
+  queryClient.invalidateQueries({ queryKey: ['records'] });
+}
+
 export function Plan() {
   const app = useApp();
+  const queryClient = useQueryClient();
   const sessionQuery = useSession();
   const plan = sessionQuery.data;
-  const currentQuery = useCurrent(plan?.id);
+  const currentQuery = useCurrent(plan?.id, plan?.status);
+  const [pickerState, setPickerState] = useState<{ mode: 'add' | 'replace'; exercise?: any } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any | null>(null);
+
+  const repeatSession = useMutation({
+    mutationFn: () => apiFetch('POST', `/sessions/${plan.id}/repeat`),
+    onSuccess: (repeated) => {
+      queryClient.setQueryData(['session', repeated.id], repeated);
+      queryClient.invalidateQueries({ queryKey: ['active'] });
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['session-activity'] });
+      app.openSession(repeated.id);
+      haptic('ok');
+      showToast('Sesión repetida para hoy', 'ok');
+    },
+    onError: (error: any) => {
+      haptic('bad');
+      showToast(error.message, 'err');
+    },
+  });
 
   if (sessionQuery.isLoading) return <Loading message="Cargando plan..." />;
   if (!plan)
@@ -74,13 +105,33 @@ export function Plan() {
       </div>
 
       {exercises.map((exercise: any) => (
-        <ExerciseCard
-          key={exercise.planned_id}
-          exercise={exercise}
-          isCurrent={String(exercise.planned_id) === String(currentPlannedId)}
-          onOpen={() => openExercise(exercise.planned_id)}
-        />
+        <div key={exercise.planned_id}>
+          <ExerciseCard
+            exercise={exercise}
+            isCurrent={String(exercise.planned_id) === String(currentPlannedId)}
+            onOpen={() => openExercise(exercise.planned_id)}
+          />
+          {!app.readOnly && plan.status !== 'completed' && (
+            <PlanExerciseControls
+              sessionId={plan.id}
+              planStatus={plan.status}
+              exercise={exercise}
+              exercises={exercises}
+              onReplace={() => setPickerState({ mode: 'replace', exercise })}
+              onDelete={() => setDeleteTarget(exercise)}
+            />
+          )}
+        </div>
       ))}
+
+      {!app.readOnly && plan.status !== 'completed' && (
+        <button
+          class="btn-primary mt-2 bg-surface text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]"
+          onClick={() => setPickerState({ mode: 'add' })}
+        >
+          + Añadir ejercicio
+        </button>
+      )}
 
       {muscles.length > 0 && (
         <details class="card [&[open]>summary]:mb-2.5">
@@ -90,6 +141,16 @@ export function Plan() {
       )}
 
       {plan.status === 'completed' && <CompletedSummary plan={plan} exercises={exercises} />}
+
+      {!app.readOnly && plan.status === 'completed' && (
+        <button
+          class="btn-primary mt-3 bg-ink text-canvas"
+          disabled={repeatSession.isPending}
+          onClick={() => repeatSession.mutate()}
+        >
+          {repeatSession.isPending ? 'Repitiendo...' : 'Repetir sesión hoy'}
+        </button>
+      )}
 
       {!app.readOnly && plan.status !== 'completed' && (
         <div class="mt-3 flex items-center gap-[9px] [&>button]:min-w-0 [&>button]:flex-1">
@@ -102,6 +163,31 @@ export function Plan() {
           <FinishButton sessionId={plan.id} energy={plan.energy} discomfort={plan.discomfort} />
         </div>
       )}
+
+      {pickerState && plan.status !== 'completed' && (
+        <PlanExercisePicker
+          sessionId={plan.id}
+          mode={pickerState.mode}
+          exercise={pickerState.exercise}
+          onDismiss={() => setPickerState(null)}
+        />
+      )}
+      <ConfirmSheet
+        open={!!deleteTarget}
+        title="Eliminar ejercicio"
+        message={deleteTarget ? `Se quitará ${deleteTarget.name || 'este ejercicio'} del plan actual.` : ''}
+        confirmLabel="Eliminar"
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {}}
+      >
+        {deleteTarget && (
+          <DeleteExerciseButton
+            sessionId={plan.id}
+            exercise={deleteTarget}
+            onDone={() => setDeleteTarget(null)}
+          />
+        )}
+      </ConfirmSheet>
     </>
   );
 }
@@ -300,5 +386,298 @@ function FinishButton({ sessionId, energy, discomfort }: { sessionId: number; en
         <textarea ref={feedbackRef} class="mt-3" placeholder="Fácil, duro, molestias, sensaciones..." />
       </ConfirmSheet>
     </>
+  );
+}
+
+function PlanExerciseControls({
+  sessionId,
+  planStatus,
+  exercise,
+  exercises,
+  onReplace,
+  onDelete,
+}: {
+  sessionId: number;
+  planStatus: string;
+  exercise: any;
+  exercises: any[];
+  onReplace: () => void;
+  onDelete: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const hasLoggedSets = (exercise.performed_sets || []).length > 0;
+  const orderedIds = exercises.map((item) => item.planned_id);
+  const index = orderedIds.indexOf(exercise.planned_id);
+  const reorder = useMutation({
+    mutationFn: (direction: -1 | 1) => {
+      const next = [...orderedIds];
+      const swapIndex = index + direction;
+      [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
+      return apiFetch('PUT', `/sessions/${sessionId}/exercises/reorder`, { planned_exercise_ids: next });
+    },
+    onSuccess: (updated) => {
+      refreshPlanQueries(queryClient, sessionId, updated);
+      haptic('light');
+    },
+    onError: (error: any) => showToast(error.message, 'err'),
+  });
+  const skip = useMutation({
+    mutationFn: () =>
+      apiFetch('PUT', `/sessions/${sessionId}/exercises/${exercise.planned_id}`, {
+        status: exercise.status === 'skipped' ? 'pending' : 'skipped',
+      }),
+    onSuccess: (updated) => {
+      refreshPlanQueries(queryClient, sessionId, updated);
+      haptic('ok');
+    },
+    onError: (error: any) => showToast(error.message, 'err'),
+  });
+  const isBusy = reorder.isPending || skip.isPending;
+
+  return (
+    <div class="mb-3 -mt-1 rounded-2xl bg-surface px-3 pb-3 pt-1 shadow-[inset_0_0_0_1px_var(--color-edge)]">
+      <div class="flex flex-wrap gap-2 pt-2">
+        <button
+          class="rounded-pill border-0 bg-surface-2 px-3 py-2 text-[.78rem] font-[680] text-ink disabled:opacity-35"
+          disabled={isBusy || index === 0}
+          aria-label={`Subir ${exercise.name || 'ejercicio'}`}
+          onClick={() => reorder.mutate(-1)}
+        >
+          ↑ Subir
+        </button>
+        <button
+          class="rounded-pill border-0 bg-surface-2 px-3 py-2 text-[.78rem] font-[680] text-ink disabled:opacity-35"
+          disabled={isBusy || index === exercises.length - 1}
+          aria-label={`Bajar ${exercise.name || 'ejercicio'}`}
+          onClick={() => reorder.mutate(1)}
+        >
+          ↓ Bajar
+        </button>
+        <button
+          class="rounded-pill border-0 bg-surface-2 px-3 py-2 text-[.78rem] font-[680] text-ink disabled:opacity-35"
+          disabled={isBusy || planStatus === 'completed'}
+          onClick={() => skip.mutate()}
+        >
+          {exercise.status === 'skipped' ? 'Desmarcar skip' : 'Saltar'}
+        </button>
+        <button
+          class="rounded-pill border-0 bg-surface-2 px-3 py-2 text-[.78rem] font-[680] text-ink disabled:opacity-35"
+          disabled={isBusy || hasLoggedSets}
+          onClick={onReplace}
+        >
+          Reemplazar
+        </button>
+        <button
+          class="rounded-pill border-0 bg-err/10 px-3 py-2 text-[.78rem] font-[680] text-err disabled:opacity-35"
+          disabled={isBusy || hasLoggedSets}
+          onClick={onDelete}
+        >
+          Eliminar
+        </button>
+      </div>
+      {hasLoggedSets && (
+        <p class="mt-2 text-[.74rem] text-hint">
+          Reemplazar y eliminar quedan desactivados porque este ejercicio ya tiene series registradas.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function DeleteExerciseButton({ sessionId, exercise, onDone }: { sessionId: number; exercise: any; onDone: () => void }) {
+  const queryClient = useQueryClient();
+  const remove = useMutation({
+    mutationFn: () => apiFetch('DELETE', `/sessions/${sessionId}/exercises/${exercise.planned_id}`),
+    onSuccess: (updated) => {
+      refreshPlanQueries(queryClient, sessionId, updated);
+      haptic('ok');
+      showToast('Ejercicio eliminado', 'ok');
+      onDone();
+    },
+    onError: (error: any) => {
+      haptic('bad');
+      showToast(error.message, 'err');
+    },
+  });
+
+  return (
+    <button
+      class="btn-primary mt-3 w-full bg-err text-white"
+      disabled={remove.isPending}
+      onClick={() => remove.mutate()}
+    >
+      {remove.isPending ? 'Eliminando...' : 'Confirmar eliminación'}
+    </button>
+  );
+}
+
+function PlanExercisePicker({
+  sessionId,
+  mode,
+  exercise,
+  onDismiss,
+}: {
+  sessionId: number;
+  mode: 'add' | 'replace';
+  exercise?: any;
+  onDismiss: () => void;
+}) {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState('');
+  const [selected, setSelected] = useState<any | null>(null);
+  const [metric, setMetric] = useState<'reps' | 'duration_minutes' | 'duration_seconds'>('reps');
+  const [targetSets, setTargetSets] = useState('3');
+  const [targetValue, setTargetValue] = useState('10');
+  const [weight, setWeight] = useState('');
+  const listQuery = useQuery({
+    queryKey: ['plan-picker', search],
+    queryFn: () => apiFetch('GET', `/exercises?limit=20&offset=0${search ? `&search=${encodeURIComponent(search)}` : ''}`),
+  });
+
+  useEffect(() => {
+    if (!exercise) {
+      setMetric('reps');
+      setTargetSets('3');
+      setTargetValue('10');
+      setWeight('');
+      return;
+    }
+    setMetric(exercise.execution_metric || (exercise.activity_type === 'cardio' ? 'duration_minutes' : 'reps'));
+    setTargetSets(String(exercise.sets || 3));
+    setTargetValue(
+      String(
+        exercise.execution_metric === 'duration_minutes'
+          ? exercise.duration_minutes || 20
+          : exercise.execution_metric === 'duration_seconds'
+            ? exercise.duration_seconds || 40
+            : exercise.reps || 10,
+      ),
+    );
+    setWeight(String(exercise.weight ?? ''));
+  }, [exercise]);
+
+  const save = useMutation({
+    mutationFn: () => {
+      if (!selected) throw new Error('Elige un ejercicio del catálogo');
+      const parsedSets = Math.max(1, Math.min(20, parseInt(targetSets || '0', 10) || 3));
+      const parsedTarget = parseInt(targetValue || '0', 10);
+      if (parsedTarget <= 0) {
+        throw new Error(metric === 'duration_minutes' ? 'Pon los minutos objetivo' : metric === 'duration_seconds' ? 'Pon los segundos objetivo' : 'Pon las reps objetivo');
+      }
+      const payload: Record<string, any> = { target_sets: parsedSets };
+      const selectedMetric = selected.activity_type === 'cardio' ? 'duration_minutes' : metric;
+      payload.execution_metric = selectedMetric;
+      if (selectedMetric === 'duration_minutes') payload.target_duration_minutes = parsedTarget;
+      if (selectedMetric === 'duration_seconds') payload.target_duration_seconds = parsedTarget;
+      if (selectedMetric === 'reps') payload.target_reps = parsedTarget;
+      if (selectedMetric !== 'duration_minutes' && weight.trim() !== '') {
+        const normalizedWeight = parseWeight(weight);
+        if (isNaN(normalizedWeight) || normalizedWeight <= 0) {
+          throw new Error('El peso debe ser mayor que 0 o quedar vacío');
+        }
+        payload.suggested_weight = normalizedWeight;
+      }
+      if (mode === 'add') {
+        return apiFetch('POST', `/sessions/${sessionId}/exercises`, {
+          exercise_id: selected.id,
+          ...payload,
+        });
+      }
+      return apiFetch('PUT', `/sessions/${sessionId}/exercises/${exercise.planned_id}`, {
+        new_exercise_id: selected.id,
+        ...payload,
+      });
+    },
+    onSuccess: (updated) => {
+      refreshPlanQueries(queryClient, sessionId, updated);
+      haptic('ok');
+      showToast(mode === 'add' ? 'Ejercicio añadido' : 'Ejercicio reemplazado', 'ok');
+      onDismiss();
+    },
+    onError: (error: any) => {
+      haptic('bad');
+      showToast(error.message, 'err');
+    },
+  });
+
+  const isCardio = selected?.activity_type === 'cardio';
+  const selectedName = selected?.name || exercise?.name || '';
+
+  return (
+    <ConfirmSheet
+      open={true}
+      title={mode === 'add' ? 'Añadir ejercicio' : 'Reemplazar ejercicio'}
+      message="Busca en el catálogo y define una prescripción simple para hoy."
+      confirmLabel={mode === 'add' ? 'Añadir' : 'Reemplazar'}
+      busy={save.isPending}
+      onConfirm={() => save.mutate()}
+      onCancel={onDismiss}
+    >
+      <input
+        type="search"
+        class="mt-3"
+        placeholder="Buscar en el catálogo"
+        value={search}
+        onInput={(event: any) => setSearch(event.target.value)}
+      />
+      <div class="mt-3 max-h-48 overflow-y-auto rounded-2xl bg-surface-2">
+        {((listQuery.data as any[]) || []).map((item: any) => (
+          <button
+            key={item.id}
+            class={`grid w-full grid-cols-[1fr_auto] gap-3 border-0 border-b border-edge bg-transparent px-3 py-3 text-left last:border-b-0 ${selected?.id === item.id ? 'bg-accent/10' : ''}`}
+            onClick={() => {
+              setSelected(item);
+              if (item.activity_type === 'cardio') {
+                setMetric('duration_minutes');
+                setWeight('');
+                setTargetValue('20');
+              }
+            }}
+          >
+            <span class="min-w-0">
+              <b class="block truncate text-[.88rem]">{item.name}</b>
+              <span class="block text-[.72rem] text-hint">
+                {formatMuscle(item.target || item.muscle_group)}
+                {item.equipment ? ` · ${formatEquipment(item.equipment)}` : ''}
+              </span>
+            </span>
+            <span class="text-[.72rem] font-[700] text-hint">{item.activity_type === 'cardio' ? 'Cardio' : 'Fuerza'}</span>
+          </button>
+        ))}
+      </div>
+      <p class="mt-3 text-[.74rem] text-hint">{selectedName ? `Elegido: ${selectedName}` : 'Elige un ejercicio para continuar.'}</p>
+      {!isCardio && (
+        <div class="mt-3 flex gap-2">
+          <button
+            class={`flex-1 rounded-pill border-0 px-3 py-2 text-[.78rem] font-[680] ${metric === 'reps' ? 'bg-ink text-canvas' : 'bg-surface-2 text-ink'}`}
+            onClick={() => setMetric('reps')}
+          >
+            Reps
+          </button>
+          <button
+            class={`flex-1 rounded-pill border-0 px-3 py-2 text-[.78rem] font-[680] ${metric === 'duration_seconds' ? 'bg-ink text-canvas' : 'bg-surface-2 text-ink'}`}
+            onClick={() => setMetric('duration_seconds')}
+          >
+            Segundos
+          </button>
+        </div>
+      )}
+      <div class="mt-3 grid grid-cols-2 gap-3">
+        <div>
+          <label>Series</label>
+          <input type="text" inputmode="numeric" value={targetSets} onInput={(event: any) => setTargetSets(event.target.value)} />
+        </div>
+        <div>
+          <label>{isCardio ? 'Minutos' : metric === 'duration_seconds' ? 'Segundos' : 'Reps'}</label>
+          <input type="text" inputmode="numeric" value={targetValue} onInput={(event: any) => setTargetValue(event.target.value)} />
+        </div>
+      </div>
+      {!isCardio && (
+        <div class="mt-3">
+          <label>Peso sugerido (kg)</label>
+          <input type="text" inputmode="decimal" value={weight} onInput={(event: any) => setWeight(event.target.value)} placeholder={formatWeight(exercise?.weight, exercise?.weight_mode) || 'Opcional'} />
+        </div>
+      )}
+    </ConfirmSheet>
   );
 }

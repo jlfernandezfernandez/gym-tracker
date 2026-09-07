@@ -24,13 +24,13 @@ Status: complete; reviewed with Task 2. API 143, MCP 44, miniapp 122 tests passe
 
 Introduce explicit execution metric for timed strength sets using duration_seconds, distinct from cardio duration_minutes and strength reps. Maintain existing catalog activity_type compatibility where possible by representing timed execution on the planned exercise; clients must not infer units from names. Update API schemas/DB constraints, migrations, MCP, frontend normalization/editor/journal, progression and volume handling consistently. Existing history stays unchanged. Tests cover strength, timed unloaded/loaded, cardio, mutually exclusive metrics and warmups. Assisted loading and side-by-side unilateral logs are deferred until they have an explicit catalog contract; do not present them as supported.
 
-Status: reviewed/fixed on 2026-09-07; pending main validation.
+Status: complete in commit 22b5a0f; reviewed/fixed on 2026-09-07.
 
 ### Task 3: Everyday autonomy and shared state
 
 Expose skip, replace, add/remove and reorder exercise controls using existing endpoints; require confirmation for destructive actions and preserve logged sets. Offer repeat completed session through a small atomic endpoint which copies prescriptions, not performed sets, on today's date. Allow correction of set values through an atomic API endpoint, including completed sessions, without delete-then-create. Add direct dated measurement entry. Keep read-only/demo isolation. Add paginated history and an activity date-range summary instead of claiming a full year from ten sessions. Refresh active open session while visible without overwriting unsaved inputs or pending journal entries. Fix Profile's missing import and Home next-set targets.
 
-Status: pending.
+Status: complete; main and delegated review passed. API 151, MCP 45, miniapp 133 tests passed; TypeScript clean. Includes actual SQL aggregation regression coverage. Browser workflow validation remains in Task 6.
 
 ### Task 4: Portable installation and operating skills
 

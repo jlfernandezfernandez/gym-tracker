@@ -7,6 +7,7 @@ not a mocked route function.
 
 import os
 from collections.abc import AsyncGenerator
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
@@ -267,6 +268,46 @@ def test_delete_middle_set_reopens_completed_session_and_exercise() -> None:
     assert body["status"] == "in_progress"
     assert body["planned_exercises"][0]["status"] == "in_progress"
     assert [item["set_number"] for item in body["planned_exercises"][0]["performed_sets"]] == [1, 3]
+
+
+def test_patch_set_updates_values_without_recreating_or_reopening_completed_session() -> None:
+    workout = _workout(status="completed", sets=(1, 2, 3), target_sets=3)
+    workout.duration_actual = 47
+    original_timestamp = datetime(2026, 9, 1, 12, 0)
+    target_set = workout.planned_exercises[0].performed_sets[1]
+    target_set.timestamp = original_timestamp
+    gen = _client(workout)
+    client, _ = next(gen)
+
+    response = client.patch(
+        "/api/sessions/1/exercises/5/sets/2",
+        json={"weight": 42, "reps": 12, "rpe": 9},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["duration_actual"] == 47
+    corrected = body["planned_exercises"][0]["performed_sets"][1]
+    assert corrected["id"] == 2
+    assert corrected["weight"] == 42
+    assert corrected["reps"] == 12
+    assert corrected["rpe"] == 9
+    assert corrected["timestamp"] == "2026-09-01T12:00:00"
+    assert workout.planned_exercises[0].performed_sets[1].timestamp == original_timestamp
+
+
+def test_patch_set_rejects_switching_execution_metric() -> None:
+    gen = _client(_workout(sets=(1,), target_sets=3))
+    client, _ = next(gen)
+
+    response = client.patch(
+        "/api/sessions/1/exercises/5/sets/1",
+        json={"duration_seconds": 45},
+    )
+
+    assert response.status_code == 422
+    assert "Strength requires reps" in response.json()["detail"]
 
 
 def test_correction_endpoints_enforce_session_ownership() -> None:

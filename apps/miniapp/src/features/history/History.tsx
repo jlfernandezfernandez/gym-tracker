@@ -1,7 +1,8 @@
 /** History: recent sessions list. */
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
-import { formatDate } from '../../lib/helpers';
+import { formatDate, showToast } from '../../lib/helpers';
 import { useApp } from '../../app/App';
 import { Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
@@ -35,9 +36,84 @@ function groupByWeek(sessions: any[]): [string, any[]][] {
   ];
 }
 
+export function buildHistoryPath({
+  pageSize,
+  offset,
+  selectedDate,
+}: {
+  pageSize: number;
+  offset: number;
+  selectedDate: string | null;
+}) {
+  const params = new URLSearchParams({
+    limit: String(pageSize),
+    offset: String(offset),
+    completed_only: 'true',
+  });
+  if (selectedDate) {
+    params.set('on_date', selectedDate);
+  }
+  return `/sessions?${params.toString()}`;
+}
+
+export function mergeHistoryPage(
+  currentPages: Record<number, any[]>,
+  offset: number,
+  pageSessions: any[],
+) {
+  const pages = {
+    ...currentPages,
+    [offset]: [...pageSessions],
+  };
+  const seenIds = new Set<number>();
+  const sessions = Object.keys(pages)
+    .map(Number)
+    .sort((first, second) => first - second)
+    .flatMap((pageOffset) => pages[pageOffset] || [])
+    .filter((session) => {
+      if (seenIds.has(session.id)) return false;
+      seenIds.add(session.id);
+      return true;
+    });
+  return { pages, sessions };
+}
+
 export function History() {
   const app = useApp();
-  const sessionsQuery = useQuery({ queryKey: ['sessions'], queryFn: () => apiFetch('GET', '/sessions') });
+  const queryClient = useQueryClient();
+  const PAGE_SIZE = 20;
+  const [offset, setOffset] = useState(0);
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [sessionPages, setSessionPages] = useState<Record<number, any[]>>({});
+  const activityQuery = useQuery({
+    queryKey: ['session-activity'],
+    queryFn: () => apiFetch('GET', '/sessions/activity?days=365'),
+  });
+  const sessionsQuery = useQuery({
+    queryKey: selectedDate
+      ? ['sessions', 'history', offset, selectedDate]
+      : ['sessions', 'history', offset],
+    queryFn: () => apiFetch('GET', buildHistoryPath({ pageSize: PAGE_SIZE, offset, selectedDate })),
+  });
+
+  useEffect(() => {
+    if (!Array.isArray(sessionsQuery.data)) return;
+    setSessionPages((currentPages) => mergeHistoryPage(currentPages, offset, sessionsQuery.data).pages);
+  }, [offset, sessionsQuery.data]);
+
+  const mergedSessions = mergeHistoryPage(sessionPages, offset, []).sessions;
+  const visibleSessions = mergedSessions.length > 0
+    ? mergedSessions
+    : Array.isArray(sessionsQuery.data)
+      ? sessionsQuery.data
+      : [];
+  const hasMore = (sessionsQuery.data?.length || 0) === PAGE_SIZE;
+
+  const toggleSelectedDate = (date: string) => {
+    setOffset(0);
+    setSessionPages({});
+    setSelectedDate((current) => (current === date ? null : date));
+  };
 
   return (
     <>
@@ -46,9 +122,9 @@ export function History() {
         <Loading />
       ) : sessionsQuery.isError ? (
         <Empty icon="⚠️">No pude cargar el historial.</Empty>
-      ) : !sessionsQuery.data?.length ? (
+      ) : !visibleSessions.length ? (
         <>
-          <Heatmap sessions={[]} className="mt-3" />
+          <Heatmap sessions={activityQuery.data || []} className="mt-3" />
           <Empty icon="📊">
             Sin historial todavía.
             <br />
@@ -59,50 +135,89 @@ export function History() {
         <>
           {/* Training Activity Heatmap (Requirement R4) */}
           <Heatmap
-            sessions={sessionsQuery.data}
-            onSelectDate={(_date, daySessions) => {
-              if (daySessions?.[0]?.id) {
-                app.openSession(daySessions[0].id);
-              }
-            }}
+            sessions={activityQuery.data || []}
+            onSelectDate={(date) => toggleSelectedDate(date)}
+            selectedDate={selectedDate}
             className="mt-3 mb-1"
           />
 
-          {groupByWeek(sessionsQuery.data).map(([label, sessions]) => (
+          {groupByWeek(visibleSessions).map(([label, sessions]) => (
             <section key={label}>
               <p class="mt-5 mb-0.5 ml-[3px] text-[.68rem] font-bold tracking-[.07em] text-hint uppercase first:mt-2.5">{label}</p>
               <div class="mt-2 overflow-hidden rounded-card bg-surface [content-visibility:auto] [contain-intrinsic-size:auto_500px]">
                 {sessions.map((session: any) => (
-                  <button
-                    class="group grid min-h-[76px] w-full cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 border-b border-edge bg-transparent px-[15px] py-3 text-left text-ink transition-colors last:border-b-0 hover:bg-hover active:bg-hover"
+                  <HistorySessionRow
                     key={session.id}
-                    onClick={() => app.openSession(session.id)}
-                  >
-                    <span class="text-[.74rem] font-medium text-hint">{formatDate(session.session_date)}</span>
-                    <span class="min-w-0">
-                      <b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">{session.title || 'Entrenamiento'}</b>
-                      <div class="mt-1 flex flex-wrap items-center gap-1.5 text-[.72rem] text-hint">
-                        <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
-                          {session.exercise_count || 0} ejerc.
-                        </span>
-                        <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
-                          {session.total_sets || 0} series
-                        </span>
-                        {session.duration_actual ? (
-                          <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
-                            ⏱️ {session.duration_actual} min
-                          </span>
-                        ) : null}
-                      </div>
-                    </span>
-                    <span class="text-[1.3rem] text-divider transition-transform group-active:translate-x-0.5">›</span>
-                  </button>
+                    app={app}
+                    queryClient={queryClient}
+                    session={session}
+                  />
                 ))}
               </div>
             </section>
           ))}
+          {hasMore && (
+            <button
+              class="btn-primary mt-4 bg-surface text-ink shadow-[inset_0_0_0_1px_var(--color-edge)]"
+              disabled={sessionsQuery.isLoading}
+              onClick={() => setOffset((current) => current + PAGE_SIZE)}
+            >
+              Cargar más
+            </button>
+          )}
         </>
       )}
     </>
+  );
+}
+
+function HistorySessionRow({ app, queryClient, session }: { app: any; queryClient: any; session: any }) {
+  const repeat = useMutation({
+    mutationFn: () => apiFetch('POST', `/sessions/${session.id}/repeat`),
+    onSuccess: (repeated) => {
+      queryClient.setQueryData(['session', repeated.id], repeated);
+      queryClient.invalidateQueries({ queryKey: ['active'] });
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+      queryClient.invalidateQueries({ queryKey: ['session-activity'] });
+      app.openSession(repeated.id);
+    },
+    onError: (error: any) => showToast(error.message, 'err'),
+  });
+
+  return (
+    <div class="grid min-h-[76px] grid-cols-[1fr_auto] items-center gap-2 border-b border-edge px-[15px] py-3 last:border-b-0">
+      <button
+        class="group grid min-w-0 cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 bg-transparent text-left text-ink transition-colors hover:bg-hover active:bg-hover"
+        onClick={() => app.openSession(session.id)}
+      >
+        <span class="text-[.74rem] font-medium text-hint">{formatDate(session.session_date)}</span>
+        <span class="min-w-0">
+          <b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">{session.title || 'Entrenamiento'}</b>
+          <div class="mt-1 flex flex-wrap items-center gap-1.5 text-[.72rem] text-hint">
+            <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
+              {session.exercise_count || 0} ejerc.
+            </span>
+            <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
+              {session.total_sets || 0} series
+            </span>
+            {session.duration_actual ? (
+              <span class="rounded-[6px] bg-surface-2 px-1.5 py-0.5 text-[.66rem] font-medium text-hint">
+                ⏱️ {session.duration_actual} min
+              </span>
+            ) : null}
+          </div>
+        </span>
+        <span class="text-[1.3rem] text-divider transition-transform group-active:translate-x-0.5">›</span>
+      </button>
+      {session.status === 'completed' && (
+        <button
+          class="rounded-pill border-0 bg-accent-bg px-3 py-2 text-[.68rem] font-[680] text-accent"
+          disabled={repeat.isPending}
+          onClick={() => repeat.mutate()}
+        >
+          Repetir
+        </button>
+      )}
+    </div>
   );
 }

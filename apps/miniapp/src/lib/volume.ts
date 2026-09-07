@@ -229,7 +229,8 @@ export function calculateWeeklyStreak(
   for (const s of sessions) {
     const rawDate = s?.session_date || s?.date;
     if (!rawDate) continue;
-    totalWorkouts += 1;
+    const workoutCount = Number(s?.workout_count ?? 1);
+    totalWorkouts += Number.isFinite(workoutCount) && workoutCount > 0 ? workoutCount : 1;
     const monday = getMondayOfWeek(rawDate);
     workoutWeekSet.add(toIsoDate(monday));
   }

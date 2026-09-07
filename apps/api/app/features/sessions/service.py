@@ -1,4 +1,5 @@
-from datetime import UTC, datetime
+from copy import deepcopy
+from datetime import UTC, date, datetime
 
 from fastapi import HTTPException
 from sqlalchemy import select
@@ -277,3 +278,45 @@ def current_state(workout: WorkoutSession) -> dict:
         "total_sets": total_sets,
         "is_complete": bool(planned) and completed_exercises == len(planned),
     }
+
+
+def repeat_session_prescriptions(source: WorkoutSession) -> WorkoutSession:
+    """Clone a completed session into a fresh plan for today.
+
+    Only prescription data is copied. Logged sets, share token, feedback and
+    completion clock stay on the historical source session.
+    """
+    repeated = WorkoutSession(
+        session_date=date.today(),
+        title=source.title,
+        goal=source.goal,
+        status="planned",
+        energy=source.energy,
+        discomfort="",
+        duration_estimated=source.duration_estimated,
+        duration_actual=0,
+        feedback="",
+        coach_summary="",
+        telegram_user_id=source.telegram_user_id,
+        started_at=None,
+    )
+    repeated.planned_exercises = [
+        PlannedExercise(
+            session_id=source.id,
+            exercise_id=planned.exercise_id,
+            order=planned.order,
+            target_sets=planned.target_sets,
+            execution_metric=resolve_planned_execution_metric(planned),
+            target_reps=planned.target_reps,
+            target_duration_minutes=planned.target_duration_minutes,
+            target_duration_seconds=planned.target_duration_seconds,
+            suggested_weight=planned.suggested_weight,
+            unilateral=planned.unilateral,
+            superset_group=planned.superset_group,
+            notes=planned.notes,
+            status="pending",
+            set_targets=deepcopy(planned.set_targets),
+        )
+        for planned in sorted(source.planned_exercises or [], key=lambda item: item.order)
+    ]
+    return repeated

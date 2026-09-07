@@ -5,10 +5,12 @@ import { describe, expect, it, vi } from 'vitest';
 const setQueryData = vi.fn();
 const openSession = vi.fn();
 const push = vi.fn();
+const seenKeys: string[] = [];
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: ({ queryKey }: { queryKey: string[] }) => {
     const key = queryKey[0];
+    seenKeys.push(String(key));
     if (key === 'profile') {
       return { data: { name: 'Jordi' }, isLoading: false };
     }
@@ -50,6 +52,9 @@ vi.mock('@tanstack/react-query', () => ({
         },
       };
     }
+    if (key === 'session-activity') {
+      return { data: [{ id: 11, session_date: '2026-09-07', duration_actual: 45 }], isLoading: false };
+    }
     return { data: [], isLoading: false };
   },
   useQueryClient: () => ({ setQueryData }),
@@ -77,10 +82,13 @@ import { Home } from './Home';
 
 describe('Home', () => {
   it('shows the real current set and seconds target for timed strength', () => {
+    seenKeys.length = 0;
     const html = render(h(Home, {}));
 
     expect(html).toContain('Serie 2 de 3');
     expect(html).toContain('Segundos:55');
     expect(html).not.toContain('Reps:');
+    expect(seenKeys).toContain('session-activity');
+    expect(seenKeys).not.toContain('sessions');
   });
 });

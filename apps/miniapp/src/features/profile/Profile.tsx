@@ -2,11 +2,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
-import { formatMuscle } from '../../lib/helpers';
+import { formatMuscle, showToast } from '../../lib/helpers';
 import { useApp } from '../../app/App';
 import { Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';
 import { MeasurementChart } from '../../components/visualizations';
+import { buildProfileFieldPatch } from './profile-input';
 
 const MEASURES = [
   { key: 'weight_kg', label: 'Peso corporal', unit: ' kg' },
@@ -98,13 +99,76 @@ export function Profile() {
     onSuccess: (updated) => {
       queryClient.setQueryData(['profile'], updated);
       queryClient.invalidateQueries({ queryKey: ['measurements'] });
+      showToast('Perfil actualizado', 'ok');
+    },
+    onError: (error: any) => {
+      showToast(error.message, 'err');
     },
   });
 
-  const numFieldKeys = NUMERIC_FIELDS.map((f) => f.key);
+  const [measurementDate, setMeasurementDate] = useState(
+    new Date().toISOString().slice(0, 10),
+  );
+  const [measurementSource, setMeasurementSource] = useState('manual');
+  const [measurementValues, setMeasurementValues] = useState<Record<string, string>>({
+    weight_kg: '',
+    muscle_kg: '',
+    fat_kg: '',
+    body_fat_pct: '',
+    visceral_fat: '',
+    notes: '',
+  });
+  const addMeasurement = useMutation({
+    mutationFn: async () => {
+      const payload: Record<string, unknown> = {
+        measured_at: `${measurementDate}T12:00:00`,
+        source: measurementSource || 'manual',
+        notes: measurementValues.notes || '',
+      };
+      let hasValue = false;
+      for (const key of ['weight_kg', 'muscle_kg', 'fat_kg', 'body_fat_pct', 'visceral_fat']) {
+        const raw = measurementValues[key];
+        if (!raw) continue;
+        const numeric = Number(raw.replace(',', '.'));
+        if (!Number.isFinite(numeric) || numeric < 0) {
+          throw new Error('Las mediciones deben ser numeros positivos');
+        }
+        payload[key] = numeric;
+        hasValue = true;
+      }
+      if (!measurementDate) throw new Error('Elige una fecha');
+      if (!hasValue) throw new Error('Añade al menos una medición');
+      return apiFetch('POST', '/profile/measurements', payload);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['measurements'] });
+      queryClient.invalidateQueries({ queryKey: ['profile'] });
+      setMeasurementSource('manual');
+      setMeasurementValues({
+        weight_kg: '',
+        muscle_kg: '',
+        fat_kg: '',
+        body_fat_pct: '',
+        visceral_fat: '',
+        notes: '',
+      });
+      showToast('Medición guardada', 'ok');
+    },
+    onError: (error: any) => {
+      showToast(error.message, 'err');
+    },
+  });
+
   const saveField = (key: string, value: string) => {
-    const payload: Record<string, unknown> = { [key]: numFieldKeys.includes(key as any) ? Number(value) : value };
-    patch.mutate(payload);
+    const result = buildProfileFieldPatch(key, value);
+    if (result.error) {
+      showToast(result.error, 'err');
+      return;
+    }
+    if (!result.payload) {
+      return;
+    }
+    patch.mutate(result.payload);
   };
 
   if (profileQuery.isLoading) return <><TopBar title="Perfil" /><Loading /></>;
@@ -210,7 +274,65 @@ export function Profile() {
 
       {/* Measurements with charts */}
       <div class="card">
-        <h2>Mediciones</h2>
+        <div class="flex items-center justify-between gap-3">
+          <h2>Mediciones</h2>
+          {!app.readOnly && (
+            <span class="rounded-pill bg-accent-bg px-2.5 py-1 text-[.68rem] font-[650] text-accent">
+              Entrada manual
+            </span>
+          )}
+        </div>
+        {!app.readOnly && (
+          <div class="mt-3 rounded-control bg-surface-2 px-[15px] py-[14px]">
+            <div class="grid gap-3 min-[720px]:grid-cols-2">
+              <div>
+                <label for="measurement-date">Fecha</label>
+                <input id="measurement-date" type="date" value={measurementDate} onInput={(e: any) => setMeasurementDate(e.target.value)} />
+              </div>
+              <div>
+                <label for="measurement-source">Origen</label>
+                <input id="measurement-source" type="text" value={measurementSource} onInput={(e: any) => setMeasurementSource(e.target.value)} placeholder="manual, inbody, dexa..." />
+              </div>
+            </div>
+            <div class="mt-3 grid gap-3 min-[720px]:grid-cols-2">
+              {MEASURES.map((metric) => (
+                <div key={metric.key}>
+                  <label for={`measurement-${metric.key}`}>{metric.label}</label>
+                  <input
+                    id={`measurement-${metric.key}`}
+                    type="text"
+                    inputmode="decimal"
+                    value={measurementValues[metric.key] || ''}
+                    placeholder={metric.unit.trim() || '0'}
+                    onInput={(e: any) =>
+                      setMeasurementValues((current) => ({
+                        ...current,
+                        [metric.key]: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              ))}
+            </div>
+            <div class="mt-3">
+              <label for="measurement-notes">Notas</label>
+              <textarea
+                id="measurement-notes"
+                value={measurementValues.notes}
+                onInput={(e: any) =>
+                  setMeasurementValues((current) => ({
+                    ...current,
+                    notes: e.target.value,
+                  }))
+                }
+                placeholder="Ayunas, despues de entrenar, bascula del gimnasio..."
+              />
+            </div>
+            <button class="btn-primary mt-3 bg-ink text-canvas" disabled={addMeasurement.isPending} onClick={() => addMeasurement.mutate()}>
+              {addMeasurement.isPending ? 'Guardando...' : 'Guardar medición'}
+            </button>
+          </div>
+        )}
         {measurements.length < 2 ? (
           <p>{measurements.length === 0
             ? 'Aquí irán peso, grasa, músculo, perímetros o cualquier medición por fecha cuando el coach las añada.'

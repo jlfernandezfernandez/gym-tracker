@@ -1,7 +1,8 @@
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import case, select
+from sqlalchemy import and_, case, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -16,7 +17,9 @@ from app.features.sessions.schemas import (
     ExerciseReclassify,
     PerformedSetCreate,
     PerformedSetRestore,
+    PerformedSetUpdate,
     PlannedExerciseUpdate,
+    SessionActivitySummary,
     SessionExerciseReorder,
     SessionFinish,
     SessionOut,
@@ -33,6 +36,7 @@ from app.features.sessions.service import (
     next_missing_set_number,
     performed_set_numbers,
     reopen_session_for_correction,
+    repeat_session_prescriptions,
     resolve_planned_execution_metric,
     set_conflict_error,
     start_session,
@@ -459,6 +463,79 @@ async def get_shared_session(
     return workout
 
 
+@router.get("/activity", response_model=list[SessionActivitySummary])
+async def list_session_activity(
+    days: int = Query(365, ge=1, le=366),
+    db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
+):
+    """Return date-level completed workout summaries for the yearly heatmap."""
+    since = date.today() - timedelta(days=days - 1)
+    reps_column = cast(Any, PerformedSet.reps)
+    volume_expr = func.coalesce(
+        func.sum(
+            case(
+                (
+                    and_(PerformedSet.is_warmup.is_(False), reps_column.is_not(None)),
+                    func.coalesce(PerformedSet.weight, 0) * PerformedSet.reps,
+                ),
+                else_=0,
+            )
+        ),
+        0,
+    )
+    session_totals = (
+        select(
+            WorkoutSession.id.label("id"),
+            WorkoutSession.session_date.label("session_date"),
+            WorkoutSession.duration_actual.label("duration_actual"),
+            volume_expr.label("total_volume"),
+        )
+        .select_from(WorkoutSession)
+        .outerjoin(PlannedExercise, PlannedExercise.session_id == WorkoutSession.id)
+        .outerjoin(PerformedSet, PerformedSet.planned_exercise_id == PlannedExercise.id)
+        .where(WorkoutSession.status == "completed")
+        .where(WorkoutSession.session_date >= since)
+        .group_by(
+            WorkoutSession.id,
+            WorkoutSession.session_date,
+            WorkoutSession.duration_actual,
+        )
+    )
+    if user_id is not None:
+        session_totals = session_totals.where(WorkoutSession.telegram_user_id == user_id)
+    session_totals_subquery = session_totals.subquery()
+
+    statement = (
+        select(
+            func.max(session_totals_subquery.c.id).label("id"),
+            session_totals_subquery.c.session_date.label("session_date"),
+            func.count(session_totals_subquery.c.id).label("workout_count"),
+            func.coalesce(func.sum(session_totals_subquery.c.duration_actual), 0).label(
+                "duration_actual"
+            ),
+            func.coalesce(func.sum(session_totals_subquery.c.total_volume), 0).label(
+                "total_volume"
+            ),
+        )
+        .select_from(session_totals_subquery)
+        .group_by(session_totals_subquery.c.session_date)
+        .order_by(session_totals_subquery.c.session_date.desc())
+    )
+    result = await db.execute(statement)
+    rows = result.all()
+    return [
+        SessionActivitySummary(
+            id=row.id,
+            session_date=row.session_date,
+            workout_count=row.workout_count,
+            duration_actual=int(row.duration_actual or 0),
+            total_volume=float(row.total_volume or 0),
+        )
+        for row in rows
+    ]
+
+
 @router.get("/{session_id}", response_model=SessionOut)
 async def get_session(
     session_id: int,
@@ -469,6 +546,28 @@ async def get_session(
     workout = await load_session(session_id, db)
     check_session_owner(workout, user_id)
     return workout
+
+
+@router.post("/{session_id}/repeat", response_model=SessionOut)
+async def repeat_session(
+    session_id: int,
+    db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
+):
+    """Create today's planned copy of a completed historical session."""
+    source = await load_session(session_id, db)
+    check_session_owner(source, user_id)
+    if source.status != "completed":
+        raise HTTPException(status_code=422, detail="Only completed sessions can be repeated")
+
+    repeated = repeat_session_prescriptions(source)
+    db.add(repeated)
+    await db.flush()
+    for planned in repeated.planned_exercises:
+        planned.session_id = repeated.id
+        db.add(planned)
+    await db.commit()
+    return await load_session(repeated.id, db)
 
 
 @router.patch("/{session_id}", response_model=SessionOut)
@@ -652,6 +751,101 @@ async def delete_set(
     return await load_session(session_id, db)
 
 
+@router.patch("/{session_id}/exercises/{planned_id}/sets/{set_id}", response_model=SessionOut)
+async def update_set(
+    session_id: int,
+    planned_id: int,
+    set_id: int,
+    body: PerformedSetUpdate,
+    db: AsyncSession = Depends(get_db_session),
+    user_id: int | None = Depends(current_user_id),
+):
+    """Correct one existing set in place without recreating historical data."""
+    workout = await load_session(session_id, db)
+    check_session_owner(workout, user_id)
+    planned_exercise = find_planned_exercise(workout, planned_id)
+    performed_set = await db.get(PerformedSet, set_id)
+    if not performed_set or performed_set.planned_exercise_id != planned_id:
+        raise HTTPException(status_code=404, detail="Set not found in this exercise")
+
+    execution_metric = resolve_planned_execution_metric(planned_exercise)
+    field_names = body.model_fields_set
+    if execution_metric == "duration_minutes" and (
+        "reps" in field_names or "duration_seconds" in field_names
+    ):
+        raise HTTPException(status_code=422, detail="Cardio requires duration_minutes")
+    if execution_metric == "duration_seconds" and (
+        "reps" in field_names or "duration_minutes" in field_names
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Timed strength requires duration_seconds and does not accept reps "
+                "or duration_minutes"
+            ),
+        )
+    if execution_metric == "reps" and (
+        "duration_minutes" in field_names or "duration_seconds" in field_names
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Strength requires reps and does not accept duration_minutes or duration_seconds"
+            ),
+        )
+
+    effective_reps = (
+        body.reps
+        if execution_metric == "reps" and "reps" in field_names
+        else performed_set.reps
+        if execution_metric == "reps"
+        else None
+    )
+    effective_duration_minutes = (
+        body.duration_minutes
+        if execution_metric == "duration_minutes" and "duration_minutes" in field_names
+        else performed_set.duration_minutes
+        if execution_metric == "duration_minutes"
+        else None
+    )
+    effective_duration_seconds = (
+        body.duration_seconds
+        if execution_metric == "duration_seconds" and "duration_seconds" in field_names
+        else performed_set.duration_seconds
+        if execution_metric == "duration_seconds"
+        else None
+    )
+    effective_weight = body.weight if "weight" in field_names else performed_set.weight
+
+    validate_exercise_metrics(
+        planned_exercise.exercise,
+        execution_metric=execution_metric,
+        reps=effective_reps,
+        duration_minutes=effective_duration_minutes,
+        duration_seconds=effective_duration_seconds,
+        weight=effective_weight,
+    )
+
+    performed_set.weight = effective_weight
+    performed_set.reps = effective_reps
+    performed_set.duration_minutes = effective_duration_minutes
+    performed_set.duration_seconds = effective_duration_seconds
+    if "is_warmup" in field_names:
+        performed_set.is_warmup = bool(body.is_warmup)
+    if "rpe" in field_names:
+        performed_set.rpe = body.rpe
+    if "rir" in field_names:
+        performed_set.rir = body.rir
+    if "sensation" in field_names:
+        performed_set.sensation = body.sensation or ""
+    if "notes" in field_names:
+        performed_set.notes = body.notes or ""
+
+    await db.commit()
+    db.expire_all()
+    return await load_session(session_id, db)
+
+
 @router.post("/{session_id}/exercises/{planned_id}/sets/restore", response_model=SessionOut)
 async def restore_set(
     session_id: int,
@@ -803,36 +997,60 @@ async def delete_session(
 @router.get("", response_model=list[SessionSummary])
 async def list_sessions(
     limit: int = Query(10, ge=1, le=50),
+    offset: int = Query(0, ge=0),
     on_date: date | None = None,
+    completed_only: bool = False,
     db: AsyncSession = Depends(get_db_session),
     user_id: int | None = Depends(current_user_id),
 ):
     """List last N sessions with summary info, optionally for one date (e.g. today)."""
-    statement = select(WorkoutSession).options(
-        selectinload(WorkoutSession.planned_exercises).selectinload(PlannedExercise.performed_sets)
+    summary_columns: tuple[Any, ...] = (
+        WorkoutSession.id,
+        WorkoutSession.session_date,
+        WorkoutSession.title,
+        WorkoutSession.status,
+        WorkoutSession.energy,
+        WorkoutSession.duration_actual,
+        func.count(func.distinct(PlannedExercise.id)).label("exercise_count"),
+        func.count(PerformedSet.id).label("total_sets"),
+    )
+    statement = (
+        select(*summary_columns)
+        .select_from(WorkoutSession)
+        .outerjoin(PlannedExercise, PlannedExercise.session_id == WorkoutSession.id)
+        .outerjoin(PerformedSet, PerformedSet.planned_exercise_id == PlannedExercise.id)
+        .group_by(
+            WorkoutSession.id,
+            WorkoutSession.session_date,
+            WorkoutSession.title,
+            WorkoutSession.status,
+            WorkoutSession.energy,
+            WorkoutSession.duration_actual,
+        )
     )
     if on_date:
         statement = statement.where(WorkoutSession.session_date == on_date)
-    if user_id:
+    if completed_only:
+        statement = statement.where(WorkoutSession.status == "completed")
+    if user_id is not None:
         statement = statement.where(WorkoutSession.telegram_user_id == user_id)
-    statement = statement.order_by(
-        WorkoutSession.session_date.desc(), WorkoutSession.id.desc()
-    ).limit(limit)
+    statement = (
+        statement.order_by(WorkoutSession.session_date.desc(), WorkoutSession.id.desc())
+        .offset(offset)
+        .limit(limit)
+    )
     result = await db.execute(statement)
-    workouts = result.scalars().all()
+    rows = result.all()
     return [
         SessionSummary(
-            id=workout.id,
-            session_date=workout.session_date,
-            title=workout.title,
-            status=workout.status,
-            energy=workout.energy,
-            duration_actual=workout.duration_actual,
-            exercise_count=len(workout.planned_exercises or []),
-            total_sets=sum(
-                len(planned_exercise.performed_sets or [])
-                for planned_exercise in (workout.planned_exercises or [])
-            ),
+            id=row.id,
+            session_date=row.session_date,
+            title=row.title,
+            status=row.status,
+            energy=row.energy,
+            duration_actual=row.duration_actual,
+            exercise_count=row.exercise_count,
+            total_sets=row.total_sets,
         )
-        for workout in workouts
+        for row in rows
     ]

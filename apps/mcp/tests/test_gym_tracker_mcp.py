@@ -128,6 +128,24 @@ class AddPlannedExerciseTests(unittest.TestCase):
 
 
 class SessionMutationTests(unittest.TestCase):
+    def test_update_set_calls_patch_endpoint(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.update_set(
+                session_id=1,
+                planned_exercise_id=2,
+                set_id=3,
+                reps=12,
+                weight=42,
+                rpe=9,
+                telegram_user_id=7,
+            )
+        request.assert_called_once_with(
+            "PATCH",
+            "/sessions/1/exercises/2/sets/3",
+            {"reps": 12, "weight": 42.0, "rpe": 9.0},
+            user_id=7,
+        )
+
     def test_restore_set_calls_endpoint(self) -> None:
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
             gym_tracker_mcp.restore_set(1, 2, 3, 10, weight=40, telegram_user_id=7)
@@ -161,6 +179,8 @@ class SessionMutationTests(unittest.TestCase):
         )
 
     def test_correction_tools_require_telegram_user_id_locally(self) -> None:
+        with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
+            gym_tracker_mcp.update_set(1, 2, 1, reps=10)
         with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
             gym_tracker_mcp.restore_set(1, 2, 1, 10)
         with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
@@ -692,7 +712,29 @@ class AdditionalMcpToolsTests(unittest.TestCase):
 
         with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
             gym_tracker_mcp.list_sessions(limit=5, telegram_user_id=7)
-        req.assert_called_once_with("GET", "/sessions?limit=5", user_id=7)
+        req.assert_called_once_with("GET", "/sessions?limit=5&offset=0", user_id=7)
+
+        with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
+            gym_tracker_mcp.list_sessions(
+                limit=20,
+                offset=20,
+                completed_only=True,
+                on_date="2026-09-06",
+                telegram_user_id=7,
+            )
+        req.assert_called_once_with(
+            "GET",
+            "/sessions?limit=20&offset=20&on_date=2026-09-06&completed_only=true",
+            user_id=7,
+        )
+
+        with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
+            gym_tracker_mcp.session_activity(days=90, telegram_user_id=7)
+        req.assert_called_once_with("GET", "/sessions/activity?days=90", user_id=7)
+
+        with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
+            gym_tracker_mcp.session_activity(days=999, telegram_user_id=7)
+        req.assert_called_once_with("GET", "/sessions/activity?days=366", user_id=7)
 
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as req:
             gym_tracker_mcp.get_active_session(telegram_user_id=7)
@@ -737,9 +779,9 @@ class AdditionalMcpToolsTests(unittest.TestCase):
             user_id=7,
         )
 
-        with patch.object(gym_tracker_mcp, "_request", return_value={"share_token": "token123"}):
+        with patch.object(gym_tracker_mcp, "_request", return_value={"id": 10}):
             url = gym_tracker_mcp.session_web_url(10, planned_exercise_id=2, telegram_user_id=7)
-        self.assertIn("/session/share/token123/exercise/2", url)
+        self.assertIn("/session/10/exercise/2", url)
 
         share_url = gym_tracker_mcp.share_web_url("abc-xyz")
         self.assertIn("/session/share/abc-xyz", share_url)

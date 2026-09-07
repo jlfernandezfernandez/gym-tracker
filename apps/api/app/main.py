@@ -49,6 +49,8 @@ def create_app() -> FastAPI:
 
         @app.get("/", include_in_schema=False)
         @app.get("/demo", include_in_schema=False)
+        @app.get("/session/{session_id}", include_in_schema=False)
+        @app.get("/session/{session_id}/exercise/{planned_exercise_id}", include_in_schema=False)
         @app.get("/session/share/{share_token}", include_in_schema=False)
         @app.get(
             "/session/share/{share_token}/exercise/{planned_exercise_id}",

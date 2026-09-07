@@ -127,6 +127,93 @@ export function SetRow({
   readOnly?: boolean;
 }) {
   const queryClient = useQueryClient();
+  const [editOpen, setEditOpen] = useState(false);
+  const [weight, setWeight] = useState(String(set.weight ?? ""));
+  const [metricValue, setMetricValue] = useState(
+    String(
+      activityType === "cardio"
+        ? set.duration_minutes ?? ""
+        : isTimed
+          ? set.duration_seconds ?? ""
+          : set.reps ?? "",
+    ),
+  );
+  const [isWarmup, setIsWarmup] = useState(Boolean(set.is_warmup));
+  const [selectedRir, setSelectedRir] = useState<number | null>(set.rir ?? null);
+  const [notes, setNotes] = useState(set.notes || "");
+  const [sensation, setSensation] = useState(set.sensation || "");
+
+  useEffect(() => {
+    setWeight(String(set.weight ?? ""));
+    setMetricValue(
+      String(
+        activityType === "cardio"
+          ? set.duration_minutes ?? ""
+          : isTimed
+            ? set.duration_seconds ?? ""
+            : set.reps ?? "",
+      ),
+    );
+    setIsWarmup(Boolean(set.is_warmup));
+    setSelectedRir(set.rir ?? null);
+    setNotes(set.notes || "");
+    setSensation(set.sensation || "");
+  }, [activityType, isTimed, set]);
+
+  const update = useMutation({
+    mutationFn: () => {
+      const payload: Record<string, any> = {
+        is_warmup: isWarmup,
+        notes,
+        sensation,
+        rir: selectedRir,
+        rpe: selectedRir !== null ? Math.max(1, 10 - selectedRir) : null,
+      };
+      const numericMetric = parseInt(metricValue || "0", 10);
+      if (numericMetric <= 0) {
+        throw new Error(
+          activityType === "cardio"
+            ? "Pon los minutos"
+            : isTimed
+              ? "Pon los segundos"
+              : "Pon las reps",
+        );
+      }
+      if (activityType === "cardio") {
+        payload.duration_minutes = numericMetric;
+      } else if (isTimed) {
+        payload.duration_seconds = numericMetric;
+      } else {
+        payload.reps = numericMetric;
+      }
+      if (activityType !== "cardio") {
+        if (weight.trim() === "") {
+          payload.weight = null;
+        } else {
+          const normalizedWeight = parseWeight(weight);
+          if (isNaN(normalizedWeight) || normalizedWeight <= 0) {
+            throw new Error("El peso debe ser mayor que 0 o quedar vacío");
+          }
+          payload.weight = normalizedWeight;
+        }
+      }
+      return apiFetch(
+        "PATCH",
+        `/sessions/${sessionId}/exercises/${plannedId}/sets/${set.id}`,
+        payload,
+      );
+    },
+    onSuccess: (updated: any) => {
+      refreshWorkoutQueries(queryClient, sessionId, updated, exerciseId);
+      setEditOpen(false);
+      haptic("ok");
+      showToast("Serie corregida", "ok");
+    },
+    onError: (error: any) => {
+      haptic("bad");
+      showToast(error.message, "err");
+    },
+  });
   const del = useMutation({
     mutationFn: () =>
       apiFetch(
@@ -174,7 +261,7 @@ export function SetRow({
     onError: (error: any) => showToast(error.message, "err"),
   });
   const performed = formatWeight(set.weight, set.weight_mode);
-  const isWarmup = !!set.is_warmup;
+  const isLoggedWarmup = !!set.is_warmup;
   const effortLabel =
     set.rir !== undefined && set.rir !== null
       ? ` · RIR ${set.rir}`
@@ -193,17 +280,17 @@ export function SetRow({
     <div
       role="group"
       aria-label={`Serie ${set.set_number} realizada`}
-      class={`grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control px-3 py-2.5 ${isWarmup ? "bg-amber-500/10 border border-amber-500/25" : "bg-surface-2"}`}
+      class={`grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control px-3 py-2.5 ${isLoggedWarmup ? "bg-amber-500/10 border border-amber-500/25" : "bg-surface-2"}`}
     >
       <span
         aria-hidden="true"
-        class={`grid size-[30px] place-items-center rounded-pill text-[.7rem] font-bold ${isWarmup ? "bg-amber-500/20 text-amber-600 dark:text-amber-400" : "bg-ok-bg text-ok"}`}
+        class={`grid size-[30px] place-items-center rounded-pill text-[.7rem] font-bold ${isLoggedWarmup ? "bg-amber-500/20 text-amber-600 dark:text-amber-400" : "bg-ok-bg text-ok"}`}
       >
-        {isWarmup ? "W" : `S${set.set_number}`}
+        {isLoggedWarmup ? "W" : `S${set.set_number}`}
       </span>
       <div class="min-w-0">
         <span class="block truncate text-[.68rem] text-hint">
-          {isWarmup
+          {isLoggedWarmup
             ? "Calentamiento"
             : `Plan · ${targetValue(target, { activity_type: activityType, execution_metric: target.execution_metric, weight_mode: set.weight_mode })}`}
           {unilateral ? " · Unilateral" : ""}
@@ -222,22 +309,116 @@ export function SetRow({
         </b>
       </div>
       {!readOnly && !set.pending && (
-        <button
-          class="grid size-10 cursor-pointer place-items-center rounded-pill border-0 bg-transparent text-err disabled:opacity-30"
-          disabled={del.isPending || restore.isPending}
-          onClick={() => {
-            if (
-              window.confirm(
-                `¿Borrar la serie ${set.set_number}? Puedes deshacerlo durante unos segundos.`,
+        <div class="flex items-center gap-1">
+          <button
+            class="min-h-10 cursor-pointer rounded-pill border-0 bg-surface-2 px-3 text-[.72rem] font-[700] text-ink disabled:opacity-30"
+            disabled={update.isPending || del.isPending || restore.isPending}
+            onClick={() => setEditOpen(true)}
+            aria-label={`Editar serie ${set.set_number}`}
+          >
+            Editar
+          </button>
+          <button
+            class="grid size-10 cursor-pointer place-items-center rounded-pill border-0 bg-transparent text-err disabled:opacity-30"
+            disabled={update.isPending || del.isPending || restore.isPending}
+            onClick={() => {
+              if (
+                window.confirm(
+                  `¿Borrar la serie ${set.set_number}? Puedes deshacerlo durante unos segundos.`,
+                )
               )
-            )
-              del.mutate();
-          }}
-          aria-label={`Borrar serie ${set.set_number}`}
-        >
-          ✕
-        </button>
+                del.mutate();
+            }}
+            aria-label={`Borrar serie ${set.set_number}`}
+          >
+            ✕
+          </button>
+        </div>
       )}
+      <ConfirmSheet
+        open={editOpen}
+        title={`Editar serie ${set.set_number}`}
+        message="Corrige el valor sin recrear el set histórico."
+        confirmLabel="Guardar cambios"
+        busy={update.isPending}
+        onConfirm={() => update.mutate()}
+        onCancel={() => setEditOpen(false)}
+      >
+        {activityType === "cardio" ? (
+          <div class="mt-3">
+            <label for={`edit-set-${set.id}-duration`}>Minutos</label>
+            <input
+              id={`edit-set-${set.id}-duration`}
+              class="bg-surface"
+              type="text"
+              inputmode="numeric"
+              value={metricValue}
+              onInput={(event: any) => setMetricValue(event.target.value)}
+            />
+          </div>
+        ) : (
+          <div class="mt-3 grid grid-cols-2 gap-3">
+            <div>
+              <label for={`edit-set-${set.id}-weight`}>Peso (kg)</label>
+              <input
+                id={`edit-set-${set.id}-weight`}
+                class="bg-surface"
+                type="text"
+                inputmode="decimal"
+                value={weight}
+                onInput={(event: any) => setWeight(event.target.value)}
+              />
+            </div>
+            <div>
+              <label for={`edit-set-${set.id}-metric`}>{isTimed ? 'Segundos' : 'Reps'}</label>
+              <input
+                id={`edit-set-${set.id}-metric`}
+                class="bg-surface"
+                type="text"
+                inputmode="numeric"
+                value={metricValue}
+                onInput={(event: any) => setMetricValue(event.target.value)}
+              />
+            </div>
+          </div>
+        )}
+        <label class="mt-3 flex items-center gap-2 text-xs font-semibold text-hint cursor-pointer">
+          <input
+            type="checkbox"
+            checked={isWarmup}
+            onChange={(event: any) => setIsWarmup(event.target.checked)}
+            class="rounded accent-accent"
+          />
+          Serie de calentamiento
+        </label>
+        {activityType !== "cardio" && !isWarmup && (
+          <div class="mt-3">
+            <span class="mb-1.5 block text-[0.68rem] font-bold text-hint uppercase tracking-wider">
+              Esfuerzo (RIR)
+            </span>
+            <div class="grid grid-cols-4 gap-1.5">
+              {[0, 1, 2, 3].map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  class={`min-h-[42px] cursor-pointer rounded-xl border py-2 text-center text-xs font-bold transition active:scale-95 ${
+                    selectedRir === option
+                      ? "border-accent bg-accent text-white shadow-sm"
+                      : "border-edge bg-surface-2 text-hint hover:text-ink"
+                  }`}
+                  onClick={() => setSelectedRir(selectedRir === option ? null : option)}
+                >
+                  {option === 0 ? '0' : option === 3 ? '3+' : option}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div class="mt-3">
+          <label for={`edit-set-${set.id}-notes`}>Notas</label>
+          <textarea id={`edit-set-${set.id}-notes`} value={notes} onInput={(event: any) => setNotes(event.target.value)} />
+        </div>
+      </ConfirmSheet>
     </div>
   );
 }
@@ -372,7 +553,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
                 activityType={exercise.activity_type}
                 isTimed={isTimedOrIsometricExercise(exercise)}
                 unilateral={exercise.unilateral}
-                readOnly={app.readOnly || plan.status === "completed"}
+                readOnly={app.readOnly}
               />
             ))}
           {showEditor && currentSetNumber !== undefined && (

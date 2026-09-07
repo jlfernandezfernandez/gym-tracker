@@ -246,18 +246,38 @@ def get_session(session_id: int, telegram_user_id: int | None = None) -> dict[st
 
 @mcp.tool()
 def list_sessions(
-    limit: int = 10, on_date: str = "", telegram_user_id: int | None = None
+    limit: int = 10,
+    offset: int = 0,
+    on_date: str = "",
+    completed_only: bool = False,
+    telegram_user_id: int | None = None,
 ) -> list[dict[str, Any]]:
     """List recent workout sessions (summary: date, title, status, sets).
 
     Use it to adapt new plans to recent training. For today's session pass
-    on_date as an ISO date (YYYY-MM-DD).
+    on_date as an ISO date (YYYY-MM-DD). Use offset for pagination and
+    completed_only to inspect finished history without active drafts.
     """
-    params: dict[str, Any] = {"limit": max(1, min(int(limit), 50))}
+    params: dict[str, Any] = {
+        "limit": max(1, min(int(limit), 50)),
+        "offset": max(0, int(offset)),
+    }
     if on_date:
         params["on_date"] = on_date
+    if completed_only:
+        params["completed_only"] = "true"
     qs = urllib.parse.urlencode(params)
     return _request("GET", f"/sessions?{qs}", user_id=telegram_user_id)
+
+
+@mcp.tool()
+def session_activity(
+    days: int = 365, telegram_user_id: int | None = None
+) -> list[dict[str, Any]]:
+    """Return aggregated completed-session activity by day for the selected range."""
+    safe_days = max(1, min(int(days), 366))
+    qs = urllib.parse.urlencode({"days": safe_days})
+    return _request("GET", f"/sessions/activity?{qs}", user_id=telegram_user_id)
 
 
 @mcp.tool()
@@ -832,6 +852,60 @@ def delete_set(
 
 
 @mcp.tool()
+def update_set(
+    session_id: int,
+    planned_exercise_id: int,
+    set_id: int,
+    reps: int | None = None,
+    duration_minutes: int | None = None,
+    duration_seconds: int | None = None,
+    weight: float | None = None,
+    is_warmup: bool | None = None,
+    rpe: float | None = None,
+    rir: float | None = None,
+    sensation: str | None = None,
+    notes: str | None = None,
+    telegram_user_id: int | None = None,
+) -> dict[str, Any]:
+    """Patch one existing set in place without deleting historical timestamps or ids."""
+    user_id = _require_telegram_user_id(telegram_user_id, "update_set")
+    payload: dict[str, Any] = {}
+    metric_count = sum(
+        value is not None for value in (reps, duration_minutes, duration_seconds)
+    )
+    if metric_count > 1:
+        raise ValueError(
+            "at most one of reps, duration_minutes or duration_seconds can be updated"
+        )
+    if reps is not None:
+        payload["reps"] = int(reps)
+    if duration_minutes is not None:
+        payload["duration_minutes"] = int(duration_minutes)
+    if duration_seconds is not None:
+        payload["duration_seconds"] = int(duration_seconds)
+    if weight is not None:
+        payload["weight"] = float(weight)
+    if is_warmup is not None:
+        payload["is_warmup"] = bool(is_warmup)
+    if rpe is not None:
+        payload["rpe"] = float(rpe)
+    if rir is not None:
+        payload["rir"] = float(rir)
+    if sensation is not None:
+        payload["sensation"] = sensation
+    if notes is not None:
+        payload["notes"] = notes
+    if not payload:
+        raise ValueError("update_set requires at least one field to change")
+    return _request(
+        "PATCH",
+        f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets/{int(set_id)}",
+        payload,
+        user_id=user_id,
+    )
+
+
+@mcp.tool()
 def restore_set(
     session_id: int,
     planned_exercise_id: int,
@@ -1136,12 +1210,11 @@ def session_web_url(
 ) -> str:
     """Return a Mini App URL for a session or a specific exercise screen.
 
-    User-facing links must not expose sequential session ids. Resolve the
-    session through the API using the coach key, then build a share-token URL.
+    Resolve the session through the authenticated API first so owner checks run,
+    then return the owner-only Mini App route.
     """
     session = _request("GET", f"/sessions/{int(session_id)}", user_id=telegram_user_id)
-    token = urllib.parse.quote(str(session["share_token"]), safe="")
-    url = f"{APP_BASE}/session/share/{token}"
+    url = f"{APP_BASE}/session/{int(session['id'])}"
     if planned_exercise_id is not None:
         url += f"/exercise/{int(planned_exercise_id)}"
     return url

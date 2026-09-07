@@ -130,6 +130,30 @@ class PerformedSetRestore(PerformedSetCreate):
     """Payload used by the short-lived undo action in the Mini App."""
 
 
+class PerformedSetUpdate(BaseModel):
+    weight: float | None = Field(default=None, gt=0)
+    reps: int | None = Field(default=None, ge=1)
+    duration_minutes: int | None = Field(default=None, ge=1)
+    duration_seconds: int | None = Field(default=None, ge=1)
+    is_warmup: bool | None = None
+    rpe: float | None = Field(default=None, ge=1, le=10)
+    rir: float | None = Field(default=None, ge=0, le=10)
+    sensation: str | None = None
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def validate_payload(self) -> "PerformedSetUpdate":
+        if not self.model_fields_set:
+            raise ValueError("at least one field must be provided")
+        self.rpe, self.rir = _sync_rpe_rir(self.rpe, self.rir)
+        metric_fields = {"reps", "duration_minutes", "duration_seconds"} & self.model_fields_set
+        if len(metric_fields) > 1:
+            raise ValueError(
+                "at most one of reps, duration_minutes or duration_seconds can be updated"
+            )
+        return self
+
+
 class ExerciseReclassify(BaseModel):
     new_exercise_id: int = Field(gt=0)
     reason: str = Field(default="", max_length=500)
@@ -351,3 +375,11 @@ class SessionSummary(BaseModel):
     duration_actual: int
     exercise_count: int
     total_sets: int
+
+
+class SessionActivitySummary(BaseModel):
+    id: int
+    session_date: date
+    workout_count: int
+    duration_actual: int
+    total_volume: float
