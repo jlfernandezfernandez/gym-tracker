@@ -36,7 +36,7 @@ Status: complete; main and delegated review passed. API 151, MCP 45, miniapp 133
 
 Ship exactly two self-contained, copyable skills: installation/maintenance and tracker usage. Reuse existing Docker and setup docs, with a small safe diagnostic script only if useful. Explain host/container/remote networking and dev versus production. Verify prerequisites, app and MCP readiness, dataset/bootstrap, and MCP protocol usage. Include Hermes/OpenClaw installation instructions grounded in current official docs; distinguish automatic skill discovery from manual registration. No installation of another agent, no overwrites, no secrets in command arguments or logs. Remove builder/deployment authority from the coach template and distinguish owner Web App navigation from share URLs.
 
-Status: pending.
+Status: complete; two portable skill bundles reviewed, official OpenClaw/Hermes discovery checked, diagnostic hermetic tests and shell syntax passed. Real agent runtime and Docker smoke remain unverified; Docker daemon is unavailable locally.
 
 ### Task 5: Product polish, demo and quality gates
 

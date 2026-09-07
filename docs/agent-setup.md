@@ -1,35 +1,58 @@
 # Conectar un agente MCP
 
 Gym Tracker no incluye un agente conversacional. Expone un servidor MCP; Hermes,
-Claude, Codex u otro cliente compatible decide cuándo crear planes y registrar
-series.
+OpenClaw, Claude, Codex u otro cliente compatible decide cuándo crear planes y
+registrar series.
 
-## Conexión local
+## Endpoint correcto según dónde estés
 
-Con el Compose local o de producción en la misma máquina:
+En la misma máquina que ejecuta Docker Compose:
 
 ```text
 http://127.0.0.1:8001/mcp
 ```
 
-Ejemplo para Hermes:
+Dentro de la red de Compose, el MCP resuelve la API como `http://app:8000/api`.
+Ese hostname es interno al bridge de Docker y no sirve para un agente que corre
+fuera del stack.
+
+`localhost` tampoco sirve desde otra máquina. Para un agente remoto usa una VPN,
+una red privada o un firewall que permita el puerto solo desde la IP del agente.
+No publiques el MCP directamente en Internet.
+
+## OpenClaw y Hermes: procedencia y caveat de versión
+
+- OpenClaw: documentación oficial consultada en `https://docs.openclaw.ai/cli/skills` y `https://docs.openclaw.ai/channels/telegram` el 2026-09-07. Los nombres de comandos y pantallas pueden cambiar entre versiones, así que confirma siempre la doc actual si tu build difiere.
+- Hermes: documentación oficial consultada en `https://hermes-agent.nousresearch.com/docs/user-guide/features/skills/` el 2026-09-07. Esta guía solo usa comportamientos extraídos de esa página para evitar inventar flags o rutas.
+
+## Skills del repo: descubrimiento automático frente a registro manual
+
+Las dos skills autocontenidas del repo están en [skills/gym-tracker-install/SKILL.md](../skills/gym-tracker-install/SKILL.md) y [skills/gym-tracker/SKILL.md](../skills/gym-tracker/SKILL.md).
+
+OpenClaw documenta instalación local explícita desde un directorio que contiene
+`SKILL.md`:
 
 ```bash
-hermes mcp add gym_tracker --url http://127.0.0.1:8001/mcp
-hermes mcp test gym_tracker
+openclaw skills install ./skills/gym-tracker-install --as gym-tracker-install
+openclaw skills install ./skills/gym-tracker --as gym-tracker
 ```
 
-La configuración exacta de otros agentes cambia, pero usan el mismo endpoint
-Streamable HTTP.
+Hermes usa `~/.hermes/skills/` como directorio principal. Si prefieres no tocar
+tu configuración, copia ahí el directorio completo de la skill y evita
+sobrescribir una instalación existente sin revisarla antes.
 
-## Agente remoto
+Hermes también puede escanear directorios externos mediante `skills.external_dirs`
+en `~/.hermes/config.yaml`. Si ya gestionas skills desde este repo, puedes añadir
+la ruta `repo/skills` a esa lista en lugar de copiar archivos, pero esta guía no
+modifica tu config local por ti.
 
-MCP queda privado por defecto. Para un agente en otra máquina usa una VPN, una
-red Docker privada o un firewall que permita el puerto únicamente desde la IP del
-agente. No lo publiques directamente en Internet.
+Las skills de proyecto en Hermes no se cargan desde `skills/` en la raíz del repo.
+Solo descubre `.hermes/skills/` o `.agents/skills/` dentro del proyecto, y solo
+después de confiar ese repo con `hermes skills trust`.
 
-En Coolify, la opción preferida es **Connect to Predefined Network** y el hostname
-interno que la interfaz muestra para el servicio MCP.
+Si más adelante publicas una skill en un repo GitHub con la estructura esperada,
+Hermes soporta instalación directa con el formato `hermes skills install owner/repo/skills/name`.
+Mientras no esté publicada, la copia local funciona ahora mismo.
 
 ## Variables internas
 
@@ -58,9 +81,18 @@ Gym Tracker es la fuente de verdad.
 
 ## Comprobación
 
+Antes de registrar el endpoint en el agente:
+
+```bash
+curl http://127.0.0.1:8000/health
+curl http://127.0.0.1:8000/ready
+curl http://127.0.0.1:8001/health
+curl http://127.0.0.1:8001/ready
+```
+
 Después de conectar el agente:
 
-1. Ejecuta la prueba MCP de tu cliente.
+1. Ejecuta la prueba MCP documentada por tu cliente si existe.
 2. Lee el perfil de un usuario de Telegram.
 3. Lista sus sesiones.
 4. Crea un plan de prueba solo si el usuario lo pide.

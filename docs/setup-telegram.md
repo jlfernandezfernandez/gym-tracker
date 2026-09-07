@@ -13,6 +13,9 @@ entrega al abrirla.
 Si el token de Gym Tracker no coincide con el bot que abre la Mini App, todas las
 lecturas de perfil, sesiones y mediciones devolverán `401`.
 
+La identidad debe coincidir en ambos lados: Gym Tracker valida la Mini App con
+ese bot y tu agente usa ese mismo bot para enviar botones Web App al atleta.
+
 ## 2. Publica la App por HTTPS
 
 Elige una URL estable y accesible desde el teléfono:
@@ -46,12 +49,17 @@ debe enviar un botón Telegram `web_app` con la URL devuelta por `session_web_ur
 ```json
 {
   "text": "Abrir sesión",
-  "web_app": {"url": "https://gym.example.com/session/share/TOKEN"}
+  "web_app": {"url": "https://gym.example.com/session/123"}
 }
 ```
 
-Un enlace normal no garantiza que Telegram entregue `initData`; úsalo solo para
-vistas de compartir de solo lectura.
+`session_web_url` ahora resuelve una ruta autenticada de propietario en
+`/session/{id}` y solo funciona cuando Telegram entrega `initData` válido al
+abrir la Mini App desde el bot.
+
+`share_web_url` sigue siendo una ruta de solo lectura en
+`/session/share/{token}`. Esa sí puede compartirse como enlace normal, pero no
+sirve para registrar series ni para navegar como propietario.
 
 ## 4. Checklist real
 
