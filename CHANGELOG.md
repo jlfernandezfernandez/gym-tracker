@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.8.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.7.1...v2.8.0) (2026-09-07)
+
+
+### Features
+
+* preserve workout sets offline ([a25b00b](https://github.com/jlfernandezfernandez/gym-tracker/commit/a25b00be13e2441218e61ce0b5b1f0440bff8d8c))
+
 ## [2.7.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.7.0...v2.7.1) (2026-08-25)
 
 
