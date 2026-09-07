@@ -11,16 +11,16 @@ series y mediciones. La Mini App sirve para ver y registrar el entrenamiento.
 
 ## Elige un camino
 
-| Quiero | Lee | Resultado |
-| --- | --- | --- |
-| Probarlo en mi ordenador | [Arranque local](#arranque-local) | App y MCP en `localhost` |
-| Publicarlo con Docker | [Docker en producción](docs/install-docker.md) | App HTTPS mediante tu proxy |
-| Usar Coolify | [Coolify](docs/install-coolify.md) | Un recurso Compose portable |
-| Abrirlo desde Telegram | [Telegram](docs/setup-telegram.md) | Botón Mini App autenticado |
-| Registrar series sin conexión | [Entrenamiento sin conexión](docs/offline-workouts.md) | Series locales que se sincronizan al volver la red |
-| Conectar mi agente | [MCP](docs/agent-setup.md) | Agente con herramientas de gimnasio |
-| Reutilizar skills operativas | [skills/gym-tracker-install/SKILL.md](skills/gym-tracker-install/SKILL.md) y [skills/gym-tracker/SKILL.md](skills/gym-tracker/SKILL.md) | Instalación, mantenimiento y uso guiado |
-| Recibir eventos | [Webhooks](docs/webhooks.md) | Transporte HTTP agnóstico y opcional |
+| Quiero                        | Lee                                                                                                                                     | Resultado                                          |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| Probarlo en mi ordenador      | [Arranque local](#arranque-local)                                                                                                       | App y MCP en `localhost`                           |
+| Publicarlo con Docker         | [Docker en producción](docs/install-docker.md)                                                                                          | App HTTPS mediante tu proxy                        |
+| Usar Coolify                  | [Coolify](docs/install-coolify.md)                                                                                                      | Un recurso Compose portable                        |
+| Abrirlo desde Telegram        | [Telegram](docs/setup-telegram.md)                                                                                                      | Botón Mini App autenticado                         |
+| Registrar series sin conexión | [Entrenamiento sin conexión](docs/offline-workouts.md)                                                                                  | Series locales que se sincronizan al volver la red |
+| Conectar mi agente            | [MCP](docs/agent-setup.md)                                                                                                              | Agente con herramientas de gimnasio                |
+| Reutilizar skills operativas  | [skills/gym-tracker-install/SKILL.md](skills/gym-tracker-install/SKILL.md) y [skills/gym-tracker/SKILL.md](skills/gym-tracker/SKILL.md) | Instalación, mantenimiento y uso guiado            |
+| Recibir eventos               | [Webhooks](docs/webhooks.md)                                                                                                            | Transporte HTTP agnóstico y opcional               |
 
 ## Arranque local
 
@@ -64,15 +64,15 @@ Agente ─MCP privado──────────────→ API
 
 ## Variables importantes
 
-| Variable | Para qué sirve |
-| --- | --- |
-| `POSTGRES_*` | Base de datos incluida en Compose |
-| `TELEGRAM_BOT_TOKEN` | Valida la identidad de la Mini App |
-| `COACH_API_KEY` | Permite que MCP actúe ante la API |
-| `PUBLIC_APP_URL` | URL HTTPS que reciben los enlaces de sesión |
-| `CORS_ORIGINS` | Origen HTTPS de la Mini App |
-| `GYM_TRACKER_VERSION` | Tag de imágenes GHCR; usa `latest` |
-| `WEBHOOKS_*` | Transporte HTTP opcional para eventos futuros |
+| Variable              | Para qué sirve                                |
+| --------------------- | --------------------------------------------- |
+| `POSTGRES_*`          | Base de datos incluida en Compose             |
+| `TELEGRAM_BOT_TOKEN`  | Valida la identidad de la Mini App            |
+| `COACH_API_KEY`       | Permite que MCP actúe ante la API             |
+| `PUBLIC_APP_URL`      | URL HTTPS que reciben los enlaces de sesión   |
+| `CORS_ORIGINS`        | Origen HTTPS de la Mini App                   |
+| `GYM_TRACKER_VERSION` | Tag de imágenes GHCR; usa `latest`            |
+| `WEBHOOKS_*`          | Transporte HTTP opcional para eventos futuros |
 
 Copia `.env.example`; contiene valores locales seguros y comentarios de cada
 variable. Para una Mini App real, `TELEGRAM_BOT_TOKEN` debe ser exactamente el

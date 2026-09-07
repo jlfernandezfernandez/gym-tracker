@@ -1,6 +1,6 @@
 ---
 name: gym-tracker
-description: 'Use Gym Tracker as a Telegram-first training product. Use for onboarding, planning, logging sets, owner-only session links, read-only share links, and MCP-backed coaching without inventing history.'
+description: "Use Gym Tracker as a Telegram-first training product. Use for onboarding, planning, logging sets, owner-only session links, read-only share links, and MCP-backed coaching without inventing history."
 ---
 
 # Gym Tracker usage

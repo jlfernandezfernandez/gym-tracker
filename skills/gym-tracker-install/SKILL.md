@@ -1,6 +1,6 @@
 ---
 name: gym-tracker-install
-description: 'Install, maintain, or troubleshoot Gym Tracker with Docker, Telegram, MCP, OpenClaw, or Hermes. Use for localhost vs production routing, safe health checks, skill copy/install, and agent setup without leaking secrets.'
+description: "Install, maintain, or troubleshoot Gym Tracker with Docker, Telegram, MCP, OpenClaw, or Hermes. Use for localhost vs production routing, safe health checks, skill copy/install, and agent setup without leaking secrets."
 ---
 
 # Gym Tracker install and operations
