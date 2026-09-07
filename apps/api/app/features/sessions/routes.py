@@ -462,6 +462,10 @@ async def log_set(
     user_id: int | None = Depends(current_user_id),
 ):
     """Log a performed set for a planned exercise."""
+    # Serialize set writes before loading relationships, including simultaneous replays.
+    await db.execute(
+        select(WorkoutSession).where(WorkoutSession.id == session_id).with_for_update()
+    )
     workout = await load_session(session_id, db)
     check_session_owner(workout, user_id)
     planned_exercise = find_planned_exercise(workout, planned_id)

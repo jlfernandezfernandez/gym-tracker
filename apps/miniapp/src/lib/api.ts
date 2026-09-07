@@ -12,10 +12,16 @@ export async function apiFetch<T = any>(method: string, path: string, body?: unk
   const sessionId = path.match(/^\/sessions\/(\d+)(?:\/|$)/)?.[1];
   const isSetLog = method === 'POST' && /^\/sessions\/\d+\/exercises\/\d+\/sets$/.test(path);
   const journal = getSetJournal();
+  const authenticatedRequest = async () => {
+    const result = await request<T>(method, path, body);
+    if (getSetJournal() !== journal) throw new Error('El usuario ha cambiado. Reabre la app.');
+    return result;
+  };
   if (method !== 'GET' && sessionId && !isSetLog && journal) {
-    return journal.guard(Number(sessionId), () => request<T>(method, path, body));
+    return journal.guard(Number(sessionId), authenticatedRequest,
+      method === 'DELETE' && path === `/sessions/${sessionId}`);
   }
-  return request<T>(method, path, body);
+  return authenticatedRequest();
 }
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {

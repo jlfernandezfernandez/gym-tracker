@@ -15,7 +15,7 @@ export class SetJournal {
     readonly user: string,
     private storage: Pick<Storage, "getItem" | "setItem">,
     private lock: <T>(action: () => Promise<T>) => Promise<T>,
-    private changed: () => void = () => {},
+    private changed: (error?: string) => void = () => {},
   ) { this.key = `gym-set-journal-v1:${user}`; }
 
   read(): JournalState {
@@ -34,19 +34,23 @@ export class SetJournal {
     this.changed();
   }
 
-  private checkOwner(session: any) {
-    if (String(session.telegram_user_id) !== this.user) throw new Error("La sesión pertenece a otro usuario.");
+  private cacheSession(state: JournalState, session: any) {
+    const { share_token: _shareToken, ...snapshot } = session;
+    const pending = state.pending.some(item => item.sessionId === session.id);
+    const active = ["planned", "in_progress"].includes(session.status);
+    if (active || pending) state.sessions[session.id] = snapshot;
+    else delete state.sessions[session.id];
+    if (active) state.activeId = session.id;
+    else if (state.activeId === session.id) delete state.activeId;
   }
 
   async remember(session: any) {
-    this.checkOwner(session);
     await this.lock(async () => {
       const state = this.read();
-      state.activeId = session.id;
-      state.sessions[session.id] = session;
+      this.cacheSession(state, session);
       // Keep only the active session and sessions with unresolved writes.
       for (const id of Object.keys(state.sessions)) {
-        if (+id !== session.id && !state.pending.some(item => item.sessionId === +id)) delete state.sessions[+id];
+        if (+id !== state.activeId && !state.pending.some(item => item.sessionId === +id)) delete state.sessions[+id];
       }
       this.write(state);
     });
@@ -70,7 +74,6 @@ export class SetJournal {
       const state = this.read();
       const session = state.sessions[sessionId];
       if (!session) throw new Error("Abre la sesión con conexión antes de registrar series.");
-      this.checkOwner(session);
       if (state.pending.some(item => item.sessionId === sessionId && item.plannedId === plannedId && item.payload.set_number === payload.set_number)) {
         throw new Error("Esta serie ya está pendiente en otra pestaña.");
       }
@@ -91,9 +94,8 @@ export class SetJournal {
         if (item.blocked && !retry) break;
         try {
           const session = await request("POST", `/sessions/${sessionId}/exercises/${item.plannedId}/sets`, item.payload);
-          this.checkOwner(session);
-          state.sessions[sessionId] = session;
           state.pending = state.pending.filter(candidate => candidate.payload.request_id !== item.payload.request_id);
+          this.cacheSession(state, session);
           // Cache the confirmed result and remove its journal entry in one storage write.
           this.write(state);
         } catch (error: any) {
@@ -111,12 +113,38 @@ export class SetJournal {
     });
   }
 
-  async guard<T>(sessionId: number, action: () => Promise<T>): Promise<T> {
+  async discardRejected(requestId: string) {
+    await this.lock(async () => {
+      const state = this.read();
+      const item = state.pending.find(item => item.payload.request_id === requestId);
+      if (!item?.blocked) throw new Error("Solo se pueden descartar series rechazadas por el servidor.");
+      state.pending = state.pending.filter(item => item.payload.request_id !== requestId);
+      this.write(state);
+    });
+  }
+
+  async guard<T>(sessionId: number, action: () => Promise<T>, removeSession = false): Promise<T> {
     return this.lock(async () => {
       if (this.read().pending.some(item => item.sessionId === sessionId)) {
         throw new Error("Hay series pendientes. Sincronízalas antes de finalizar o modificar la sesión.");
       }
-      return action();
+      const result: any = await action();
+      try {
+        if (removeSession) {
+          const state = this.read();
+          delete state.sessions[sessionId];
+          if (state.activeId === sessionId) delete state.activeId;
+          this.write(state);
+        } else if (result?.id === sessionId && Array.isArray(result.planned_exercises)) {
+          const state = this.read();
+          this.cacheSession(state, result);
+          this.write(state);
+        }
+      } catch (error: any) {
+        // The server committed; a cache failure must not report the mutation as failed.
+        this.changed(error.message);
+      }
+      return result;
     });
   }
 }
@@ -136,7 +164,7 @@ export function getSetJournal(): SetJournal | undefined {
     }, async action => {
       if (!navigator.locks) throw new Error("Este navegador no permite guardar series de forma segura entre pestañas. Abre Telegram con un navegador actualizado.");
       return navigator.locks.request(`gym-set-journal:${user}`, action);
-    }, () => window.dispatchEvent(new Event("gym-set-journal")));
+    }, (error) => window.dispatchEvent(new CustomEvent("gym-set-journal", { detail: { error } })));
   }
   return browserJournal;
 }

@@ -20,7 +20,9 @@ export function useWorkoutSync(disabled: boolean) {
       for (const id of new Set(journal.read().pending.map(item => item.sessionId))) {
         await journal.sync(id, async (...args) => {
           if (getSetJournal() !== journal) throw Object.assign(new Error("El usuario ha cambiado. Reabre la app."), {status: 401});
-          return apiFetch(...args);
+          const session = await apiFetch(...args);
+          client.setQueryData(["session", +id], session);
+          return session;
         }, retry);
       }
       for (const [id, session] of Object.entries(journal.read().sessions)) client.setQueryData(["session", +id], session);
@@ -34,7 +36,10 @@ export function useWorkoutSync(disabled: boolean) {
   };
 
   useEffect(() => {
-    const refresh = () => setRevision(value => value + 1);
+    const refresh = (event: Event) => {
+      setRevision(value => value + 1);
+      if (event instanceof CustomEvent && event.detail?.error) setError(event.detail.error);
+    };
     const reconnect = () => { void sync(); };
     window.addEventListener("gym-set-journal", refresh);
     window.addEventListener("storage", refresh);
@@ -51,7 +56,15 @@ export function useWorkoutSync(disabled: boolean) {
     };
   }, [journal]);
 
-  return { journal, state, error, revision, sync, setError };
+  const discard = async (requestId: string) => {
+    if (!journal || !confirm("¿Descartar esta serie rechazada? Copia sus valores antes de continuar. Esta acción no elimina ninguna serie del servidor.")) return;
+    try {
+      await journal.discardRejected(requestId);
+      await client.invalidateQueries({ queryKey: ["session"] });
+      await sync();
+    } catch (cause: any) { setError(cause.message); }
+  };
+  return { journal, state, error, revision, sync, discard, setError };
 }
 
 export function PendingWrites({ sync }: { sync: ReturnType<typeof useWorkoutSync> }) {
@@ -64,7 +77,14 @@ export function PendingWrites({ sync }: { sync: ReturnType<typeof useWorkoutSync
       <p>Conservadas en este dispositivo. Puedes continuar; sincroniza antes de finalizar.</p>
       {pending.map(item => <p key={item.payload.request_id}>
         Sesión {item.sessionId} · {sync.state?.sessions[item.sessionId]?.planned_exercises.find((pe: any) => pe.id === item.plannedId)?.exercise?.name || "Ejercicio"} · Serie {item.payload.set_number}: {item.payload.weight ? `${item.payload.weight} kg × ` : ""}{item.payload.reps ? `${item.payload.reps} reps/s` : `${item.payload.duration_minutes} min`}
+        <span> · {item.payload.is_warmup ? "Calentamiento" : "Serie efectiva"}
+          {item.payload.rpe != null && ` · RPE ${item.payload.rpe}`}
+          {item.payload.rir != null && ` · RIR ${item.payload.rir}`}
+          {item.payload.sensation && ` · Sensación: ${item.payload.sensation}`}
+          {item.payload.notes && ` · Notas: ${item.payload.notes}`}
+        </span>
         {item.error && <span role="alert"> · {item.error}</span>}
+        {item.blocked && <button class="btn-secondary" onClick={() => void sync.discard(item.payload.request_id)}>Descartar serie rechazada</button>}
       </p>)}
       <button class="btn-primary mt-2" onClick={() => void sync.sync(true)}>Reintentar sincronización</button>
     </>}

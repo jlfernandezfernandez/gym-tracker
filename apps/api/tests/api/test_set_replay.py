@@ -1,5 +1,7 @@
 """A replay acknowledges the original write; it never recreates a deleted set."""
 
+import json
+from pathlib import Path
 from uuid import uuid4
 
 from test_session_corrections import _client, _workout
@@ -43,3 +45,14 @@ def test_replay_still_checks_owner():
         },
     )
     assert response.status_code == 403
+
+
+def test_miniapp_fixture_matches_real_session_response_contract():
+    gen = _client(_workout(sets=(), target_sets=3))
+    client, _ = next(gen)
+    actual = client.get("/api/sessions/1").json()
+    path = Path(__file__).parents[3] / "miniapp/src/lib/session-response.fixture.json"
+    fixture = json.loads(path.read_text())
+    assert actual.keys() == fixture.keys()
+    assert "telegram_user_id" not in actual
+    assert actual["planned_exercises"][0].keys() == fixture["planned_exercises"][0].keys()

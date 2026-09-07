@@ -26,3 +26,9 @@ ejercicios no están disponibles. Las respuestas de `/api` y los datos de
 autenticación no se guardan en la caché offline. Al recuperar conexión, la Mini App
 sincroniza al abrirla, enfocarla y periódicamente; los rechazos permanecen visibles
 hasta que pulses **Reintentar sincronización** después de corregir la causa.
+
+Si el servidor rechaza una serie definitivamente, el aviso permite **Descartar serie
+rechazada** después de confirmar y copiar sus valores. Esto elimina solo el intento
+local y vuelve a consultar el servidor; no borra series ya guardadas. Los enlaces
+para compartir no se conservan en el registro local, ni se restauran sesiones
+completadas sin escrituras pendientes.

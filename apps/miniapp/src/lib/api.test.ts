@@ -13,7 +13,7 @@ beforeEach(() => {
 it("prevents finish and corrections at the request boundary while a durable write is unresolved", async () => {
   const {getSetJournal} = await import("./set-journal");
   const journal = getSetJournal()!;
-  await journal.remember({id: 1, telegram_user_id: 42, planned_exercises: [{id: 5, performed_sets: []}]});
+  await journal.remember({id: 1, status: "in_progress", planned_exercises: [{id: 5, performed_sets: []}]});
   await journal.enqueue(1, 5, {set_number: 1, reps: 10});
   const {apiFetch} = await import("./api");
   vi.stubGlobal("fetch", () => { throw new Error("Network must not run"); });
@@ -26,4 +26,13 @@ it("preserves HTTP status and readable validation detail for durable error handl
   vi.stubGlobal("fetch", async () => new Response(JSON.stringify({detail: [{msg: "Invalid reps"}]}), {status: 422}));
   const {apiFetch} = await import("./api");
   await expect(apiFetch("GET", "/sessions/1")).rejects.toMatchObject({status: 422, message: expect.stringContaining("Invalid reps")});
+});
+
+it("rejects a response if the Telegram user changes while it is in flight", async () => {
+  vi.stubGlobal("fetch", async () => {
+    (window as any).Telegram.WebApp.initData = new URLSearchParams({user: JSON.stringify({id: 7})}).toString();
+    return new Response(JSON.stringify({id: 1}));
+  });
+  const {apiFetch} = await import("./api");
+  await expect(apiFetch("GET", "/sessions/1")).rejects.toThrow("usuario ha cambiado");
 });

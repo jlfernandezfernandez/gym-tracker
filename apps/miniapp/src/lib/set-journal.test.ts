@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SetJournal } from "./set-journal";
+import sessionResponse from "./session-response.fixture.json";
 
 function storage() {
   const values = new Map<string, string>();
@@ -13,9 +14,7 @@ function locks() {
     return result;
   };
 }
-const session = () => ({ id: 1, telegram_user_id: 42, status: "in_progress", planned_exercises: [
-  { id: 5, exercise: { name: "Press" }, target_sets: 3, status: "in_progress", performed_sets: [] },
-] });
+const session = () => structuredClone(sessionResponse);
 const payload = { set_number: 1, reps: 10, weight: 40 };
 
 describe("durable set journal", () => {
@@ -29,7 +28,6 @@ describe("durable set journal", () => {
     expect(reopened.read().activeId).toBe(1);
     expect(reopened.view(1).planned_exercises[0].performed_sets[0]).toMatchObject({ ...payload, pending: true });
     expect(new SetJournal("7", disk, lock).read().pending).toEqual([]);
-    await expect(first.remember({ ...session(), telegram_user_id: 7 })).rejects.toThrow();
   });
 
   it("keeps an ambiguous write across reload and replays the same request id", async () => {
@@ -96,4 +94,54 @@ describe("durable set journal", () => {
     const corrupt = new SetJournal("42", { getItem: () => "broken", setItem: () => { throw new Error("Must not overwrite"); } }, locks());
     expect(() => corrupt.read()).toThrow();
   });
+});
+
+it("drops share credentials and completed sessions after confirmation", async () => {
+  const journal = new SetJournal("42", storage(), locks());
+  await journal.remember({ ...session(), share_token: "private-link" });
+  expect(journal.read().sessions[1].share_token).toBeUndefined();
+  await journal.guard(1, async () => ({ ...session(), status: "completed" }));
+  expect(journal.read().activeId).toBeUndefined();
+  expect(journal.read().sessions[1]).toBeUndefined();
+});
+
+it("requires explicit rejection before discarding and unblocks later input", async () => {
+  const journal = new SetJournal("42", storage(), locks());
+  await journal.remember(session());
+  await journal.enqueue(1, 5, payload);
+  const id = journal.read().pending[0].payload.request_id;
+  await expect(journal.discardRejected(id)).rejects.toThrow();
+  await journal.sync(1, async () => { throw Object.assign(new Error("Conflict"), {status: 409}); });
+  expect(journal.read().pending[0].payload.reps).toBe(10);
+  await journal.discardRejected(id);
+  expect(journal.read().pending).toEqual([]);
+  await expect(journal.guard(1, async () => "ok")).resolves.toBe("ok");
+});
+
+it("viewing completed history preserves the active offline workout", async () => {
+  const journal = new SetJournal("42", storage(), locks());
+  await journal.remember(session());
+  await journal.remember({...session(), id: 2, status: "completed"});
+  expect(journal.read().activeId).toBe(1);
+  expect(journal.view(1).id).toBe(1);
+  expect(journal.read().sessions[2]).toBeUndefined();
+});
+
+it("forgets a confirmed deleted session without retaining its offline copy", async () => {
+  const journal = new SetJournal("42", storage(), locks());
+  await journal.remember(session());
+  await journal.guard(1, async () => ({deleted: true}), true);
+  expect(journal.read().sessions[1]).toBeUndefined();
+  expect(journal.read().activeId).toBeUndefined();
+});
+
+it("returns a committed mutation even if its cache update fails", async () => {
+  const disk = storage();
+  let warning = "";
+  const journal = new SetJournal("42", disk, locks(), error => { warning = error || ""; });
+  await journal.remember(session());
+  disk.setItem = () => { throw new Error("quota"); };
+  const completed = {...session(), status: "completed"};
+  await expect(journal.guard(1, async () => completed)).resolves.toEqual(completed);
+  expect(warning).toContain("guardar");
 });
