@@ -9,6 +9,21 @@ from sqlalchemy.orm import selectinload
 from app.models import Exercise, PlannedExercise, WorkoutSession
 
 
+def resolve_planned_execution_metric(planned_exercise: PlannedExercise) -> str:
+    exercise = planned_exercise.exercise
+    if exercise and exercise.is_cardio:
+        return "duration_minutes"
+    if planned_exercise.target_duration_seconds is not None:
+        return "duration_seconds"
+    if any(
+        target.get("duration_seconds") is not None
+        for target in planned_exercise.set_targets or []
+        if isinstance(target, dict)
+    ):
+        return "duration_seconds"
+    return planned_exercise.execution_metric or "reps"
+
+
 def validate_exercise_weight(exercise: Exercise, weight: float | None) -> None:
     """Weight is NULL or > 0; unloaded strength equipment takes none."""
     if exercise.is_unloaded and weight is not None:
@@ -21,17 +36,32 @@ def validate_exercise_weight(exercise: Exercise, weight: float | None) -> None:
 def validate_exercise_metrics(
     exercise: Exercise,
     *,
+    execution_metric: str | None = None,
     reps: int | None,
     duration_minutes: int | None,
+    duration_seconds: int | None = None,
     weight: float | None,
     unilateral: bool = False,
     require_cardio_duration: bool = True,
 ) -> None:
     """Enforce the catalog activity domain at every session mutation boundary."""
+    metric = execution_metric
+    if metric is None:
+        if duration_seconds is not None:
+            metric = "duration_seconds"
+        elif duration_minutes is not None:
+            metric = "duration_minutes"
+        elif reps is not None:
+            metric = "reps"
+        else:
+            metric = "duration_minutes" if exercise.is_cardio else "reps"
+
     if exercise.is_cardio:
         if (
-            reps is not None
+            metric != "duration_minutes"
+            or reps is not None
             or (require_cardio_duration and duration_minutes is None)
+            or duration_seconds is not None
             or weight is not None
             or unilateral
         ):
@@ -39,14 +69,35 @@ def validate_exercise_metrics(
                 status_code=422,
                 detail=(
                     "Cardio requires duration_minutes and does not accept reps, weight,"
-                    " or unilateral execution"
+                    " duration_seconds or unilateral execution"
                 ),
             )
         return
-    if reps is None or duration_minutes is not None:
+
+    if metric == "duration_minutes":
         raise HTTPException(
             status_code=422,
-            detail="Strength requires reps and does not accept duration_minutes",
+            detail="Strength does not accept duration_minutes; use reps or duration_seconds",
+        )
+
+    if metric == "duration_seconds":
+        if duration_seconds is None or reps is not None or duration_minutes is not None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    "Timed strength requires duration_seconds"
+                    " and does not accept reps or duration_minutes"
+                ),
+            )
+        validate_exercise_weight(exercise, weight)
+        return
+
+    if reps is None or duration_minutes is not None or duration_seconds is not None:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                "Strength requires reps and does not accept duration_minutes or duration_seconds"
+            ),
         )
     validate_exercise_weight(exercise, weight)
 
@@ -143,14 +194,14 @@ def start_session(workout: WorkoutSession) -> None:
         workout.started_at = datetime.now(UTC).replace(tzinfo=None)
 
 
-def auto_finish_if_done(workout: WorkoutSession) -> None:
+def auto_finish_if_done(workout: WorkoutSession, *, derive_duration: bool = True) -> None:
     planned = workout.planned_exercises or []
     if not planned or workout.status != "in_progress":
         return
     if not all(pe.status in {"completed", "skipped"} for pe in planned):
         return
     workout.status = "completed"
-    if workout.started_at and not workout.duration_actual:
+    if derive_duration and workout.started_at and not workout.duration_actual:
         now = datetime.now(UTC).replace(tzinfo=None)
         workout.duration_actual = max(1, int((now - workout.started_at).total_seconds() / 60))
 
@@ -211,8 +262,10 @@ def current_state(workout: WorkoutSession) -> dict:
         "current_exercise_name": current.exercise.name if current.exercise else "",
         "current_set_number": next_set_number,
         "target_sets": current.target_sets,
+        "execution_metric": resolve_planned_execution_metric(current),
         "target_reps": current.target_reps,
         "target_duration_minutes": current.target_duration_minutes,
+        "target_duration_seconds": current.target_duration_seconds,
         "suggested_weight": current.suggested_weight,
         "weight_mode": current.weight_mode,
         "activity_type": current.activity_type,

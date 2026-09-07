@@ -171,6 +171,40 @@ def test_add_cardio_exercise_rejects_reps_contract() -> None:
     fake_db.add.assert_not_called()
 
 
+def test_add_timed_strength_exercise_uses_execution_metric_and_target_seconds() -> None:
+    workout = _build_workout("planned", exercises=[])
+    timed = Exercise(
+        id=21,
+        name="Farmer Carry",
+        muscle_group="forearms",
+        equipment="trap bar",
+        activity_type="strength",
+    )
+    gen = _make_client(workout, catalog_exercise=timed)
+    client, fake_db = next(gen)
+
+    response = client.post(
+        "/api/sessions/1/exercises",
+        json={
+            "exercise_id": 21,
+            "target_sets": 2,
+            "execution_metric": "duration_seconds",
+            "target_duration_seconds": 40,
+            "suggested_weight": 32.5,
+            "set_targets": [
+                {"set_number": 1, "weight": 32.5, "duration_seconds": 40},
+                {"set_number": 2, "weight": 32.5, "duration_seconds": 45},
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    added = fake_db.add.call_args.args[0]
+    assert added.execution_metric == "duration_seconds"
+    assert added.target_duration_seconds == 40
+    assert added.target_reps is None
+
+
 def test_add_exercise_to_completed_session_returns_422() -> None:
     workout = _build_workout("completed", exercises=[])
     gen = _make_client(workout)

@@ -3,6 +3,14 @@ import { EQUIPMENT_ES, STATUS_ES } from './translations';
 import { normalizeMuscle, MUSCLE_LABELS_ES } from './body-paths';
 
 type TaxonomyTerm = { es: string; bodyMap: string[] };
+type ResolvedSetTarget = {
+  set_number: number;
+  weight: number | null;
+  reps: number | null;
+  duration_minutes: number | null;
+  duration_seconds: number | null;
+  is_warmup: boolean;
+};
 export const EXERCISE_TAXONOMY = taxonomy as Record<string, TaxonomyTerm>;
 
 export const formatStatus = (status: string) => STATUS_ES[status] || status;
@@ -21,11 +29,18 @@ export const formatWeight = (weight: number | null | undefined, mode: string | n
   mode === 'bodyweight' ? 'Peso corporal' : weight != null ? `${weight} kg` : '';
 
 export const executionMetricPayload = (
-  activityType: 'strength' | 'cardio',
-  values: { weight?: number | null; reps?: number | null; duration_minutes?: number | null },
-) => activityType === 'cardio'
+  executionMetric: 'reps' | 'duration_minutes' | 'duration_seconds',
+  values: {
+    weight?: number | null;
+    reps?: number | null;
+    duration_minutes?: number | null;
+    duration_seconds?: number | null;
+  },
+) => executionMetric === 'duration_minutes'
   ? { duration_minutes: values.duration_minutes }
-  : { weight: values.weight, reps: values.reps };
+  : executionMetric === 'duration_seconds'
+    ? { weight: values.weight, duration_seconds: values.duration_seconds }
+    : { weight: values.weight, reps: values.reps };
 
 
 export const formatEquipment = (equipment: string) =>
@@ -41,12 +56,16 @@ export function normalizeSession(session: any) {
   return {
     ...session,
     exercises: orderedExercises.map((plannedExercise) => ({
+      execution_metric:
+        plannedExercise.execution_metric
+        || (plannedExercise.exercise?.activity_type === 'cardio' ? 'duration_minutes' : 'reps'),
       planned_id: plannedExercise.id,
       exercise_id: plannedExercise.exercise_id,
       order: plannedExercise.order,
       sets: plannedExercise.target_sets,
       reps: plannedExercise.target_reps,
       duration_minutes: plannedExercise.target_duration_minutes,
+      duration_seconds: plannedExercise.target_duration_seconds,
       weight: plannedExercise.suggested_weight,
       weight_mode: plannedExercise.weight_mode,
       unilateral: plannedExercise.unilateral === true,
@@ -93,6 +112,75 @@ export function missingSetNumbers(exercise: any): number[] {
   return Array.from({ length: exercise.sets || 0 }, (_, index) => index + 1).filter(
     (setNumber) => !performed.has(setNumber),
   );
+}
+
+const baseTargetForSet = (exercise: any, setNumber: number): ResolvedSetTarget => ({
+  set_number: setNumber,
+  weight: exercise?.weight ?? null,
+  reps: exercise?.reps ?? null,
+  duration_minutes: exercise?.duration_minutes ?? null,
+  duration_seconds: exercise?.duration_seconds ?? null,
+  is_warmup: false,
+});
+
+const mergeTargetFields = (
+  target: ResolvedSetTarget,
+  source: Record<string, any> | null | undefined,
+): ResolvedSetTarget => {
+  if (!source) return target;
+  const next: ResolvedSetTarget = { ...target };
+  for (const key of ['weight', 'reps', 'duration_minutes', 'duration_seconds'] as const) {
+    if (source[key] != null) next[key] = source[key];
+  }
+  if (source.is_warmup != null) next.is_warmup = Boolean(source.is_warmup);
+  return next;
+};
+
+const previousPerformedSet = (exercise: any, setNumber: number) =>
+  [...(exercise?.performed_sets || [])]
+    .filter((set: any) => Number(set.set_number) < setNumber)
+    .sort((first: any, second: any) => second.set_number - first.set_number)[0];
+
+export function resolveCurrentSetNumber(exercise: any, currentState: any): number | null {
+  if (!exercise) return null;
+  if (
+    currentState?.current_set_number != null &&
+    String(currentState?.current_planned_exercise_id) === String(exercise?.planned_id)
+  ) {
+    return Number(currentState.current_set_number);
+  }
+  return missingSetNumbers(exercise)[0] ?? null;
+}
+
+export function resolveSetTarget(exercise: any, setNumber: number | null, currentState?: any) {
+  if (!exercise || setNumber == null) return null;
+  let target = baseTargetForSet(exercise, setNumber);
+  target = mergeTargetFields(target, previousPerformedSet(exercise, setNumber));
+  target = mergeTargetFields(
+    target,
+    exercise?.set_targets?.find((candidate: any) => Number(candidate.set_number) === setNumber),
+  );
+  if (
+    String(currentState?.current_planned_exercise_id) === String(exercise?.planned_id) &&
+    Number(currentState?.current_set_number) === setNumber
+  ) {
+    target = mergeTargetFields(target, currentState?.next_set_target);
+  }
+  return target;
+}
+
+export function formatExerciseTargetBadge(exercise: any): string {
+  const target = resolveSetTarget(exercise, 1);
+  const executionMetric =
+    exercise?.execution_metric ||
+    (exercise?.activity_type === 'cardio' ? 'duration_minutes' : 'reps');
+  if (executionMetric === 'duration_minutes') {
+    return `${exercise?.sets || 0}×${target?.duration_minutes ?? exercise?.duration_minutes ?? 0} min`;
+  }
+  if (executionMetric === 'duration_seconds') {
+    return `${exercise?.sets || 0}×${target?.duration_seconds ?? exercise?.duration_seconds ?? 0}s`;
+  }
+  return `${exercise?.sets || 0}×${target?.reps ?? exercise?.reps ?? '—'}`;
 }
 
 /** Owner-only workout edits require an editable session and exercise. */

@@ -6,6 +6,8 @@ import {
   formatWeight,
   mediaUrl,
   normalizeSession,
+  resolveCurrentSetNumber,
+  resolveSetTarget,
 } from "../../lib/helpers";
 import { useApp } from "../../app/App";
 import { Empty, Stat } from "../../components/feedback";
@@ -57,14 +59,21 @@ export function Home() {
   const mediaSrc = activeExercise
     ? mediaUrl(activeExercise.image_url || activeExercise.gif_url)
     : "";
-  const lastSet =
-    activeExercise?.performed_sets?.[activeExercise.performed_sets.length - 1];
-  const nextWeight = lastSet?.weight ?? activeExercise?.weight ?? null;
-  const nextDuration = currentState?.next_set_target?.duration_minutes
-    ?? lastSet?.duration_minutes
-    ?? activeExercise?.duration_minutes
-    ?? '—';
-  const doneSetCount = activeExercise?.performed_sets?.length || 0;
+  const currentSetNumber = activeExercise
+    ? resolveCurrentSetNumber(activeExercise, currentState)
+    : null;
+  const currentTarget = activeExercise
+    ? resolveSetTarget(activeExercise, currentSetNumber, currentState)
+    : null;
+  const completedSetNumbers = new Set<number>(
+    (activeExercise?.performed_sets || []).map((set: any) => set.set_number),
+  );
+  const nextWeight = currentTarget?.weight ?? null;
+  const executionMetric =
+    activeExercise?.execution_metric ||
+    currentState?.execution_metric ||
+    (activeExercise?.activity_type === 'cardio' ? 'duration_minutes' : 'reps');
+  const doneSetCount = completedSetNumbers.size;
   const totalSetCount = activeExercise?.sets || currentState?.target_sets || 0;
 
   return (
@@ -119,18 +128,25 @@ export function Home() {
                 </div>
                 <SetProgress
                   total={totalSetCount}
-                  completedSetNumbers={new Set(Array.from({ length: doneSetCount }, (_, i) => i + 1))}
-                  currentSetNumber={doneSetCount + 1}
-                  showCurrent={doneSetCount < totalSetCount}
+                  completedSetNumbers={completedSetNumbers}
+                  currentSetNumber={currentSetNumber ?? undefined}
+                  showCurrent={
+                    currentSetNumber != null && !completedSetNumbers.has(currentSetNumber)
+                  }
                   class="my-[13px]"
-                  ariaLabel={`Serie ${doneSetCount + 1} de ${totalSetCount}`}
+                  ariaLabel={`Serie ${currentSetNumber ?? doneSetCount} de ${totalSetCount}`}
                 />
-                {activeExercise?.activity_type === 'cardio' ? (
-                  <Stat surface label="Minutos" value={nextDuration} />
+                {executionMetric === 'duration_minutes' ? (
+                  <Stat surface label="Minutos" value={currentTarget?.duration_minutes ?? '—'} />
+                ) : executionMetric === 'duration_seconds' ? (
+                  <div class="grid grid-cols-2 gap-[9px]">
+                    <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode) || '—'} />
+                    <Stat surface label="Segundos" value={currentTarget?.duration_seconds ?? '—'} />
+                  </div>
                 ) : (
                   <div class="grid grid-cols-2 gap-[9px]">
                     <Stat surface label="Carga" value={formatWeight(nextWeight, activeExercise?.weight_mode) || '—'} />
-                    <Stat surface label="Reps" value={activeExercise?.reps || "-"} />
+                    <Stat surface label="Reps" value={currentTarget?.reps ?? '-'} />
                   </div>
                 )}
               </div>

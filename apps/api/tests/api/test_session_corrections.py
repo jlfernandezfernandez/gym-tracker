@@ -161,6 +161,38 @@ def _cardio_workout() -> WorkoutSession:
     return workout
 
 
+def _timed_strength_workout() -> WorkoutSession:
+    exercise = Exercise(
+        id=30,
+        name="Farmer Carry",
+        muscle_group="forearms",
+        body_part="upper arms",
+        equipment="trap bar",
+        activity_type="strength",
+    )
+    planned = PlannedExercise(
+        id=7,
+        session_id=3,
+        exercise_id=exercise.id,
+        target_sets=2,
+        target_reps=None,
+        target_duration_minutes=None,
+        status="pending",
+        suggested_weight=32.5,
+        set_targets=[
+            {"set_number": 1, "weight": 32.5, "duration_seconds": 40},
+            {"set_number": 2, "weight": 32.5, "duration_seconds": 40},
+        ],
+        execution_metric="duration_seconds",
+        target_duration_seconds=40,
+    )
+    planned.exercise = exercise
+    planned.performed_sets = []
+    workout = WorkoutSession(id=3, status="planned", telegram_user_id=42)
+    workout.planned_exercises = [planned]
+    return workout
+
+
 def _client(workout: WorkoutSession, user_id: int = 42, catalog: dict[int, Exercise] | None = None):
     memory = MemorySession(workout)
     original_get = memory.get
@@ -200,6 +232,27 @@ def test_restore_middle_set_returns_fresh_completed_session() -> None:
     assert restored["status"] == "completed"
     assert [item["set_number"] for item in restored["performed_sets"]] == [1, 2, 3]
     db.expire_all.assert_called_once()
+
+
+def test_restore_middle_set_preserves_historical_completed_duration_and_clock() -> None:
+    workout = _workout(status="completed", sets=(1, 3), target_sets=3)
+    workout.started_at = None
+    workout.duration_actual = 0
+    gen = _client(workout)
+    client, _ = next(gen)
+
+    response = client.post(
+        "/api/sessions/1/exercises/5/sets/restore",
+        json={"set_number": 2, "weight": 40, "reps": 10},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "completed"
+    assert body["duration_actual"] == 0
+    assert body["planned_exercises"][0]["status"] == "completed"
+    assert workout.started_at is None
+    assert workout.duration_actual == 0
 
 
 def test_delete_middle_set_reopens_completed_session_and_exercise() -> None:
@@ -263,6 +316,24 @@ def test_log_cardio_set_uses_duration_minutes() -> None:
     assert performed["duration_minutes"] == 24
     assert performed["reps"] is None
     assert performed["weight_mode"] is None
+
+
+def test_log_timed_strength_set_uses_duration_seconds_and_optional_weight() -> None:
+    gen = _client(_timed_strength_workout())
+    client, _ = next(gen)
+
+    response = client.post(
+        "/api/sessions/3/exercises/7/sets",
+        json={"set_number": 1, "duration_seconds": 45, "weight": 36},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    logged = body["planned_exercises"][0]["performed_sets"][0]
+    assert logged["duration_seconds"] == 45
+    assert logged["reps"] is None
+    assert logged["weight"] == 36
+    assert body["planned_exercises"][0]["execution_metric"] == "duration_seconds"
 
 
 def test_log_cardio_set_rejects_reps_contract() -> None:

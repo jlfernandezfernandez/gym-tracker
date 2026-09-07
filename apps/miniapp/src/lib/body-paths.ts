@@ -102,8 +102,6 @@ export const MUSCLE_ALIASES: Record<string, CanonicalMuscle | null> = {
   'back-deltoids': 'deltoids',
   'rear deltoids': 'deltoids',
   'rotator cuff': 'deltoids',
-  triceps: 'triceps',
-  tricep: 'triceps',
   'upper back': 'upper-back',
   'upper-back': 'upper-back',
   'espalda alta': 'upper-back',

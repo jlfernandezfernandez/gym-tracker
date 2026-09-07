@@ -1,7 +1,9 @@
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
 
-from app.features.coach.importer import parse_tracker_csv
+import pytest
+
+from app.features.coach.importer import TrackerCsvImportError, parse_tracker_csv
 from app.features.coach.onerm import calculate_1rm
 from app.features.coach.progression import recommend_progression
 from app.features.coach.recovery import calculate_muscle_readiness
@@ -111,3 +113,88 @@ def test_hevy_csv_parsing():
     assert len(bench["sets"]) == 2
     assert bench["sets"][0]["weight"] == 80.0
     assert bench["sets"][0]["reps"] == 10
+
+
+def test_csv_parsing_converts_lbs_and_keeps_rir_distinct_from_rpe():
+    sample_csv = (
+        "Date,Workout Name,Exercise_Title,Weight (lbs),Reps,RIR,Set Type\n"
+        "2026-08-20 18:00:00,Upper Body,Bench Press,100,8,2,normal\n"
+    )
+
+    workouts = parse_tracker_csv(sample_csv)
+
+    logged_set = workouts[0]["exercises"][0]["sets"][0]
+    assert logged_set["weight"] == pytest.approx(45.359, abs=0.001)
+    assert logged_set["rir"] == 2.0
+    assert logged_set["rpe"] is None
+
+
+@pytest.mark.parametrize(
+    ("columns", "row"),
+    [
+        (
+            "Weight (kg),Reps,RIR",
+            "0,8,0",
+        ),
+        (
+            "Weight (lbs),Reps,RIR",
+            "0,8,0",
+        ),
+        (
+            "Weight,Weight Unit,Reps,RIR",
+            "0,kg,8,0",
+        ),
+    ],
+)
+def test_csv_parsing_normalizes_zero_weight_and_accepts_zero_rir(columns: str, row: str) -> None:
+    sample_csv = (
+        f"Date,Workout Name,Exercise_Title,{columns}\n"
+        f"2026-08-20 18:00:00,Upper Body,Pull Up,{row}\n"
+    )
+
+    workouts = parse_tracker_csv(sample_csv)
+
+    logged_set = workouts[0]["exercises"][0]["sets"][0]
+    assert logged_set["weight"] is None
+    assert logged_set["rir"] == 0.0
+
+
+@pytest.mark.parametrize(
+    ("columns", "row"),
+    [
+        ("Weight (kg),Reps", "nan,8"),
+        ("Weight (kg),Reps", "inf,8"),
+        ("Weight (kg),Reps", "-inf,8"),
+        ("Weight (kg),Reps", "-1,8"),
+        ("Weight (kg),Reps,RPE", "80,8,nan"),
+        ("Weight (kg),Reps,RPE", "80,8,inf"),
+        ("Weight (kg),Reps,RPE", "80,8,-inf"),
+        ("Weight (kg),Reps,RPE", "80,8,0"),
+        ("Weight (kg),Reps,RPE", "80,8,11"),
+        ("Weight (kg),Reps,RIR", "80,8,nan"),
+        ("Weight (kg),Reps,RIR", "80,8,inf"),
+        ("Weight (kg),Reps,RIR", "80,8,-inf"),
+        ("Weight (kg),Reps,RIR", "80,8,-1"),
+        ("Weight (kg),Reps,RIR", "80,8,11"),
+    ],
+)
+def test_csv_parsing_rejects_non_finite_and_out_of_range_numeric_values(
+    columns: str, row: str
+) -> None:
+    sample_csv = (
+        f"Date,Workout Name,Exercise_Title,{columns}\n"
+        f"2026-08-20 18:00:00,Upper Body,Bench Press,{row}\n"
+    )
+
+    with pytest.raises(TrackerCsvImportError):
+        parse_tracker_csv(sample_csv)
+
+
+def test_csv_parsing_rejects_seconds_when_not_whole_minutes():
+    sample_csv = (
+        "Date,Workout Name,Exercise_Title,Seconds,Set Type\n"
+        "2026-08-20 18:00:00,Cardio,Rower,90,normal\n"
+    )
+
+    with pytest.raises(TrackerCsvImportError, match="whole minutes"):
+        parse_tracker_csv(sample_csv)

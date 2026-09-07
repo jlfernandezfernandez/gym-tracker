@@ -2,6 +2,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'preact/hooks';
 import { apiFetch } from '../../lib/api';
+import { formatMuscle } from '../../lib/helpers';
 import { useApp } from '../../app/App';
 import { Empty, Loading } from '../../components/feedback';
 import { TopBar } from '../../components/navigation';

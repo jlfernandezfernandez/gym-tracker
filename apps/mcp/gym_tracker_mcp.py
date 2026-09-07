@@ -14,6 +14,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from typing import Any, Literal
+from uuid import UUID
 
 from fastmcp import FastMCP
 from starlette.requests import Request
@@ -30,7 +31,8 @@ profile, exercise catalog, sessions and sets. You are the brain; Telegram chat i
 product and the Mini App (deep links) is the visual surface.
 
 Operating rules:
-1. Start each coaching turn with training_snapshot. If onboarding_complete is false, don't plan yet —
+1. Call training_snapshot when starting a workout, resuming one, or before planning a new one. Do not
+    call it before every log_set. If onboarding_complete is false, don't plan yet —
    ask like a real trainer (goal, experience, days/time and preferences) in short
    blocks and save with patch_athlete_profile (finish with {"onboarding_complete": true}).
 2. Check muscle readiness: training_snapshot includes active_fatigue and muscle_recovery (36h decay).
@@ -86,10 +88,15 @@ def _require_one_metric(
     payload: dict[str, Any],
     reps_key: str = "reps",
     duration_key: str = "duration_minutes",
+    duration_seconds_key: str = "duration_seconds",
     weight_key: str = "weight",
 ) -> None:
-    if (payload.get(reps_key) is None) == (payload.get(duration_key) is None):
-        raise ValueError(f"exactly one of {reps_key} or {duration_key} is required")
+    metric_keys = [reps_key, duration_key, duration_seconds_key]
+    metric_count = sum(payload.get(key) is not None for key in metric_keys)
+    if metric_count != 1:
+        raise ValueError(
+            f"exactly one of {reps_key}, {duration_key} or {duration_seconds_key} is required"
+        )
     if payload.get(duration_key) is not None and payload.get(weight_key) is not None:
         raise ValueError(f"{duration_key} does not accept {weight_key}")
 
@@ -221,7 +228,7 @@ def list_exercise_facets() -> dict[str, list[str]]:
 def exercise_progress(
     exercise_id: int, limit: int = 20, telegram_user_id: int | None = None
 ) -> list[dict[str, Any]]:
-    """Progression by session. Strength reports weight/reps; cardio reports top_duration_minutes. Use session_id to open a past session."""
+    """Progression by session. Strength reports weight/reps or duration_seconds; cardio reports top_duration_minutes. Use session_id to open a past session."""
     qs = urllib.parse.urlencode({"limit": max(1, min(int(limit), 100))})
     return _request(
         "GET", f"/exercises/{int(exercise_id)}/progress?{qs}", user_id=telegram_user_id
@@ -354,9 +361,10 @@ def create_plan(
     for exercise in exercises:
         _require_one_metric(
             exercise,
-            "target_reps",
-            "target_duration_minutes",
-            "suggested_weight",
+            reps_key="target_reps",
+            duration_key="target_duration_minutes",
+            duration_seconds_key="target_duration_seconds",
+            weight_key="suggested_weight",
         )
         if exercise.get("target_duration_minutes") is not None and exercise.get(
             "unilateral"
@@ -444,6 +452,7 @@ def format_compact_set(performed_set: dict[str, Any]) -> str:
 
     reps = performed_set.get("reps")
     duration = performed_set.get("duration_minutes")
+    duration_seconds = performed_set.get("duration_seconds")
     weight = performed_set.get("weight")
     rir = performed_set.get("rir")
     rpe = performed_set.get("rpe")
@@ -455,6 +464,13 @@ def format_compact_set(performed_set: dict[str, Any]) -> str:
             core = f"{prefix}{reps}@{w_str}kg"
         else:
             core = f"{prefix}{reps}@BW" if not prefix else f"{prefix}{reps} reps"
+    elif duration_seconds is not None:
+        if weight is not None and float(weight) > 0:
+            w = float(weight)
+            w_str = f"{int(w)}" if w.is_integer() else f"{w}"
+            core = f"{prefix}{duration_seconds}s@{w_str}kg"
+        else:
+            core = f"{prefix}{duration_seconds}s"
     elif duration is not None:
         core = f"{prefix}{duration}m"
     else:
@@ -485,8 +501,10 @@ def format_target_notation(planned_exercise: dict[str, Any]) -> str:
     if not isinstance(planned_exercise, dict):
         return ""
     target_sets = planned_exercise.get("target_sets", 3)
+    execution_metric = planned_exercise.get("execution_metric")
     target_reps = planned_exercise.get("target_reps")
     target_dur = planned_exercise.get("target_duration_minutes")
+    target_dur_seconds = planned_exercise.get("target_duration_seconds")
     suggested_weight = planned_exercise.get("suggested_weight")
 
     if target_reps is not None:
@@ -495,9 +513,40 @@ def format_target_notation(planned_exercise: dict[str, Any]) -> str:
             w_str = f"{int(w)}" if w.is_integer() else f"{w}"
             return f"{target_sets}x{target_reps}@{w_str}kg"
         return f"{target_sets}x{target_reps}@BW"
+    if execution_metric == "duration_seconds" or target_dur_seconds is not None:
+        if suggested_weight is not None and float(suggested_weight) > 0:
+            w = float(suggested_weight)
+            w_str = f"{int(w)}" if w.is_integer() else f"{w}"
+            return f"{target_sets}x{target_dur_seconds}s@{w_str}kg"
+        return f"{target_sets}x{target_dur_seconds}s"
     if target_dur is not None:
         return f"{target_sets}x{target_dur}m"
     return f"{target_sets} sets"
+
+
+def format_next_set_target(set_target: dict[str, Any] | None) -> str | None:
+    """Format a per-set target override as one-set shorthand."""
+    if not isinstance(set_target, dict):
+        return None
+    reps = set_target.get("reps")
+    duration = set_target.get("duration_minutes")
+    duration_seconds = set_target.get("duration_seconds")
+    weight = set_target.get("weight")
+    if reps is not None:
+        if weight is not None and float(weight) > 0:
+            w = float(weight)
+            w_str = f"{int(w)}" if w.is_integer() else f"{w}"
+            return f"{reps}@{w_str}kg"
+        return f"{reps}@BW"
+    if duration_seconds is not None:
+        if weight is not None and float(weight) > 0:
+            w = float(weight)
+            w_str = f"{int(w)}" if w.is_integer() else f"{w}"
+            return f"{duration_seconds}s@{w_str}kg"
+        return f"{duration_seconds}s"
+    if duration is not None:
+        return f"{duration}m"
+    return None
 
 
 def _extract_active_fatigue(
@@ -605,25 +654,36 @@ def format_dense_snapshot(raw_snapshot: dict[str, Any]) -> dict[str, Any]:
                 "name": pe_name,
                 "target": format_target_notation(pe),
                 "status": pe.get("status", "planned"),
-                "sets": [format_compact_set(s) for s in performed],
+                "sets": [
+                    {
+                        "id": s.get("id"),
+                        "set_number": s.get("set_number"),
+                        "summary": format_compact_set(s),
+                    }
+                    for s in performed
+                ],
             }
             formatted_planned.append(pe_dict)
+
+        next_set_target = current_obj.get("next_set_target")
+        if not isinstance(next_set_target, dict):
+            next_set_target = None
 
         compact_active = {
             "id": session_obj.get("id"),
             "title": session_obj.get("title") or "Workout",
             "status": session_obj.get("status"),
             "session_date": session_obj.get("session_date"),
-            "exercises_done": current_obj.get("exercises_completed", 0),
-            "exercises_total": current_obj.get(
-                "total_exercises", len(formatted_planned)
-            ),
+            "current_planned_exercise_id": current_obj.get("current_planned_exercise_id"),
+            "current_exercise_id": current_obj.get("current_exercise_id"),
+            "exercises_done": current_obj.get("completed_exercises", 0),
+            "exercises_total": current_obj.get("exercise_count", len(formatted_planned)),
             "current_exercise": current_obj.get("current_exercise_name")
             or (formatted_planned[0]["name"] if formatted_planned else None),
             "current_set": current_obj.get("current_set_number", 1),
-            "next_target": format_target_notation(current_obj)
-            if current_obj
-            else None,
+            "next_set_target": next_set_target,
+            "next_target": format_next_set_target(next_set_target)
+            or (format_target_notation(current_obj) if current_obj else None),
             "next_action": current_obj.get("next_action"),
             "exercises": formatted_planned,
         }
@@ -698,10 +758,6 @@ def training_snapshot(
     qs = urllib.parse.urlencode({"limit": max(1, min(int(session_limit), 10))})
     raw = _request("GET", f"/coach/snapshot?{qs}", user_id=user_id)
     return format_dense_snapshot(raw)
-    user_id = _require_telegram_user_id(telegram_user_id, "training_snapshot")
-    qs = urllib.parse.urlencode({"limit": max(1, min(int(session_limit), 10))})
-    raw = _request("GET", f"/coach/snapshot?{qs}", user_id=user_id)
-    return format_dense_snapshot(raw)
 
 
 @mcp.tool()
@@ -711,20 +767,25 @@ def log_set(
     set_number: int,
     reps: int | None = None,
     duration_minutes: int | None = None,
+    duration_seconds: int | None = None,
     weight: float | None = None,
     is_warmup: bool = False,
     rpe: float | None = None,
     rir: float | None = None,
+    request_id: str | None = None,
     sensation: str = "",
     notes: str = "",
     telegram_user_id: int | None = None,
 ) -> dict[str, Any]:
     """Log one performed set.
 
-    Strength requires reps and optional kg. Cardio requires duration_minutes and
-    rejects reps/weight. Exactly one execution metric must be supplied.
+    Strength requires reps or duration_seconds and optional kg. Cardio requires
+    duration_minutes and rejects reps/weight. Exactly one execution metric must
+    be supplied.
     Set is_warmup=True for ramp-up / warm-up sets (excluded from PRs/progression).
     rir: Reps In Reserve (0 = failure, 1 = 1 rep left, 2 = 2 reps left).
+    request_id: Optional stable UUID string for safe client-side retries after a lost response.
+    Mutations are not retried automatically by this MCP.
     """
     payload: dict[str, Any] = {
         "set_number": int(set_number),
@@ -736,6 +797,8 @@ def log_set(
         payload["reps"] = int(reps)
     if duration_minutes is not None:
         payload["duration_minutes"] = int(duration_minutes)
+    if duration_seconds is not None:
+        payload["duration_seconds"] = int(duration_seconds)
     if weight is not None:
         payload["weight"] = float(weight)
     _require_one_metric(payload)
@@ -743,6 +806,8 @@ def log_set(
         payload["rpe"] = float(rpe)
     if rir is not None:
         payload["rir"] = float(rir)
+    if request_id:
+        payload["request_id"] = str(UUID(request_id))
     return _request(
         "POST",
         f"/sessions/{int(session_id)}/exercises/{int(planned_exercise_id)}/sets",
@@ -773,6 +838,7 @@ def restore_set(
     set_number: int,
     reps: int | None = None,
     duration_minutes: int | None = None,
+    duration_seconds: int | None = None,
     weight: float | None = None,
     is_warmup: bool = False,
     rpe: float | None = None,
@@ -796,6 +862,8 @@ def restore_set(
         payload["reps"] = int(reps)
     if duration_minutes is not None:
         payload["duration_minutes"] = int(duration_minutes)
+    if duration_seconds is not None:
+        payload["duration_seconds"] = int(duration_seconds)
     if weight is not None:
         payload["weight"] = float(weight)
     _require_one_metric(payload)
@@ -829,8 +897,10 @@ def add_planned_exercise(
     exercise_id: int,
     order: int | None = None,
     target_sets: int = 3,
+    execution_metric: Literal["reps", "duration_minutes", "duration_seconds"] | None = None,
     target_reps: int | None = None,
     target_duration_minutes: int | None = None,
+    target_duration_seconds: int | None = None,
     suggested_weight: float | None = None,
     unilateral: bool = False,
     set_targets: list[dict[str, Any]] | None = None,
@@ -850,17 +920,22 @@ def add_planned_exercise(
         "target_sets": int(target_sets),
         "notes": notes,
     }
+    if execution_metric is not None:
+        payload["execution_metric"] = execution_metric
     if target_reps is not None:
         payload["target_reps"] = int(target_reps)
     if target_duration_minutes is not None:
         payload["target_duration_minutes"] = int(target_duration_minutes)
+    if target_duration_seconds is not None:
+        payload["target_duration_seconds"] = int(target_duration_seconds)
     if suggested_weight is not None:
         payload["suggested_weight"] = float(suggested_weight)
     _require_one_metric(
         payload,
-        "target_reps",
-        "target_duration_minutes",
-        "suggested_weight",
+        reps_key="target_reps",
+        duration_key="target_duration_minutes",
+        duration_seconds_key="target_duration_seconds",
+        weight_key="suggested_weight",
     )
     if target_duration_minutes is not None and unilateral:
         raise ValueError("cardio target_duration_minutes does not accept unilateral")
@@ -886,8 +961,10 @@ def update_planned_exercise(
     status: Literal["pending", "in_progress", "completed", "skipped"] | None = None,
     new_exercise_id: int | None = None,
     target_sets: int | None = None,
+    execution_metric: Literal["reps", "duration_minutes", "duration_seconds"] | None = None,
     target_reps: int | None = None,
     target_duration_minutes: int | None = None,
+    target_duration_seconds: int | None = None,
     suggested_weight: float | None = None,
     notes: str | None = None,
     set_targets: list[dict[str, Any]] | None = None,
@@ -911,10 +988,14 @@ def update_planned_exercise(
         payload["new_exercise_id"] = int(new_exercise_id)
     if target_sets is not None:
         payload["target_sets"] = int(target_sets)
+    if execution_metric is not None:
+        payload["execution_metric"] = execution_metric
     if target_reps is not None:
         payload["target_reps"] = int(target_reps)
     if target_duration_minutes is not None:
         payload["target_duration_minutes"] = int(target_duration_minutes)
+    if target_duration_seconds is not None:
+        payload["target_duration_seconds"] = int(target_duration_seconds)
     if suggested_weight is not None:
         payload["suggested_weight"] = float(suggested_weight)
     if set_targets is not None:

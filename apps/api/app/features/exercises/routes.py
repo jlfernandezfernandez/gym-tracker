@@ -136,6 +136,7 @@ async def personal_records(
             PerformedSet.weight,
             PerformedSet.reps,
             PerformedSet.duration_minutes,
+            PerformedSet.duration_seconds,
             PerformedSet.is_warmup,
             WorkoutSession.session_date,
             WorkoutSession.id,
@@ -149,6 +150,7 @@ async def personal_records(
     statement = statement.order_by(
         Exercise.id,
         PerformedSet.duration_minutes.desc().nulls_last(),  # pyright: ignore[reportOptionalMemberAccess]
+        PerformedSet.duration_seconds.desc().nulls_last(),  # pyright: ignore[reportOptionalMemberAccess]
         PerformedSet.weight.desc().nulls_last(),  # pyright: ignore[reportOptionalMemberAccess]
         PerformedSet.reps.desc(),  # pyright: ignore[reportOptionalMemberAccess]
         WorkoutSession.session_date.desc(),
@@ -166,12 +168,24 @@ async def personal_records(
         weight,
         reps,
         duration_minutes,
+        duration_seconds,
         is_warmup,
         session_date,
         session_id,
     ) in rows:
         record = records.get(exercise_id)
-        e1rm = None if is_warmup or activity_type == "cardio" else calculate_1rm(weight, reps)
+        execution_metric = (
+            "duration_minutes"
+            if activity_type == "cardio"
+            else "duration_seconds"
+            if duration_seconds is not None
+            else "reps"
+        )
+        e1rm = (
+            None
+            if is_warmup or activity_type == "cardio" or execution_metric != "reps"
+            else calculate_1rm(weight, reps)
+        )
         if record is None:
             records[exercise_id] = {
                 "exercise_id": exercise_id,
@@ -180,11 +194,15 @@ async def personal_records(
                 "equipment": equipment,
                 "image_url": image_url,
                 "activity_type": activity_type,
+                "execution_metric": execution_metric,
                 # The first row is one real best set, never a synthetic weight/reps pair.
                 "max_weight": float(weight) if weight is not None else None,
-                "max_reps": None if activity_type == "cardio" else int(reps or 0),
+                "max_reps": int(reps or 0) if execution_metric == "reps" else None,
                 "max_duration_minutes": (
                     int(duration_minutes or 0) if activity_type == "cardio" else None
+                ),
+                "max_duration_seconds": (
+                    int(duration_seconds or 0) if execution_metric == "duration_seconds" else None
                 ),
                 "estimated_1rm": e1rm,
                 "weight_mode": (
@@ -229,6 +247,7 @@ async def exercise_progress(
             func.max(PerformedSet.weight),
             func.max(PerformedSet.reps),
             func.max(PerformedSet.duration_minutes),
+            func.max(PerformedSet.duration_seconds),
             func.sum(
                 case((PerformedSet.weight > 0, PerformedSet.weight * PerformedSet.reps), else_=0)  # pyright: ignore[reportOptionalOperand, reportOperatorIssue]
             ),
@@ -253,25 +272,37 @@ async def exercise_progress(
         top_weight,
         top_reps,
         top_duration_minutes,
+        top_duration_seconds,
         volume,
         set_count,
     ) in reversed(rows):
+        execution_metric = (
+            "duration_minutes"
+            if exercise.is_cardio
+            else "duration_seconds"
+            if top_duration_seconds is not None
+            else "reps"
+        )
         item = {
             "session_id": session_id,
             "date": session_date.isoformat(),
             "top_weight": float(top_weight) if top_weight is not None else None,
-            "top_reps": None if exercise.is_cardio else int(top_reps or 0),
+            "top_reps": int(top_reps or 0) if execution_metric == "reps" else None,
             "top_duration_minutes": (
                 int(top_duration_minutes or 0) if exercise.is_cardio else None
             ),
+            "top_duration_seconds": (
+                int(top_duration_seconds or 0) if execution_metric == "duration_seconds" else None
+            ),
             "volume": float(volume or 0),
             "activity_type": exercise.activity_type,
+            "execution_metric": execution_metric,
             "weight_mode": (
                 None if exercise.is_cardio else weight_mode(exercise.is_unloaded, top_weight)
             ),
             "sets": set_count,
         }
-        if not exercise.is_cardio and top_weight and top_reps:
+        if execution_metric == "reps" and top_weight and top_reps:
             item["estimated_1rm"] = calculate_1rm(float(top_weight), int(top_reps))
         progress_list.append(item)
     return progress_list

@@ -88,30 +88,31 @@ describe('calculateMuscleLoadSplit', () => {
     expect(result.muscles[2].percentage).toBe(22);
   });
 
-  it('handles timed and cardio exercises correctly (50 kg/min equivalent)', () => {
+  it('counts cardio volume but excludes timed strength from kg-equivalent volume', () => {
     const exercises = [
       {
         activity_type: 'cardio',
+        execution_metric: 'duration_minutes',
         target: 'quadriceps',
         performed_sets: [
           { duration_minutes: 20, is_warmup: false }, // 20 * 50 = 1000 kg
         ],
       },
       {
-        activity_type: 'timed',
+        activity_type: 'strength',
+        execution_metric: 'duration_seconds',
         target: 'abs',
         performed_sets: [
-          { duration_seconds: 60, is_warmup: false }, // 1 min * 50 = 50 kg
+          { duration_seconds: 60, is_warmup: false },
         ],
       },
     ];
 
     const result = calculateMuscleLoadSplit(exercises);
-    expect(result.totalLoad).toBe(1050);
+    expect(result.totalLoad).toBe(1000);
     expect(result.muscles[0].muscle).toBe('quadriceps');
     expect(result.muscles[0].load).toBe(1000);
-    expect(result.muscles[1].muscle).toBe('abs');
-    expect(result.muscles[1].load).toBe(50);
+    expect(result.muscles.find((item) => item.muscle === 'abs')).toBeUndefined();
   });
 
   it('returns empty result when no working sets exist', () => {

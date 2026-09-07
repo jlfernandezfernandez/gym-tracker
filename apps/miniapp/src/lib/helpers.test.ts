@@ -3,11 +3,14 @@ import {
   canEditWorkout,
   currentExercise,
   executionMetricPayload,
+  formatExerciseTargetBadge,
   formatMuscle,
   formatWeight,
   missingSetNumbers,
   normalizeSession,
   parseWeight,
+  resolveCurrentSetNumber,
+  resolveSetTarget,
 } from './helpers';
 
 describe('parseWeight', () => {
@@ -45,10 +48,12 @@ describe('formatWeight', () => {
 
 describe('executionMetricPayload', () => {
   it('emits only the metric fields for the activity domain', () => {
-    expect(executionMetricPayload('cardio', { duration_minutes: 20, reps: 20, weight: 5 }))
+    expect(executionMetricPayload('duration_minutes', { duration_minutes: 20, reps: 20, duration_seconds: 45, weight: 5 }))
       .toEqual({ duration_minutes: 20 });
-    expect(executionMetricPayload('strength', { duration_minutes: 20, reps: 10, weight: 40 }))
+    expect(executionMetricPayload('reps', { duration_minutes: 20, reps: 10, duration_seconds: 45, weight: 40 }))
       .toEqual({ reps: 10, weight: 40 });
+    expect(executionMetricPayload('duration_seconds', { duration_minutes: 20, reps: 10, duration_seconds: 45, weight: 40 }))
+      .toEqual({ duration_seconds: 45, weight: 40 });
   });
 });
 
@@ -71,7 +76,31 @@ describe('normalizeSession', () => {
       }],
     }).exercises[0];
     expect(exercise.activity_type).toBe('cardio');
+    expect(exercise.execution_metric).toBe('duration_minutes');
     expect(exercise.duration_minutes).toBe(25);
+    expect(exercise.reps).toBeNull();
+  });
+
+  it('normalizes timed strength with explicit seconds contract', () => {
+    const exercise = normalizeSession({
+      planned_exercises: [{
+        id: 10,
+        order: 0,
+        exercise_id: 12,
+        target_sets: 2,
+        execution_metric: 'duration_seconds',
+        target_reps: null,
+        target_duration_minutes: null,
+        target_duration_seconds: 40,
+        suggested_weight: 32.5,
+        set_targets: [{ set_number: 1, weight: 32.5, duration_seconds: 40 }],
+        exercise: { activity_type: 'strength' },
+      }],
+    }).exercises[0];
+
+    expect(exercise.activity_type).toBe('strength');
+    expect(exercise.execution_metric).toBe('duration_seconds');
+    expect(exercise.duration_seconds).toBe(40);
     expect(exercise.reps).toBeNull();
   });
 });
@@ -80,6 +109,45 @@ describe('series workspace', () => {
   it('selects the first missing set number after deleting a middle set', () => {
     const exercise = { sets: 3, performed_sets: [{ set_number: 1 }, { set_number: 3 }] };
     expect(missingSetNumbers(exercise)).toEqual([2]);
+  });
+
+  it('prefers backend current_set_number for a deleted middle set', () => {
+    const exercise = { planned_id: 5, sets: 3, performed_sets: [{ set_number: 1 }, { set_number: 3 }] };
+    expect(resolveCurrentSetNumber(exercise, { current_planned_exercise_id: 5, current_set_number: 2 })).toBe(2);
+  });
+
+  it('resolves next target in order current over per-set over previous over global', () => {
+    const exercise = {
+      planned_id: 5,
+      sets: 3,
+      reps: 10,
+      weight: 30,
+      performed_sets: [
+        { set_number: 1, reps: 12, weight: 32.5 },
+        { set_number: 3, reps: 8, weight: 35 },
+      ],
+      set_targets: [{ set_number: 2, reps: 11, weight: 34 }],
+    };
+
+    expect(resolveSetTarget(exercise, 2)).toMatchObject({ set_number: 2, reps: 11, weight: 34 });
+    expect(resolveSetTarget({ ...exercise, set_targets: [] }, 2)).toMatchObject({ set_number: 2, reps: 12, weight: 32.5 });
+    expect(
+      resolveSetTarget(exercise, 2, {
+        current_planned_exercise_id: 5,
+        current_set_number: 2,
+        next_set_target: { set_number: 2, reps: 9, weight: 36 },
+      }),
+    ).toMatchObject({ set_number: 2, reps: 9, weight: 36 });
+  });
+
+  it('formats timed target badges with explicit seconds', () => {
+    expect(
+      formatExerciseTargetBadge({
+        sets: 2,
+        execution_metric: 'duration_seconds',
+        duration_seconds: 40,
+      }),
+    ).toBe('2×40s');
   });
 
   it('keeps a completed session non-editable even if an exercise remains pending', () => {
@@ -140,4 +208,3 @@ describe('formatMuscle', () => {
     expect(formatMuscle('Abdominales')).toBe('Abdominales');
   });
 });
-

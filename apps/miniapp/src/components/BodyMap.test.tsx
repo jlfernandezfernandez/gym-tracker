@@ -3,9 +3,11 @@ import render from 'preact-render-to-string';
 import { describe, expect, it, vi } from 'vitest';
 import { BodyMap } from './BodyMap';
 
+const BodyMapView = BodyMap as any;
+
 describe('BodyMap component rendering', () => {
   it('renders front (anterior) and back (posterior) SVG diagrams', () => {
-    const html = render(h(BodyMap, {}));
+    const html = render(h(BodyMapView, {}));
     expect(html).toContain('Vista frontal');
     expect(html).toContain('Vista dorsal');
     expect(html).toContain('Frente');
@@ -17,7 +19,7 @@ describe('BodyMap component rendering', () => {
   });
 
   it('renders simple highlighted muscles in accent color', () => {
-    const html = render(h(BodyMap, { muscles: ['chest', 'biceps'] }));
+    const html = render(h(BodyMapView, { muscles: ['chest', 'biceps'] }));
     expect(html).toContain('data-muscle="chest"');
     expect(html).toContain('data-muscle="biceps"');
   });
@@ -41,7 +43,7 @@ describe('BodyMap component rendering', () => {
     };
 
     const html = render(
-      h(BodyMap, {
+      h(BodyMapView, {
         mode: 'fatigue',
         recoveryData,
         selectedMuscle: 'quadriceps',
@@ -62,7 +64,7 @@ describe('BodyMap component rendering', () => {
     };
 
     const html = render(
-      h(BodyMap, {
+      h(BodyMapView, {
         mode: 'balance',
         volumeData,
         selectedMuscle: 'chest',
@@ -78,7 +80,7 @@ describe('BodyMap component rendering', () => {
 
   it('renders mode selector buttons when showModeSelector is true', () => {
     const html = render(
-      h(BodyMap, {
+      h(BodyMapView, {
         showModeSelector: true,
       }),
     );
@@ -89,7 +91,7 @@ describe('BodyMap component rendering', () => {
 
   it('highlights the selected muscle with an active outline', () => {
     const html = render(
-      h(BodyMap, {
+      h(BodyMapView, {
         selectedMuscle: 'abs',
       }),
     );
