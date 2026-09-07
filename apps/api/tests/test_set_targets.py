@@ -107,6 +107,72 @@ def test_current_state_no_set_targets():
     assert state["next_set_target"] is None
 
 
+def test_current_state_completed_session_keeps_full_contract_shape():
+    """Completed sessions still emit every current_state key with null-safe values."""
+    exercise = Exercise(id=1, name="Test", muscle_group="chest")
+    planned = PlannedExercise(
+        id=1,
+        session_id=1,
+        exercise_id=1,
+        order=0,
+        target_sets=1,
+        target_reps=10,
+        suggested_weight=40.0,
+        status="completed",
+    )
+    planned.exercise = exercise
+    planned.performed_sets = [
+        PerformedSet(id=1, planned_exercise_id=1, set_number=1, weight=40, reps=10)
+    ]
+    workout = WorkoutSession(id=1, status="completed", planned_exercises=[planned])
+
+    state = current_state(workout)
+
+    assert set(state) == {
+        "session_id",
+        "session_status",
+        "current_planned_exercise_id",
+        "current_exercise_id",
+        "current_exercise_name",
+        "current_set_number",
+        "target_sets",
+        "execution_metric",
+        "target_reps",
+        "target_duration_minutes",
+        "target_duration_seconds",
+        "suggested_weight",
+        "weight_mode",
+        "activity_type",
+        "next_set_target",
+        "exercise_order",
+        "exercise_count",
+        "completed_exercises",
+        "completed_sets",
+        "total_sets",
+        "is_complete",
+    }
+    assert state["session_status"] == "completed"
+    assert state["current_planned_exercise_id"] is None
+    assert state["current_exercise_id"] is None
+    assert state["current_exercise_name"] in (None, "")
+    assert state["current_set_number"] is None
+    assert state["target_sets"] is None
+    assert state["execution_metric"] is None
+    assert state["target_reps"] is None
+    assert state["target_duration_minutes"] is None
+    assert state["target_duration_seconds"] is None
+    assert state["suggested_weight"] is None
+    assert state["weight_mode"] is None
+    assert state["activity_type"] is None
+    assert state["next_set_target"] is None
+    assert state["exercise_order"] is None
+    assert state["exercise_count"] == 1
+    assert state["completed_exercises"] == 1
+    assert state["completed_sets"] == 1
+    assert state["total_sets"] == 1
+    assert state["is_complete"] is True
+
+
 def test_set_targets_can_be_sparse():
     """set_targets are sparse overrides; fewer targets than target_sets is valid."""
     spec = PlannedExerciseCreate(

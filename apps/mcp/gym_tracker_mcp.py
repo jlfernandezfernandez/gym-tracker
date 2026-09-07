@@ -866,10 +866,32 @@ def update_set(
     sensation: str | None = None,
     notes: str | None = None,
     telegram_user_id: int | None = None,
+    clear_weight: bool = False,
+    clear_rir: bool = False,
+    clear_rpe: bool = False,
 ) -> dict[str, Any]:
-    """Patch one existing set in place without deleting historical timestamps or ids."""
+    """Patch one existing set in place without deleting historical timestamps or ids.
+
+    Omitted or None values leave fields unchanged. Set clear_weight, clear_rir,
+    or clear_rpe to True to send explicit null for that field. These flags default
+    to False and are not forwarded to the API. A True flag conflicts with a
+    non-None value for the same field and raises an error before any API call.
+    Use clear_rir and clear_rpe together to remove both effort values.
+    telegram_user_id is required to scope the correction to its athlete.
+    """
     user_id = _require_telegram_user_id(telegram_user_id, "update_set")
     payload: dict[str, Any] = {}
+    for field, value, clear in (
+        ("weight", weight, clear_weight),
+        ("rir", rir, clear_rir),
+        ("rpe", rpe, clear_rpe),
+    ):
+        if clear:
+            if value is not None:
+                raise ValueError(f"clear_{field} cannot be combined with a {field} value")
+            payload[field] = None
+        elif value is not None:
+            payload[field] = float(value)
     metric_count = sum(
         value is not None for value in (reps, duration_minutes, duration_seconds)
     )
@@ -883,14 +905,8 @@ def update_set(
         payload["duration_minutes"] = int(duration_minutes)
     if duration_seconds is not None:
         payload["duration_seconds"] = int(duration_seconds)
-    if weight is not None:
-        payload["weight"] = float(weight)
     if is_warmup is not None:
         payload["is_warmup"] = bool(is_warmup)
-    if rpe is not None:
-        payload["rpe"] = float(rpe)
-    if rir is not None:
-        payload["rir"] = float(rir)
     if sensation is not None:
         payload["sensation"] = sensation
     if notes is not None:

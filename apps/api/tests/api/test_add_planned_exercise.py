@@ -236,7 +236,7 @@ def test_other_user_cannot_add_exercise() -> None:
     assert response.status_code == 403
 
 
-def test_add_exercise_not_in_catalog_returns_422() -> None:
+def test_add_exercise_not_in_catalog_returns_404() -> None:
     workout = _build_workout("planned", exercises=[])
     fake_db = AsyncMock()
     fake_db.add = MagicMock()
@@ -273,7 +273,7 @@ def test_add_exercise_not_in_catalog_returns_422() -> None:
                 "target_reps": 10,
             },
         )
-        assert response.status_code == 422
+        assert response.status_code == 404
         fake_db.add.assert_not_called()
     finally:
         routes_mod.load_session = original_load

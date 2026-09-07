@@ -145,7 +145,10 @@ class PerformedSetUpdate(BaseModel):
     def validate_payload(self) -> "PerformedSetUpdate":
         if not self.model_fields_set:
             raise ValueError("at least one field must be provided")
-        self.rpe, self.rir = _sync_rpe_rir(self.rpe, self.rir)
+        if self.rpe is not None and "rir" not in self.model_fields_set:
+            self.rir = _sync_rpe_rir(self.rpe, None)[1]
+        elif self.rir is not None and "rpe" not in self.model_fields_set:
+            self.rpe = _sync_rpe_rir(None, self.rir)[0]
         metric_fields = {"reps", "duration_minutes", "duration_seconds"} & self.model_fields_set
         if len(metric_fields) > 1:
             raise ValueError(

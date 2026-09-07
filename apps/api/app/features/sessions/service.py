@@ -209,21 +209,39 @@ def auto_finish_if_done(workout: WorkoutSession, *, derive_duration: bool = True
 
 def current_state(workout: WorkoutSession) -> dict:
     planned = sorted(workout.planned_exercises or [], key=lambda pe: pe.order)
-    if workout.status in {"completed", "cancelled"}:
+    total_sets = sum(planned_exercise.target_sets for planned_exercise in planned)
+    completed_sets = sum(len(planned_exercise.performed_sets or []) for planned_exercise in planned)
+    completed_exercises = sum(
+        1 for planned_exercise in planned if planned_exercise.status in {"completed", "skipped"}
+    )
+
+    def empty_state(*, exercise_count: int, complete: bool) -> dict:
         return {
             "session_id": workout.id,
             "session_status": workout.status,
             "current_planned_exercise_id": None,
+            "current_exercise_id": None,
+            "current_exercise_name": None,
             "current_set_number": None,
+            "target_sets": None,
+            "execution_metric": None,
+            "target_reps": None,
+            "target_duration_minutes": None,
+            "target_duration_seconds": None,
+            "suggested_weight": None,
+            "weight_mode": None,
+            "activity_type": None,
+            "next_set_target": None,
             "exercise_order": None,
-            "exercise_count": len(planned),
-            "completed_exercises": sum(
-                1 for item in planned if item.status in {"completed", "skipped"}
-            ),
-            "completed_sets": sum(len(item.performed_sets or []) for item in planned),
-            "total_sets": sum(item.target_sets for item in planned),
-            "is_complete": True,
+            "exercise_count": exercise_count,
+            "completed_exercises": completed_exercises,
+            "completed_sets": completed_sets,
+            "total_sets": total_sets,
+            "is_complete": complete,
         }
+
+    if workout.status in {"completed", "cancelled"}:
+        return empty_state(exercise_count=len(planned), complete=True)
     current = None
     for planned_exercise in planned:
         if planned_exercise.status in {"pending", "in_progress"}:
@@ -231,24 +249,8 @@ def current_state(workout: WorkoutSession) -> dict:
             break
     if current is None and planned:
         current = planned[-1]
-    completed_exercises = sum(
-        1 for planned_exercise in planned if planned_exercise.status in {"completed", "skipped"}
-    )
-    total_sets = sum(planned_exercise.target_sets for planned_exercise in planned)
-    completed_sets = sum(len(planned_exercise.performed_sets or []) for planned_exercise in planned)
     if current is None:
-        return {
-            "session_id": workout.id,
-            "session_status": workout.status,
-            "current_planned_exercise_id": None,
-            "current_set_number": None,
-            "exercise_order": None,
-            "exercise_count": 0,
-            "completed_exercises": completed_exercises,
-            "completed_sets": completed_sets,
-            "total_sets": total_sets,
-            "is_complete": True,
-        }
+        return empty_state(exercise_count=0, complete=True)
     next_set_number = next_missing_set_number(current)
     if next_set_number is None:
         next_set_number = current.target_sets
