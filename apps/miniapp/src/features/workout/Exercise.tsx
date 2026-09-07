@@ -156,10 +156,10 @@ export function SetRow({ set, target, sessionId, plannedId, exerciseId, activity
             : timedExercise
             ? performed ? `${performed} × ${set.reps ?? set.duration_seconds}s` : `${set.reps ?? set.duration_seconds}s`
             : performed ? `${performed} × ${set.reps}` : `${set.reps} reps`}
-          {effortLabel} · Hecha
+          {effortLabel} · {set.pending ? 'Pendiente de guardar' : 'Guardada'}
         </b>
       </div>
-      {!readOnly && (
+      {!readOnly && !set.pending && (
         <button class="grid size-10 cursor-pointer place-items-center rounded-pill border-0 bg-transparent text-err disabled:opacity-30" disabled={del.isPending || restore.isPending} onClick={() => {
           if (window.confirm(`¿Borrar la serie ${set.set_number}? Puedes deshacerlo durante unos segundos.`)) del.mutate();
         }} aria-label={`Borrar serie ${set.set_number}`}>
@@ -674,8 +674,8 @@ export function LogSetForm({
   };
 
   const logSet = useMutation({
-    mutationFn: ({ normalizedWeight, metricReps, metricMinutes }: { normalizedWeight: number | null; metricReps?: number; metricMinutes?: number }) =>
-      apiFetch('POST', `/sessions/${sessionId}/exercises/${exercise.planned_id}/sets`, {
+    mutationFn: async ({ normalizedWeight, metricReps, metricMinutes }: { normalizedWeight: number | null; metricReps?: number; metricMinutes?: number }) => {
+      const payload = {
         set_number: nextSetNumber,
         ...executionMetricPayload(exercise.activity_type, {
           duration_minutes: metricMinutes ?? parseInt(durationMinutes || '0', 10),
@@ -687,19 +687,26 @@ export function LogSetForm({
         rpe: selectedRir !== null ? Math.max(1, 10 - selectedRir) : null,
         sensation: 'ok',
         notes: '',
-      }),
+      };
+      if (app.workoutSync?.journal) {
+        const updated = await app.workoutSync.journal.enqueue(sessionId, exercise.planned_id, payload);
+        void app.workoutSync.sync();
+        return updated;
+      }
+      return apiFetch('POST', `/sessions/${sessionId}/exercises/${exercise.planned_id}/sets`, payload);
+    },
     onSuccess: (updatedSession) => {
       refreshAfterMutation(updatedSession);
       haptic('ok');
       if (isLastSet) {
-        showToast('Ejercicio completado', 'ok');
+        showToast(app.workoutSync?.journal ? 'Series registradas; sincronizando' : 'Ejercicio completado', 'ok');
         const pending = (updatedSession.planned_exercises || []).filter(
           (candidate: any) => candidate.id !== exercise.planned_id && ['pending', 'in_progress'].includes(candidate.status)
         );
         if (pending.length > 0) onShowPicker();
         else app.pop();
       } else {
-        showToast('Serie guardada', 'ok');
+        showToast(app.workoutSync?.journal ? 'Serie pendiente de guardar' : 'Serie guardada', 'ok');
         onSetDone?.();
       }
     },

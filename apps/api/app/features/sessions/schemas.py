@@ -1,5 +1,6 @@
 from datetime import date, datetime
 from typing import Literal
+from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -60,6 +61,7 @@ class PlannedExerciseCreate(BaseModel):
 
 
 class PerformedSetCreate(BaseModel):
+    request_id: UUID | None = None
     set_number: int = Field(ge=1)
     weight: float | None = Field(default=None, gt=0)
     reps: int | None = Field(default=None, ge=1)

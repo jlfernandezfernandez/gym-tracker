@@ -42,6 +42,7 @@ from app.models import (
     Exercise,
     PerformedSet,
     PlannedExercise,
+    SetLogReceipt,
     WorkoutSession,
 )
 
@@ -465,6 +466,32 @@ async def log_set(
     check_session_owner(workout, user_id)
     planned_exercise = find_planned_exercise(workout, planned_id)
 
+    payload = body.model_dump(mode="json", exclude={"request_id"})
+    if body.request_id:
+        receipt = await db.get(SetLogReceipt, str(body.request_id))
+        if receipt:
+            original = next(
+                (
+                    item
+                    for item in planned_exercise.performed_sets
+                    if item.id == receipt.performed_set_id
+                ),
+                None,
+            )
+            if (
+                receipt.session_id != session_id
+                or receipt.planned_exercise_id != planned_id
+                or receipt.exercise_id != planned_exercise.exercise_id
+                or receipt.payload != payload
+                or original is None
+                or any(getattr(original, key) != value for key, value in payload.items())
+            ):
+                raise HTTPException(
+                    status_code=409,
+                    detail="Original set was changed or deleted; pending input retained",
+                )
+            return workout
+
     validate_exercise_metrics(
         planned_exercise.exercise,
         reps=body.reps,
@@ -505,6 +532,18 @@ async def log_set(
     auto_finish_if_done(workout)
 
     try:
+        if body.request_id:
+            await db.flush()
+            db.add(
+                SetLogReceipt(
+                    request_id=str(body.request_id),
+                    session_id=session_id,
+                    planned_exercise_id=planned_id,
+                    exercise_id=planned_exercise.exercise_id,
+                    performed_set_id=performed_set.id,
+                    payload=payload,
+                )
+            )
         await db.commit()
     except IntegrityError as error:
         await db.rollback()

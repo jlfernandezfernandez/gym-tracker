@@ -52,7 +52,7 @@ def validate_exercise_metrics(
 
 
 def set_conflict_error(error: IntegrityError) -> HTTPException:
-    if "uq_performed_set_number" in str(error.orig):
+    if any(name in str(error.orig) for name in ("uq_performed_set_number", "pk_set_log_receipts")):
         return HTTPException(status_code=409, detail="Set was already logged by another request")
     raise error
 

@@ -281,3 +281,16 @@ class AthleteProfile(SQLModel, table=True):
     notes: str = Field(default="")
     onboarding_complete: bool = Field(default=False)
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC).replace(tzinfo=None))
+
+
+class SetLogReceipt(SQLModel, table=True):
+    """Survives corrections/deletion of the set; retries must never recreate it."""
+
+    __tablename__ = "set_log_receipts"
+    __table_args__ = (sa.PrimaryKeyConstraint("request_id", name="pk_set_log_receipts"),)
+    request_id: str = Field(primary_key=True)
+    session_id: int = Field(foreign_key="workout_sessions.id", ondelete="CASCADE")
+    planned_exercise_id: int
+    exercise_id: int
+    performed_set_id: int
+    payload: dict = Field(sa_column=sa.Column(sa.JSON, nullable=False))

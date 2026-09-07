@@ -19,16 +19,22 @@ os.environ["DATABASE_URL"] = "postgresql+asyncpg://x:x@localhost/x"
 from app.core.auth import current_user_id
 from app.core.database import get_session as get_db_session
 from app.main import create_app
-from app.models import Exercise, PerformedSet, PlannedExercise, WorkoutSession
+from app.models import Exercise, PerformedSet, PlannedExercise, SetLogReceipt, WorkoutSession
 
 
 class MemorySession:
     def __init__(self, workout: WorkoutSession):
         self.workout = workout
         self.added: list[object] = []
+        self.receipts: dict[str, SetLogReceipt] = {}
         self.expire_all = MagicMock()
-        self.flush = AsyncMock()
+        self.flush = AsyncMock(side_effect=self.assign_ids)
         self.rollback = AsyncMock()
+
+    async def assign_ids(self) -> None:
+        for value in self.added:
+            if isinstance(value, PerformedSet):
+                value.id = value.id or 100 + value.set_number
 
     def add(self, value: object) -> None:
         self.added.append(value)
@@ -43,6 +49,8 @@ class MemorySession:
         return SimpleNamespace(scalar_one_or_none=lambda: self.workout)
 
     async def get(self, model, primary_key):
+        if model is SetLogReceipt:
+            return self.receipts.get(primary_key)
         if model is Exercise:
             return next(
                 (
@@ -64,6 +72,8 @@ class MemorySession:
 
     async def commit(self) -> None:
         for value in self.added:
+            if isinstance(value, SetLogReceipt):
+                self.receipts[value.request_id] = value
             if isinstance(value, PerformedSet):
                 planned = next(
                     item
