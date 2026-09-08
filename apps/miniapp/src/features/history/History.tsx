@@ -215,10 +215,10 @@ function HistorySessionRow({
   return (
     <div class="grid min-h-[76px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-edge px-2 py-1.5 last:border-b-0">
       <button
-        class="group grid min-h-16 min-w-0 cursor-pointer grid-cols-[82px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control border-0 bg-transparent px-[7px] py-1.5 text-left text-ink transition-colors hover:bg-hover active:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+        class="group grid min-h-16 min-w-0 cursor-pointer grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control border-0 bg-transparent px-[7px] py-1.5 text-left text-ink transition-colors hover:bg-hover active:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         onClick={() => app.openSession(session.id)}
       >
-        <span class="text-[.74rem] font-medium text-hint">
+        <span class="text-[1.15rem] font-semibold leading-none text-ink">
           {formatDay(session.session_date)}
         </span>
         <span class="min-w-0">
