@@ -15,7 +15,8 @@
   p { color: var(--color-hint); font-size: .875rem; line-height: 1.45; text-wrap: pretty; }
   label { display: block; margin-bottom: 6px; color: var(--color-hint); font-size: .62rem; font-weight: 700; letter-spacing: .07em; text-align: center; text-transform: uppercase; }
   input, textarea { width: 100%; min-height: 48px; padding: 11px 12px; border: 1px solid var(--color-edge); border-radius: 13px; outline: none; background: var(--color-surface); color: var(--color-ink); font-size: 1rem; }
-  input { text-align: center; }
+  input:not([type="checkbox"]):not([type="radio"]) { text-align: center; }
+  input[type="checkbox"], input[type="radio"] { width: 1.25rem; height: 1.25rem; min-height: 0; padding: 0; accent-color: var(--color-accent); }
   textarea { min-height: 78px; resize: none; }
   input:focus-visible, textarea:focus-visible { border-color: var(--color-accent); box-shadow: 0 0 0 3px var(--color-accent-soft); }
 }
