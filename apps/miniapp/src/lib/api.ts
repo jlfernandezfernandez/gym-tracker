@@ -7,7 +7,7 @@ import { getSetJournal } from './set-journal';
 const API_BASE = location.origin + '/api';
 
 export async function apiFetch<T = any>(method: string, path: string, body?: unknown): Promise<T> {
-  if (isDemoMode()) return demoFetch(method, path) as Promise<T>;
+  if (isDemoMode()) return demoFetch(method, path, body) as Promise<T>;
 
   const sessionId = path.match(/^\/sessions\/(\d+)(?:\/|$)/)?.[1];
   const isSetLog = method === 'POST' && /^\/sessions\/\d+\/exercises\/\d+\/sets$/.test(path);

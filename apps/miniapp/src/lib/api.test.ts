@@ -36,3 +36,22 @@ it("rejects a response if the Telegram user changes while it is in flight", asyn
   const {apiFetch} = await import("./api");
   await expect(apiFetch("GET", "/sessions/1")).rejects.toThrow("usuario ha cambiado");
 });
+
+it("keeps demo mutations in memory and never touches fetch", async () => {
+  vi.resetModules();
+  vi.doMock("./demo", () => ({
+    isDemoMode: () => true,
+    demoFetch: vi.fn(async (_method: string, _path: string, body: any) => ({ ok: true, body })),
+  }));
+  vi.doMock("./telegram", () => ({ tg: undefined }));
+  const fetchSpy = vi.fn(() => {
+    throw new Error("Network must not run");
+  });
+  vi.stubGlobal("fetch", fetchSpy);
+
+  const {apiFetch} = await import("./api");
+  const response = await apiFetch("PATCH", "/profile", { goal: "Fuerza" });
+
+  expect(response).toEqual({ ok: true, body: { goal: "Fuerza" } });
+  expect(fetchSpy).not.toHaveBeenCalled();
+});

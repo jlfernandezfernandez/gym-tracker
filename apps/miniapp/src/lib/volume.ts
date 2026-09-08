@@ -107,12 +107,11 @@ export function calculateMuscleLoadSplit(exercises: any[] = []): SessionVolumeSp
     for (const set of setsToCalculate) {
       if (set?.is_warmup) continue;
 
-      if (exercise.activity_type === 'cardio' || exercise.is_cardio) {
-        const mins = Number(set.duration_minutes ?? exercise.duration_minutes ?? (set.duration_seconds ? set.duration_seconds / 60 : 0) ?? 0);
+      if (exercise.activity_type === 'cardio' || exercise.is_cardio || exercise.execution_metric === 'duration_minutes') {
+        const mins = Number(set.duration_minutes ?? exercise.duration_minutes ?? (set.duration_seconds ? set.duration_seconds / 60 : 0));
         exerciseTonnage += mins * 50; // 50 kg equivalent per cardio minute
-      } else if (exercise.activity_type === 'timed' || (set.duration_seconds && !set.weight && !set.reps)) {
-        const mins = Number((set.duration_seconds ? set.duration_seconds / 60 : 0) || set.duration_minutes || exercise.duration_minutes || 0);
-        exerciseTonnage += mins * 50;
+      } else if (exercise.execution_metric === 'duration_seconds' || set.duration_seconds) {
+        continue;
       } else {
         const reps = Number(set.reps ?? exercise.reps ?? 0);
         const weight = set.weight != null ? Number(set.weight) : (exercise.weight != null ? Number(exercise.weight) : null);
@@ -230,7 +229,8 @@ export function calculateWeeklyStreak(
   for (const s of sessions) {
     const rawDate = s?.session_date || s?.date;
     if (!rawDate) continue;
-    totalWorkouts += 1;
+    const workoutCount = Number(s?.workout_count ?? 1);
+    totalWorkouts += Number.isFinite(workoutCount) && workoutCount > 0 ? workoutCount : 1;
     const monday = getMondayOfWeek(rawDate);
     workoutWeekSet.add(toIsoDate(monday));
   }

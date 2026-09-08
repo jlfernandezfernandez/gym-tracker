@@ -1,6 +1,7 @@
 import os
 import sys
 import unittest
+from uuid import uuid4
 from unittest.mock import patch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -127,6 +128,24 @@ class AddPlannedExerciseTests(unittest.TestCase):
 
 
 class SessionMutationTests(unittest.TestCase):
+    def test_update_set_calls_patch_endpoint(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.update_set(
+                session_id=1,
+                planned_exercise_id=2,
+                set_id=3,
+                reps=12,
+                weight=42,
+                rpe=9,
+                telegram_user_id=7,
+            )
+        request.assert_called_once_with(
+            "PATCH",
+            "/sessions/1/exercises/2/sets/3",
+            {"reps": 12, "weight": 42.0, "rpe": 9.0},
+            user_id=7,
+        )
+
     def test_restore_set_calls_endpoint(self) -> None:
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
             gym_tracker_mcp.restore_set(1, 2, 3, 10, weight=40, telegram_user_id=7)
@@ -160,6 +179,8 @@ class SessionMutationTests(unittest.TestCase):
         )
 
     def test_correction_tools_require_telegram_user_id_locally(self) -> None:
+        with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
+            gym_tracker_mcp.update_set(1, 2, 1, reps=10)
         with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
             gym_tracker_mcp.restore_set(1, 2, 1, 10)
         with self.assertRaisesRegex(ValueError, "telegram_user_id is required"):
@@ -228,6 +249,49 @@ class CardioContractTests(unittest.TestCase):
             user_id=7,
         )
 
+    def test_create_plan_accepts_unloaded_timed_strength_contract(self) -> None:
+        exercises = [
+            {
+                "exercise_id": 9,
+                "order": 0,
+                "target_sets": 2,
+                "execution_metric": "duration_seconds",
+                "target_duration_seconds": 40,
+            }
+        ]
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.create_plan(
+                title="Timed strength",
+                exercises=exercises,
+                telegram_user_id=7,
+            )
+
+        assert request.call_args.args[2]["exercises"] == exercises
+
+    def test_create_plan_accepts_loaded_timed_strength_contract(self) -> None:
+        exercises = [
+            {
+                "exercise_id": 9,
+                "order": 0,
+                "target_sets": 2,
+                "execution_metric": "duration_seconds",
+                "target_duration_seconds": 40,
+                "suggested_weight": 32.5,
+                "set_targets": [
+                    {"set_number": 1, "weight": 32.5, "duration_seconds": 40},
+                    {"set_number": 2, "weight": 32.5, "duration_seconds": 45},
+                ],
+            }
+        ]
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.create_plan(
+                title="Loaded timed strength",
+                exercises=exercises,
+                telegram_user_id=7,
+            )
+
+        assert request.call_args.args[2]["exercises"] == exercises
+
     def test_import_forwards_cardio_minutes(self) -> None:
         exercises = [{"exercise_id": 9, "sets": [{"duration_minutes": 30}]}]
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
@@ -255,6 +319,50 @@ class CardioContractTests(unittest.TestCase):
             user_id=7,
         )
 
+    def test_log_set_forwards_request_id_when_present(self) -> None:
+        request_id = str(uuid4())
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.log_set(
+                session_id=1,
+                planned_exercise_id=2,
+                set_number=1,
+                reps=10,
+                weight=40,
+                request_id=request_id,
+                telegram_user_id=7,
+            )
+        request.assert_called_once_with(
+            "POST",
+            "/sessions/1/exercises/2/sets",
+            {
+                "set_number": 1,
+                "is_warmup": False,
+                "reps": 10,
+                "weight": 40.0,
+                "request_id": request_id,
+                "sensation": "",
+                "notes": "",
+            },
+            user_id=7,
+        )
+
+    def test_log_timed_strength_set_sends_duration_seconds_and_optional_weight(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.log_set(
+                session_id=1,
+                planned_exercise_id=2,
+                set_number=1,
+                duration_seconds=45,
+                weight=32.5,
+                telegram_user_id=7,
+            )
+        request.assert_called_once_with(
+            "POST",
+            "/sessions/1/exercises/2/sets",
+            {"set_number": 1, "is_warmup": False, "duration_seconds": 45, "weight": 32.5, "sensation": "", "notes": ""},
+            user_id=7,
+        )
+
     def test_add_cardio_uses_target_minutes_without_target_reps(self) -> None:
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
             gym_tracker_mcp.add_planned_exercise(
@@ -277,11 +385,47 @@ class CardioContractTests(unittest.TestCase):
             user_id=7,
         )
 
+    def test_add_timed_strength_uses_execution_metric_and_target_seconds(self) -> None:
+        with patch.object(gym_tracker_mcp, "_request", return_value={}) as request:
+            gym_tracker_mcp.add_planned_exercise(
+                session_id=1,
+                exercise_id=42,
+                target_sets=2,
+                execution_metric="duration_seconds",
+                target_duration_seconds=40,
+                suggested_weight=32.5,
+                set_targets=[
+                    {"set_number": 1, "weight": 32.5, "duration_seconds": 40},
+                    {"set_number": 2, "weight": 32.5, "duration_seconds": 45},
+                ],
+                telegram_user_id=7,
+            )
+        request.assert_called_once_with(
+            "POST",
+            "/sessions/1/exercises",
+            {
+                "exercise_id": 42,
+                "target_sets": 2,
+                "execution_metric": "duration_seconds",
+                "target_duration_seconds": 40,
+                "suggested_weight": 32.5,
+                "notes": "",
+                "unilateral": False,
+                "set_targets": [
+                    {"set_number": 1, "weight": 32.5, "duration_seconds": 40},
+                    {"set_number": 2, "weight": 32.5, "duration_seconds": 45},
+                ],
+            },
+            user_id=7,
+        )
+
     def test_log_set_rejects_mixed_cardio_and_strength_metrics(self) -> None:
         with self.assertRaisesRegex(ValueError, "exactly one"):
             gym_tracker_mcp.log_set(1, 2, 1, reps=10, duration_minutes=10)
         with self.assertRaisesRegex(ValueError, "does not accept weight"):
             gym_tracker_mcp.log_set(1, 2, 1, duration_minutes=10, weight=5)
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            gym_tracker_mcp.log_set(1, 2, 1, reps=10, duration_seconds=45)
 
     def test_create_plan_rejects_cardio_weight_or_unilateral(self) -> None:
         base = {
@@ -295,6 +439,19 @@ class CardioContractTests(unittest.TestCase):
         ):
             with self.assertRaises(ValueError):
                 gym_tracker_mcp.create_plan(exercises=[invalid], telegram_user_id=7)
+
+    def test_create_plan_rejects_weight_without_execution_metric(self) -> None:
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            gym_tracker_mcp.create_plan(
+                exercises=[
+                    {
+                        "exercise_id": 9,
+                        "target_sets": 1,
+                        "suggested_weight": 32.5,
+                    }
+                ],
+                telegram_user_id=7,
+            )
 
 
 class TokenOptimizationTests(unittest.TestCase):
@@ -318,6 +475,10 @@ class TokenOptimizationTests(unittest.TestCase):
         s = {"duration_minutes": 25, "is_warmup": False}
         self.assertEqual(gym_tracker_mcp.format_compact_set(s), "25m")
 
+    def test_format_compact_set_timed_strength_seconds(self) -> None:
+        s = {"duration_seconds": 45, "weight": 32.5, "is_warmup": False}
+        self.assertEqual(gym_tracker_mcp.format_compact_set(s), "45s@32.5kg")
+
     def test_format_compact_set_warmup_duration(self) -> None:
         s = {"duration_minutes": 10, "is_warmup": True}
         self.assertEqual(gym_tracker_mcp.format_compact_set(s), "W:10m")
@@ -339,6 +500,15 @@ class TargetNotationTests(unittest.TestCase):
     def test_format_target_notation_duration(self) -> None:
         pe = {"target_sets": 1, "target_duration_minutes": 20}
         self.assertEqual(gym_tracker_mcp.format_target_notation(pe), "1x20m")
+
+    def test_format_target_notation_timed_strength(self) -> None:
+        pe = {
+            "target_sets": 2,
+            "execution_metric": "duration_seconds",
+            "target_duration_seconds": 40,
+            "suggested_weight": 32.5,
+        }
+        self.assertEqual(gym_tracker_mcp.format_target_notation(pe), "2x40s@32.5kg")
 
 
 class DenseSnapshotTests(unittest.TestCase):
@@ -402,20 +572,23 @@ class DenseSnapshotTests(unittest.TestCase):
                             "suggested_weight": 80.0,
                             "status": "in_progress",
                             "performed_sets": [
-                                {"reps": 8, "weight": 80.0, "rir": 2.0, "is_warmup": False},
-                                {"reps": 8, "weight": 80.0, "rir": 1.0, "is_warmup": False},
+                                {"id": 101, "set_number": 1, "reps": 8, "weight": 80.0, "rir": 2.0, "is_warmup": False},
+                                {"id": 102, "set_number": 2, "reps": 8, "weight": 80.0, "rir": 1.0, "is_warmup": False},
                             ],
                         }
                     ],
                 },
                 "current": {
+                    "current_planned_exercise_id": 1,
+                    "current_exercise_id": 45,
                     "current_exercise_name": "Bench Press",
-                    "exercises_completed": 0,
-                    "total_exercises": 1,
+                    "completed_exercises": 0,
+                    "exercise_count": 1,
                     "current_set_number": 3,
                     "target_sets": 3,
                     "target_reps": 8,
                     "suggested_weight": 80.0,
+                    "next_set_target": {"set_number": 3, "weight": 82.5, "reps": 6},
                     "next_action": "log_set",
                 },
             },
@@ -466,9 +639,18 @@ class DenseSnapshotTests(unittest.TestCase):
         active = dense["active_session"]
         self.assertIsNotNone(active)
         self.assertEqual(active["id"], 10)
+        self.assertEqual(active["current_planned_exercise_id"], 1)
+        self.assertEqual(active["current_exercise_id"], 45)
         self.assertEqual(active["current_exercise"], "Bench Press")
+        self.assertEqual(active["exercises_done"], 0)
+        self.assertEqual(active["exercises_total"], 1)
         self.assertEqual(active["current_set"], 3)
-        self.assertEqual(active["exercises"][0]["sets"], ["8@80kg (2RIR)", "8@80kg (1RIR)"])
+        self.assertEqual(active["next_set_target"], {"set_number": 3, "weight": 82.5, "reps": 6})
+        self.assertEqual(active["next_target"], "6@82.5kg")
+        self.assertEqual(active["exercises"][0]["sets"], [
+            {"id": 101, "set_number": 1, "summary": "8@80kg (2RIR)"},
+            {"id": 102, "set_number": 2, "summary": "8@80kg (1RIR)"},
+        ])
 
         # 4. Recent History
         history = dense["recent_sessions"]
@@ -530,7 +712,29 @@ class AdditionalMcpToolsTests(unittest.TestCase):
 
         with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
             gym_tracker_mcp.list_sessions(limit=5, telegram_user_id=7)
-        req.assert_called_once_with("GET", "/sessions?limit=5", user_id=7)
+        req.assert_called_once_with("GET", "/sessions?limit=5&offset=0", user_id=7)
+
+        with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
+            gym_tracker_mcp.list_sessions(
+                limit=20,
+                offset=20,
+                completed_only=True,
+                on_date="2026-09-06",
+                telegram_user_id=7,
+            )
+        req.assert_called_once_with(
+            "GET",
+            "/sessions?limit=20&offset=20&on_date=2026-09-06&completed_only=true",
+            user_id=7,
+        )
+
+        with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
+            gym_tracker_mcp.session_activity(days=90, telegram_user_id=7)
+        req.assert_called_once_with("GET", "/sessions/activity?days=90", user_id=7)
+
+        with patch.object(gym_tracker_mcp, "_request", return_value=[]) as req:
+            gym_tracker_mcp.session_activity(days=999, telegram_user_id=7)
+        req.assert_called_once_with("GET", "/sessions/activity?days=366", user_id=7)
 
         with patch.object(gym_tracker_mcp, "_request", return_value={}) as req:
             gym_tracker_mcp.get_active_session(telegram_user_id=7)
@@ -575,9 +779,9 @@ class AdditionalMcpToolsTests(unittest.TestCase):
             user_id=7,
         )
 
-        with patch.object(gym_tracker_mcp, "_request", return_value={"share_token": "token123"}):
+        with patch.object(gym_tracker_mcp, "_request", return_value={"id": 10}):
             url = gym_tracker_mcp.session_web_url(10, planned_exercise_id=2, telegram_user_id=7)
-        self.assertIn("/session/share/token123/exercise/2", url)
+        self.assertIn("/session/10/exercise/2", url)
 
         share_url = gym_tracker_mcp.share_web_url("abc-xyz")
         self.assertIn("/session/share/abc-xyz", share_url)
@@ -602,4 +806,3 @@ class AdditionalMcpToolsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

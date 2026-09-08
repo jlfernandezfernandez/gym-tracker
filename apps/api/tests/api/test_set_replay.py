@@ -4,7 +4,32 @@ import json
 from pathlib import Path
 from uuid import uuid4
 
+import pytest
 from test_session_corrections import _client, _workout
+
+
+@pytest.mark.parametrize("legacy_receipt", [False, True])
+def test_replay_accepts_receipt_from_before_seconds_support(legacy_receipt):
+    gen = _client(_workout(sets=(), target_sets=1))
+    client, db = next(gen)
+    payload = {"request_id": str(uuid4()), "set_number": 1, "weight": 40, "reps": 10}
+    first = client.post("/api/sessions/1/exercises/5/sets", json=payload)
+    assert first.status_code == 200
+    receipt = db.receipts[payload["request_id"]]
+    if legacy_receipt:
+        receipt.payload.pop("duration_seconds")
+    stored_payload = dict(receipt.payload)
+
+    replay = client.post("/api/sessions/1/exercises/5/sets", json=payload)
+    assert replay.status_code == 200
+    assert len(replay.json()["planned_exercises"][0]["performed_sets"]) == 1
+    assert receipt.payload == stored_payload
+
+    changed = client.post("/api/sessions/1/exercises/5/sets", json={**payload, "reps": 12})
+    assert changed.status_code == 409
+    set_id = first.json()["planned_exercises"][0]["performed_sets"][0]["id"]
+    assert client.delete(f"/api/sessions/1/exercises/5/sets/{set_id}").status_code == 200
+    assert client.post("/api/sessions/1/exercises/5/sets", json=payload).status_code == 409
 
 
 def test_replay_after_lost_response_returns_one_set_even_when_session_completed():

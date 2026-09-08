@@ -168,7 +168,7 @@ export function BodyMap({
                   strokeWidth={isSelected ? '2.4' : '1.2'}
                   strokeLinejoin="round"
                   class={`transition-all duration-200 ${
-                    isClickable ? 'cursor-pointer hover:brightness-110 active:scale-98' : ''
+                    isClickable ? 'cursor-pointer hover:brightness-110' : ''
                   }`}
                   onClick={() => handleMuscleClick(item.id, item.isInert)}
                   data-muscle={item.id}
@@ -212,7 +212,7 @@ export function BodyMap({
                   strokeWidth={isSelected ? '2.4' : '1.2'}
                   strokeLinejoin="round"
                   class={`transition-all duration-200 ${
-                    isClickable ? 'cursor-pointer hover:brightness-110 active:scale-98' : ''
+                    isClickable ? 'cursor-pointer hover:brightness-110' : ''
                   }`}
                   onClick={() => handleMuscleClick(item.id, item.isInert)}
                   data-muscle={item.id}
@@ -227,17 +227,19 @@ export function BodyMap({
       </div>
 
       {/* Selected Muscle Interactive Popover / Tooltip Card */}
-      {showPopover && selectedInfo && (
-        <div class="mt-3 w-full max-w-[340px] animate-fadeIn rounded-2xl border border-edge bg-surface-2 p-3 shadow-md">
+      {showPopover && (
+        <div class="mt-3 h-40 w-full max-w-[340px]" aria-live="polite">
+        {selectedInfo && (
+        <div class="h-full overflow-y-auto rounded-lg border border-edge bg-surface-2 p-3 shadow-md">
           <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2">
-              <span class="size-2.5 rounded-full bg-accent" />
-              <b class="text-sm font-bold text-ink">{selectedInfo.label}</b>
+            <div class="flex min-w-0 items-center gap-2">
+              <span class="size-2.5 shrink-0 rounded-full bg-accent" />
+              <b class="min-w-0 break-words text-sm font-bold text-ink">{selectedInfo.label}</b>
             </div>
             {interactive && (
               <button
                 type="button"
-                class="rounded-full p-1 text-hint transition hover:bg-hover hover:text-ink"
+                class="shrink-0 rounded-full p-1 text-hint transition hover:bg-hover hover:text-ink"
                 onClick={() => handleMuscleClick(selectedInfo.slug as CanonicalMuscle)}
                 aria-label="Cerrar detalle"
               >
@@ -295,6 +297,8 @@ export function BodyMap({
               </div>
             )}
           </div>
+        </div>
+        )}
         </div>
       )}
 

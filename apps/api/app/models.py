@@ -122,6 +122,23 @@ class PlannedExercise(SQLModel, table=True):
             name="ck_planned_duration_positive",
         ),
         CheckConstraint(
+            "target_duration_seconds IS NULL OR target_duration_seconds > 0",
+            name="ck_planned_duration_seconds_positive",
+        ),
+        CheckConstraint(
+            "execution_metric IN ('reps', 'duration_minutes', 'duration_seconds')",
+            name="ck_planned_execution_metric",
+        ),
+        CheckConstraint(
+            "(execution_metric != 'reps' OR (target_duration_minutes IS NULL"
+            " AND target_duration_seconds IS NULL))"
+            " AND (execution_metric != 'duration_minutes' OR (target_reps IS NULL"
+            " AND target_duration_seconds IS NULL))"
+            " AND (execution_metric != 'duration_seconds' OR (target_reps IS NULL"
+            " AND target_duration_minutes IS NULL))",
+            name="ck_planned_target_matches_metric",
+        ),
+        CheckConstraint(
             "status IN ('pending', 'in_progress', 'completed', 'skipped')", name="ck_planned_status"
         ),
         CheckConstraint(
@@ -134,8 +151,10 @@ class PlannedExercise(SQLModel, table=True):
     exercise_id: int = Field(foreign_key="exercises.id")
     order: int = Field(default=0)
     target_sets: int = Field(default=3)
+    execution_metric: str = Field(default="reps")
     target_reps: int | None = Field(default=None)
     target_duration_minutes: int | None = Field(default=None)
+    target_duration_seconds: int | None = Field(default=None)
     suggested_weight: float | None = Field(default=None)
     unilateral: bool = Field(default=False)
     superset_group: str | None = Field(default=None)
@@ -171,7 +190,13 @@ class PerformedSet(SQLModel, table=True):
             "duration_minutes IS NULL OR duration_minutes > 0", name="ck_set_duration_positive"
         ),
         CheckConstraint(
-            "(reps IS NULL) <> (duration_minutes IS NULL)",
+            "duration_seconds IS NULL OR duration_seconds > 0",
+            name="ck_set_duration_seconds_positive",
+        ),
+        CheckConstraint(
+            "(CASE WHEN reps IS NOT NULL THEN 1 ELSE 0 END)"
+            " + (CASE WHEN duration_minutes IS NOT NULL THEN 1 ELSE 0 END)"
+            " + (CASE WHEN duration_seconds IS NOT NULL THEN 1 ELSE 0 END) = 1",
             name="ck_set_metric_exactly_one",
         ),
     )
@@ -182,6 +207,7 @@ class PerformedSet(SQLModel, table=True):
     weight: float | None = Field(default=None)
     reps: int | None = Field(default=None)
     duration_minutes: int | None = Field(default=None)
+    duration_seconds: int | None = Field(default=None)
     is_warmup: bool = Field(default=False)
     rpe: float | None = Field(default=None, ge=1.0, le=10.0)
     rir: float | None = Field(default=None, ge=0.0, le=10.0)

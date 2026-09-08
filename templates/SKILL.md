@@ -153,32 +153,28 @@ Never insist on an exercise if the athlete says the machine does not exist or it
 
 ## Mini App URLs
 
-Important: the Mini App is not the start-training surface. Do not tell the athlete to open the web app to begin. Training starts in Telegram with you. You create/update the session via MCP, then send a Web App/deep link for the exact visual surface needed.
+Important: workout coordination starts in Telegram with you. Do not replace coaching with a generic landing-page redirect. If the athlete reopens the Mini App directly, continue from the current session state and send the exact owner/share link needed.
 
 Use:
 
 - Landing/base: `<APP_BASE>/` only explains the product and can show an active session.
-- Session plan: `session_web_url(session_id)` → `<APP_BASE>/session/share/<token>`
-- Exercise detail: `session_web_url(session_id, planned_exercise_id)` → `<APP_BASE>/session/share/<token>/exercise/<planned_id>`
-- Companion share: `share_web_url(share_token)`
+- Session plan: `session_web_url(session_id)` → `<APP_BASE>/session/<id>`
+- Exercise detail: `session_web_url(session_id, planned_exercise_id)` → `<APP_BASE>/session/<id>/exercise/<planned_id>`
+- Companion share: `share_web_url(share_token)` → `<APP_BASE>/session/share/<token>`
+
+`session_web_url` is owner-only and must open as a Telegram Mini App with valid `initData` from the same bot configured in Gym Tracker. `share_web_url` remains read-only and is the only safe plain share link.
 
 Never build these URLs by hand — always use the MCP tools so session ids stay private.
 
 After creating a plan, always include the session link. During the workout, prefer exercise detail links for the current planned exercise.
 
-## Builder mode
+## Compatibility note
 
-You may improve the gym-tracker app when the product need is clear and low-risk.
+This template is a legacy compatibility persona, not an installation or deployment authority.
 
-Rules:
-
-- Small UX/API fixes may be implemented directly.
-- For larger changes, propose first and ask the owner.
-- Always run build/tests/smoke checks before saying it is deployed.
-- Use the local gym-tracker repo clone.
-- Deploy through your own pipeline (Coolify, docker compose...).
-- Keep code simple, YAGNI, modern, maintainable.
-- If you learn a durable workflow, update this skill.
+- For Docker setup, maintenance and safe diagnostics, load `skills/gym-tracker-install`.
+- For product operation and coaching flows, load `skills/gym-tracker`.
+- Do not use this template to overwrite an operator's persona, memory, or deployment workflow.
 
 ## Safety
 

@@ -350,23 +350,9 @@ describe('Adversarial Stress Test: Domain 3 - Timed & Isometric Stopwatch Calcul
 
   it('detects timed/isometric across various syntax, notes, and activity types', () => {
     const isometrics = [
-      { name: 'Plank' },
-      { name: 'Plancha lateral' },
-      { name: 'Dead Hang con agarre prono' },
-      { name: 'Colgado en barra pasivo' },
-      { name: 'Wall sit apoyado en pared' },
-      { name: 'Sentadilla isométrica a 90 grados' },
-      { name: 'Paseo del granjero con mancuernas pesadas' },
-      { name: 'Farmer carry unilateral' },
-      { name: 'Hollow body hold' },
-      { name: 'L-sit en anillas' },
-      { name: 'V-sit hold' },
-      { name: 'Flexiones', notes: 'Aguantar abajo 3s en isometría' },
-      { activity_type: 'isometric' },
-      { activity_type: 'timed' },
-      { is_isometric: true },
-      { is_timed: true },
-      { mode: 'time' },
+      { execution_metric: 'duration_seconds' },
+      { duration_seconds: 45 },
+      { target_duration_seconds: 30 },
     ];
 
     for (const ex of isometrics) {
@@ -384,6 +370,8 @@ describe('Adversarial Stress Test: Domain 3 - Timed & Isometric Stopwatch Calcul
       { name: 'Remo con barra', activity_type: 'strength' },
       { name: 'Sentadilla búlgara', activity_type: 'strength' },
       { name: 'Press banca plano', activity_type: 'strength' },
+      { name: 'Plancha abdominal' },
+      { notes: 'Aguantar abajo 3s en isometría' },
       { name: 'Carrera continua', activity_type: 'cardio' },
       { name: 'Cinta elíptica', activity_type: 'cardio' },
       null,

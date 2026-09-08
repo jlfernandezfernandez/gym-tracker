@@ -1,7 +1,9 @@
 # Instalar con Docker
 
-Esta guía instala Gym Tracker en un servidor Docker normal. Usa imágenes públicas
-de GHCR y deja App y MCP en `localhost` por defecto.
+Esta guía instala Gym Tracker en un servidor Docker normal. Para desarrollo desde
+tu clon local usa `docker-compose.yaml` y compila desde fuente. Para producción
+usa `compose.production.yml`, que descarga imágenes públicas de GHCR y deja App
+y MCP en `localhost` por defecto.
 
 ## Requisitos
 
@@ -41,7 +43,16 @@ GYM_TRACKER_VERSION=latest
 No cambies `APP_BIND=127.0.0.1` ni `MCP_BIND=127.0.0.1` para una instalación
 normal. Así los puertos no quedan publicados por accidente.
 
-## 2. Arranca el stack de producción
+## 2. Elige el modo correcto
+
+- Desarrollo desde tu clon: `docker compose up -d --build` en la raíz del repo. Este camino construye App y MCP desde tu checkout y es el adecuado para probar cambios locales.
+- Producción: `docker compose -f compose.production.yml up -d`. Este camino usa las imágenes `ghcr.io/jlfernandezfernandez/gym-tracker` y `ghcr.io/jlfernandezfernandez/gym-tracker-mcp`.
+
+En ambos casos, `127.0.0.1` significa la máquina host donde corre Docker. Dentro
+de los contenedores, el MCP alcanza la API con `http://app:8000/api`. No mezcles
+ese hostname interno con la URL que usa un navegador, Telegram o un agente externo.
+
+## 3. Arranca el stack de producción
 
 ```bash
 docker compose -f compose.production.yml up -d
@@ -51,7 +62,7 @@ docker compose -f compose.production.yml ps
 `app-init` aplica migraciones e instala el catálogo en el volumen persistente.
 El primer arranque descarga la release del dataset; después es idempotente.
 
-## 3. Configura HTTPS
+## 4. Configura HTTPS
 
 Tu proxy debe terminar TLS para `gym.example.com` y reenviar a:
 
@@ -62,12 +73,18 @@ http://127.0.0.1:8000
 No reenvíes PostgreSQL. Tampoco expongas MCP: si el agente vive en esta máquina,
 conéctalo a `http://127.0.0.1:8001/mcp`.
 
-## 4. Comprueba antes de abrir Telegram
+## 5. Comprueba antes de abrir Telegram
 
 ```bash
+docker compose -f compose.production.yml ps
+curl http://127.0.0.1:8000/health
 curl http://127.0.0.1:8000/ready
 curl http://127.0.0.1:8001/health
+curl http://127.0.0.1:8001/ready
 ```
+
+Si prefieres una comprobación local de bajo riesgo en el clon, usa el script
+[skills/gym-tracker-install/scripts/diagnose-local.sh](../skills/gym-tracker-install/scripts/diagnose-local.sh). Solo consulta `docker compose ps` y endpoints de salud/readiness; no lee `.env`, no toca la base de datos y no ejecuta `down -v`.
 
 Después sigue [Telegram](setup-telegram.md) y [MCP](agent-setup.md).
 
@@ -77,6 +94,9 @@ La opción recomendada es una VPN o una red privada. Solo en una LAN de confianz
 puedes cambiar `MCP_BIND=0.0.0.0`, proteger el puerto con firewall para la IP del
 agente y reiniciar el stack. Nunca publiques MCP directamente en Internet: la
 clave del coach protege MCP → API, no al cliente que conecta a MCP.
+
+Si usas Telegram Mini App real, el bot configurado en el agente debe ser el mismo
+que corresponde a `TELEGRAM_BOT_TOKEN` en Gym Tracker.
 
 ## Actualizar
 

@@ -39,5 +39,5 @@ export function MeasurementChart({ points, unit }: { points: MeasurementPoint[];
     const chart = renderMeasurementChart(canvasRef.current, points, unit);
     return () => chart.destroy();
   }, [points, unit]);
-  return <div class="relative mt-2.5 h-[165px]"><canvas ref={canvasRef} /></div>;
+  return <div class="relative mt-2.5 h-[165px] min-w-0 w-full"><canvas ref={canvasRef} /></div>;
 }

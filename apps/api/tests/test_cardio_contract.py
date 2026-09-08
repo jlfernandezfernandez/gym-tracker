@@ -39,6 +39,17 @@ def strength() -> Exercise:
     )
 
 
+def timed_strength() -> Exercise:
+    return Exercise(
+        id=3,
+        name="Farmer Carry",
+        muscle_group="forearms",
+        body_part="upper arms",
+        equipment="trap bar",
+        activity_type="strength",
+    )
+
+
 def test_catalog_classifies_cardio_deterministically() -> None:
     records = (
         ({"id": "bike", "name": "Bike", "target": "quadriceps", "body_part": "cardio"}, "cardio"),
@@ -73,6 +84,14 @@ def test_set_targets_and_import_sets_use_exactly_one_metric() -> None:
 def test_metric_validation_is_exercise_specific() -> None:
     validate_exercise_metrics(cardio(), reps=None, duration_minutes=15, weight=None)
     validate_exercise_metrics(strength(), reps=10, duration_minutes=None, weight=40)
+    validate_exercise_metrics(
+        timed_strength(),
+        execution_metric="duration_seconds",
+        reps=None,
+        duration_minutes=None,
+        duration_seconds=45,
+        weight=40,
+    )
     for exercise, reps, minutes, weight in (
         (cardio(), 15, None, None),
         (cardio(), None, 15, 5),
@@ -91,9 +110,78 @@ def test_metric_validation_is_exercise_specific() -> None:
             cardio(),
             reps=None,
             duration_minutes=20,
+            duration_seconds=None,
             weight=None,
             unilateral=True,
         )
+
+
+def test_set_targets_accept_duration_seconds_for_timed_strength() -> None:
+    target = SetTarget(set_number=1, weight=32.5, duration_seconds=40)
+    imported = ImportSet(weight=32.5, duration_seconds=45)
+
+    assert target.duration_seconds == 40
+    assert target.reps is None
+    assert imported.duration_seconds == 45
+
+
+def test_timed_strength_current_state_emits_execution_metric_and_seconds() -> None:
+    exercise = timed_strength()
+    planned = PlannedExercise(
+        id=12,
+        session_id=9,
+        exercise_id=exercise.id,
+        target_sets=2,
+        execution_metric="duration_seconds",
+        target_reps=None,
+        target_duration_minutes=None,
+        target_duration_seconds=40,
+        suggested_weight=32.5,
+        status="in_progress",
+        set_targets=[
+            {"set_number": 1, "weight": 32.5, "duration_seconds": 40},
+            {"set_number": 2, "weight": 32.5, "duration_seconds": 45},
+        ],
+    )
+    planned.exercise = exercise
+    planned.performed_sets = []
+    workout = WorkoutSession(id=9, status="in_progress", planned_exercises=[planned])
+
+    state = current_state(workout)
+
+    assert state["activity_type"] == "strength"
+    assert state["execution_metric"] == "duration_seconds"
+    assert state["target_duration_seconds"] == 40
+    assert state["target_reps"] is None
+    assert state["target_duration_minutes"] is None
+    assert state["next_set_target"] == {"set_number": 1, "weight": 32.5, "duration_seconds": 40}
+
+
+def test_timed_strength_progress_reports_seconds_without_reps_or_onerm() -> None:
+    exercise = timed_strength()
+    db = AsyncMock()
+    db.get.return_value = exercise
+    result = MagicMock()
+    result.all.return_value = [(4, date(2026, 8, 2), 36.0, None, None, 45, 0, 2)]
+    db.execute.return_value = result
+
+    progress = asyncio.run(exercise_progress(exercise.id, limit=20, db=db, user_id=42))
+
+    assert progress == [
+        {
+            "session_id": 4,
+            "date": "2026-08-02",
+            "top_weight": 36.0,
+            "top_reps": None,
+            "top_duration_minutes": None,
+            "top_duration_seconds": 45,
+            "volume": 0.0,
+            "activity_type": "strength",
+            "execution_metric": "duration_seconds",
+            "weight_mode": "weighted",
+            "sets": 2,
+        }
+    ]
 
 
 def test_strength_and_unilateral_contract_is_unchanged() -> None:
@@ -161,7 +249,7 @@ def test_cardio_progress_reports_minutes_only() -> None:
     db = AsyncMock()
     db.get.return_value = exercise
     result = MagicMock()
-    result.all.return_value = [(3, date(2026, 8, 1), None, None, 25, 0, 1)]
+    result.all.return_value = [(3, date(2026, 8, 1), None, None, 25, None, 0, 1)]
     db.execute.return_value = result
 
     progress = asyncio.run(exercise_progress(7, limit=20, db=db, user_id=42))
@@ -173,8 +261,10 @@ def test_cardio_progress_reports_minutes_only() -> None:
             "top_weight": None,
             "top_reps": None,
             "top_duration_minutes": 25,
+            "top_duration_seconds": None,
             "volume": 0.0,
             "activity_type": "cardio",
+            "execution_metric": "duration_minutes",
             "weight_mode": None,
             "sets": 1,
         }

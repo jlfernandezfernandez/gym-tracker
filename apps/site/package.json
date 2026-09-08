@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "astro dev",
+    "typecheck": "astro check",
     "build": "astro build",
     "preview": "astro preview"
   },
@@ -15,6 +16,7 @@
     "tailwindcss": "^4.3.2"
   },
   "devDependencies": {
-    "typescript": "^7.0.2"
+    "@astrojs/check": "^0.9.10",
+    "typescript": "^5.9.3"
   }
 }

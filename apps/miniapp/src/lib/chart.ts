@@ -10,9 +10,11 @@ export interface ProgressPoint {
   date: string;
   top_weight: number | null;
   activity_type: 'strength' | 'cardio';
+  execution_metric?: 'reps' | 'duration_minutes' | 'duration_seconds';
   weight_mode: 'bodyweight' | 'unloaded' | 'weighted' | null;
   top_reps?: number;
   top_duration_minutes?: number;
+  top_duration_seconds?: number;
   volume: number;
   sets: number;
 }
@@ -22,25 +24,47 @@ export interface MeasurementPoint {
   value: number;
 }
 
+const chartNumberFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
+
+function formatChartValue(value: number | string, unit = ''): string {
+  const number = chartNumberFormat.format(Number(value));
+  return unit.trim() ? `${number} ${unit.trim()}` : number;
+}
+
+function resolvedColor(token: string, fallback: string): string {
+  const probe = document.createElement('span');
+  probe.style.color = `var(--color-${token}, ${fallback})`;
+  document.documentElement.appendChild(probe);
+  const color = getComputedStyle(probe).color;
+  probe.remove();
+  return color;
+}
+
 const COLORS = {
-  accent: () => getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#5856d6',
-  hint: () => getComputedStyle(document.documentElement).getPropertyValue('--color-hint').trim() || '#6b7280',
-  ok: () => getComputedStyle(document.documentElement).getPropertyValue('--color-ok').trim() || '#248a3d',
+  accent: () => resolvedColor('accent', '#5856d6'),
+  hint: () => resolvedColor('hint', '#6b7280'),
+  grid: () => resolvedColor('edge', 'rgba(17,24,39,.08)'),
 };
 
-export const progressValue = (point: ProgressPoint, metric: 'minutes' | 'weight' | 'reps') =>
-  metric === 'minutes' ? point.top_duration_minutes || 0 : metric === 'weight' ? point.top_weight || 0 : point.top_reps || 0;
+export const progressValue = (point: ProgressPoint, metric: 'minutes' | 'seconds' | 'weight' | 'reps') =>
+  metric === 'minutes'
+    ? point.top_duration_minutes || 0
+    : metric === 'seconds'
+      ? point.top_duration_seconds || 0
+      : metric === 'weight'
+        ? point.top_weight || 0
+        : point.top_reps || 0;
 
-export const progressUnit = (metric: 'minutes' | 'weight' | 'reps') =>
-  metric === 'minutes' ? 'min' : metric === 'weight' ? 'kg' : 'reps';
-
-const GRID_COLOR = 'rgba(17,24,39,.08)';
+export const progressUnit = (metric: 'minutes' | 'seconds' | 'weight' | 'reps') =>
+  metric === 'minutes' ? 'min' : metric === 'seconds' ? 's' : metric === 'weight' ? 'kg' : 'reps';
 
 /** Bodyweight exercises have no logged weight; the chart (and its labels) fall back to reps. */
 export const chartUsesWeight = (points: ProgressPoint[]) => points.some((point) => point.weight_mode === 'weighted');
 export const progressMetric = (points: ProgressPoint[]) =>
-  points.some((point) => point.activity_type === 'cardio')
+  points.some((point) => point.execution_metric === 'duration_minutes' || point.activity_type === 'cardio')
     ? 'minutes'
+    : points.some((point) => point.execution_metric === 'duration_seconds' || (point.top_duration_seconds || 0) > 0)
+      ? 'seconds'
     : chartUsesWeight(points)
       ? 'weight'
       : 'reps';
@@ -79,10 +103,12 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
             label: (tooltipContext) => {
               const point = points[tooltipContext.dataIndex];
               return metric === 'minutes'
-                ? [`máx ${point.top_duration_minutes || 0} min`, `${point.sets} bloques`]
+                ? [`máx ${formatChartValue(point.top_duration_minutes || 0, 'min')}`, `${formatChartValue(point.sets)} bloques`]
+                : metric === 'seconds'
+                ? [`máx ${formatChartValue(point.top_duration_seconds || 0, 's')}`, `${formatChartValue(point.sets)} series`]
                 : metric === 'weight'
-                ? [`máx ${point.top_weight || 0} kg`, `${point.sets} series · ${Math.round(point.volume)} kg vol`]
-                : [`máx ${point.top_reps || 0} reps`, `${point.sets} series`];
+                ? [`máx ${formatChartValue(point.top_weight || 0, 'kg')}`, `${formatChartValue(point.sets)} series · ${formatChartValue(point.volume, 'kg')} vol`]
+                : [`máx ${formatChartValue(point.top_reps || 0, 'reps')}`, `${formatChartValue(point.sets)} series`];
             },
           },
         },
@@ -90,8 +116,8 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
       scales: {
         x: { ticks: { color: hintColor, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
         y: {
-          ticks: { color: hintColor, font: { size: 10 }, callback: (value) => metric === 'minutes' ? `${value} min` : metric === 'weight' ? `${value}kg` : `${value} reps` },
-          grid: { color: GRID_COLOR },
+          ticks: { color: hintColor, font: { size: 10 }, callback: (value) => formatChartValue(value, progressUnit(metric)) },
+          grid: { color: COLORS.grid() },
         },
       },
     },
@@ -121,10 +147,18 @@ export function renderMeasurementChart(canvas: HTMLCanvasElement, points: Measur
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { displayColors: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          displayColors: false,
+          callbacks: {
+            label: (context) => context.parsed.y == null ? '' : formatChartValue(context.parsed.y, unit),
+          },
+        },
+      },
       scales: {
         x: { ticks: { color: hintColor, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
-        y: { ticks: { color: hintColor, font: { size: 10 }, callback: (v) => `${v}${unit}` }, grid: { color: GRID_COLOR } },
+        y: { ticks: { color: hintColor, font: { size: 10 }, callback: (value) => formatChartValue(value, unit) }, grid: { color: COLORS.grid() } },
       },
     },
   });

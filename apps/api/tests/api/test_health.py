@@ -46,7 +46,7 @@ def test_ready_returns_503_without_dependency_details(monkeypatch: pytest.Monkey
     assert response.json() == {"detail": "not ready"}
 
 
-def test_frontend_shell_serves_root_and_share_routes(monkeypatch, tmp_path) -> None:
+def test_frontend_shell_serves_root_owner_and_share_routes(monkeypatch, tmp_path) -> None:
     static_dir = tmp_path / "static"
     static_dir.mkdir()
     (static_dir / "index.html").write_text("<main>Mini App</main>", encoding="utf-8")
@@ -55,7 +55,14 @@ def test_frontend_shell_serves_root_and_share_routes(monkeypatch, tmp_path) -> N
     os.environ["DATABASE_URL"] = "postgresql+asyncpg://x:x@localhost/x"
     client = TestClient(create_app())
 
-    for path in ("/", "/demo", "/session/share/token", "/session/share/token/exercise/1"):
+    for path in (
+        "/",
+        "/demo",
+        "/session/10",
+        "/session/10/exercise/1",
+        "/session/share/token",
+        "/session/share/token/exercise/1",
+    ):
         response = client.get(path)
         assert response.status_code == 200
         assert response.text == "<main>Mini App</main>"

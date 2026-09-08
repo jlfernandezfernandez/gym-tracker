@@ -2,7 +2,7 @@
  * Training Activity Heatmap (GitHub-style 52-week horizontal calendar)
  * Displays workout consistency, volume/duration quantile shading, and weekly streak counter.
  */
-import { useEffect, useMemo, useRef } from 'preact/hooks';
+import { useEffect, useMemo, useRef } from "preact/hooks";
 import {
   calculateQuantileThresholds,
   calculateWeeklyStreak,
@@ -10,7 +10,7 @@ import {
   resolveHeatTier,
   toIsoDate,
   type StreakStats,
-} from '../lib/volume';
+} from "../lib/volume";
 
 export interface HeatmapProps {
   sessions?: any[];
@@ -21,14 +21,24 @@ export interface HeatmapProps {
 }
 
 const MONTH_NAMES_ES = [
-  'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-  'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+  "Ene",
+  "Feb",
+  "Mar",
+  "Abr",
+  "May",
+  "Jun",
+  "Jul",
+  "Ago",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dic",
 ];
 
 const WEEKDAY_LABELS = [
-  { day: 0, label: 'L' }, // Lunes
-  { day: 2, label: 'X' }, // Miércoles
-  { day: 4, label: 'V' }, // Viernes
+  { day: 0, label: "L" }, // Lunes
+  { day: 2, label: "X" }, // Miércoles
+  { day: 4, label: "V" }, // Viernes
 ];
 
 const WEEKS_COUNT = 52;
@@ -37,7 +47,7 @@ export function Heatmap({
   sessions = [],
   onSelectDate,
   selectedDate,
-  className = '',
+  className = "",
   today = new Date(),
 }: HeatmapProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -48,7 +58,10 @@ export function Heatmap({
     for (const session of sessions) {
       const rawDate = session?.session_date || session?.date;
       if (!rawDate) continue;
-      const dateKey = typeof rawDate === 'string' ? rawDate.slice(0, 10) : toIsoDate(new Date(rawDate));
+      const dateKey =
+        typeof rawDate === "string"
+          ? rawDate.slice(0, 10)
+          : toIsoDate(new Date(rawDate));
       const list = map.get(dateKey) || [];
       list.push(session);
       map.set(dateKey, list);
@@ -112,6 +125,15 @@ export function Heatmap({
         const isToday = dateString === todayStr;
         const isSelected = selectedDate === dateString;
         const daySessions = sessionsByDate.get(dateString) || [];
+        const dayWorkoutCount = daySessions.reduce((count, session) => {
+          const workoutCount = Number(session?.workout_count ?? 1);
+          return (
+            count +
+            (Number.isFinite(workoutCount) && workoutCount > 0
+              ? workoutCount
+              : 1)
+          );
+        }, 0);
 
         let dayDuration = 0;
         let dayVolume = 0;
@@ -120,22 +142,30 @@ export function Heatmap({
           dayVolume += Number(s.total_volume || 0);
         }
 
-        const value = dayDuration > 0 ? dayDuration : (dayVolume > 0 ? dayVolume : (daySessions.length > 0 ? 30 : 0));
+        const value =
+          dayDuration > 0
+            ? dayDuration
+            : dayVolume > 0
+              ? dayVolume
+              : dayWorkoutCount > 0
+                ? 30
+                : 0;
         if (value > 0 && !isFuture) {
           activeValues.push(value);
         }
 
-        const shortDateFormatted = date.toLocaleDateString('es-ES', {
-          day: 'numeric',
-          month: 'short',
-          year: 'numeric',
+        const shortDateFormatted = date.toLocaleDateString("es-ES", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
         });
 
-        const label = daySessions.length > 0
-          ? `${shortDateFormatted}: ${daySessions.length} entreno${daySessions.length > 1 ? 's' : ''}${dayDuration ? ` · ${dayDuration} min` : ''}${dayVolume ? ` · ${Math.round(dayVolume)} kg` : ''}`
-          : isFuture
-            ? `${shortDateFormatted}`
-            : `${shortDateFormatted}: Descanso`;
+        const label =
+          dayWorkoutCount > 0
+            ? `${shortDateFormatted}: ${dayWorkoutCount} entreno${dayWorkoutCount > 1 ? "s" : ""}${dayDuration ? ` · ${dayDuration} min` : ""}${dayVolume ? ` · ${Math.round(dayVolume)} kg` : ""}`
+            : isFuture
+              ? `${shortDateFormatted}`
+              : `${shortDateFormatted}: Descanso`;
 
         days.push({
           date,
@@ -181,11 +211,11 @@ export function Heatmap({
   }, [weeks]);
 
   const tierColors = [
-    'bg-surface-2 dark:bg-surface-2', // tier 0
-    'bg-accent/25',                   // tier 1
-    'bg-accent/50',                   // tier 2
-    'bg-accent/75',                   // tier 3
-    'bg-accent',                      // tier 4
+    "bg-surface-2 dark:bg-surface-2", // tier 0
+    "bg-accent/25", // tier 1
+    "bg-accent/50", // tier 2
+    "bg-accent/75", // tier 3
+    "bg-accent", // tier 4
   ];
 
   return (
@@ -193,9 +223,12 @@ export function Heatmap({
       {/* Header: Title & Streak Counter */}
       <div class="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-edge">
         <div>
-          <h3 class="text-[.95rem] font-bold text-ink">Actividad y consistencia</h3>
+          <h3 class="text-[.95rem] font-bold text-ink">
+            Actividad y consistencia
+          </h3>
           <p class="mt-0.5 text-[.74rem] text-hint">
-            {streakStats.totalWorkouts} entrenamientos · {streakStats.activeWeeksCount} semanas activas este año
+            {streakStats.totalWorkouts} entrenamientos ·{" "}
+            {streakStats.activeWeeksCount} semanas activas este año
           </p>
         </div>
 
@@ -207,7 +240,7 @@ export function Heatmap({
           <span class="text-base leading-none">🔥</span>
           <span class="text-[.78rem] font-[700] tracking-tight">
             {streakStats.currentStreak === 1
-              ? '1 semana'
+              ? "1 semana"
               : `${streakStats.currentStreak} semanas`}
           </span>
         </div>
@@ -223,7 +256,10 @@ export function Heatmap({
         >
           <div class="min-w-fit flex gap-2">
             {/* Weekday Row Labels (L, X, V) */}
-            <div class="flex flex-col justify-between pt-[18px] pb-[2px] pr-1 text-[.64rem] font-bold text-hint select-none" aria-hidden="true">
+            <div
+              class="flex flex-col justify-between pt-[18px] pb-[2px] pr-1 text-[.64rem] font-bold text-hint select-none"
+              aria-hidden="true"
+            >
               <span class="h-[12px] leading-[12px]">L</span>
               <span class="h-[12px] leading-[12px]"></span>
               <span class="h-[12px] leading-[12px]">X</span>
@@ -236,7 +272,10 @@ export function Heatmap({
             {/* Weeks Columns Grid */}
             <div class="flex flex-col gap-1">
               {/* Month Header Track */}
-              <div class="relative h-[14px] text-[.65rem] font-bold text-hint select-none" aria-hidden="true">
+              <div
+                class="relative h-[14px] text-[.65rem] font-bold text-hint select-none"
+                aria-hidden="true"
+              >
                 {monthHeaders.map((header) => (
                   <span
                     key={`${header.weekIndex}-${header.label}`}
@@ -253,7 +292,17 @@ export function Heatmap({
                 {weeks.map((week) => (
                   <div key={week.weekIndex} class="flex flex-col gap-[3px]">
                     {week.days.map((day) => {
-                      const hasWorkouts = day.sessions.length > 0;
+                      const workoutCount = day.sessions.reduce(
+                        (count, session) => {
+                          const value = Number(session?.workout_count ?? 1);
+                          return (
+                            count +
+                            (Number.isFinite(value) && value > 0 ? value : 1)
+                          );
+                        },
+                        0,
+                      );
+                      const hasWorkouts = workoutCount > 0;
                       return (
                         <button
                           key={day.dateString}
@@ -261,22 +310,22 @@ export function Heatmap({
                           disabled={day.isFuture}
                           class={`size-[13px] rounded-[3px] transition-transform duration-100 p-0 border-0 ${
                             day.isFuture
-                              ? 'bg-surface-2 opacity-25 cursor-default'
-                              : `${tierColors[day.tier]} ${hasWorkouts ? 'cursor-pointer hover:scale-125 active:scale-95' : 'cursor-default'}`
+                              ? "bg-surface-2 opacity-25 cursor-default"
+                              : `${tierColors[day.tier]} ${hasWorkouts ? "cursor-pointer hover:scale-125 active:scale-95" : "cursor-default"}`
                           } ${
                             day.isToday
-                              ? 'ring-1.5 ring-accent ring-offset-1 ring-offset-surface'
-                              : ''
+                              ? "ring-1.5 ring-accent ring-offset-1 ring-offset-surface"
+                              : ""
                           } ${
                             day.isSelected
-                              ? 'ring-2 ring-ink ring-offset-1 ring-offset-surface z-10'
-                              : ''
+                              ? "ring-2 ring-ink ring-offset-1 ring-offset-surface z-10"
+                              : ""
                           }`}
                           title={day.label}
                           aria-label={day.label}
                           data-date={day.dateString}
                           data-tier={day.tier}
-                          data-workouts={day.sessions.length}
+                          data-workouts={workoutCount}
                           onClick={() => {
                             if (!day.isFuture && onSelectDate) {
                               onSelectDate(day.dateString, day.sessions);
@@ -296,7 +345,8 @@ export function Heatmap({
       {/* Legend Footer */}
       <div class="mt-3 flex items-center justify-between text-[.7rem] text-hint pt-2 border-t border-edge/60">
         <span>
-          {streakStats.maxStreak > 0 && `Mejor racha: ${streakStats.maxStreak} sem.`}
+          {streakStats.maxStreak > 0 &&
+            `Mejor racha: ${streakStats.maxStreak} sem.`}
         </span>
         <div class="flex items-center gap-1.5">
           <span class="text-[.66rem]">Menos</span>
