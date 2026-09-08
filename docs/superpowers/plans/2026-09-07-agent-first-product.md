@@ -49,3 +49,19 @@ Status: complete with documented limits. Demo is editable and resettable without
 Review all changes for ownership, offline journal regressions, timed metric integrity, read-only sharing, unknown import handling and installation safety. Run backend/MCP/frontend tests, frontend typecheck, builds, migration graph and relevant lint. Perform browser workflow checks for demo, manual controls and viewport overflow. Run isolated Compose smoke when environment allows, without touching existing production volumes. Report precisely any remaining limitations.
 
 Status: complete for available local checks; deployment verification remains pending. Final review used GPT-6 Astra and closed metric/history integrity, stale replacement targets, pagination, draft refresh, partial effort PATCH and demo UI regressions. API: 189 tests, Ruff format/check and Pyright pass. MCP: 51 tests pass. Alembic has one head, r8i9j0k1l2m3. Portable diagnostic tests pass. Docker builds/Compose smoke and real PostgreSQL migration were not run because the local daemon is unavailable; real Telegram/Hermes/OpenClaw and physical devices remain untested. CI retains Docker gates. Frontend has 12 non-blocking hints; global MCP lint has a pre-existing E402 in run_mcp.py outside the modified slice.
+
+### Follow-up: Daily-use friction (2026-09-08)
+
+User approved the full follow-up after reviewing the product:
+
+- Rounded pointer and keyboard feedback in history and similar list controls.
+- Stable muscle-map detail and selection controls without card resizing.
+- Spanish chart numbers with at most two decimals, without changing stored values.
+- Measurement sheet with selected fields only, date, optional notes and implicit manual source.
+- Plan grouped by primary muscle, preserving explicit supersets and allowing any exercise to be opened; ordering remains a suggestion.
+- Shared replace/skip/delete controls in Plan and Exercise, preserving ownership, pending-write and logged-set guards.
+- Strength defaults to reps with a secondary timed option; cardio uses minutes. Common or per-set prescriptions are supported, including cardio-to-strength selection and unilateral-to-cardio replacement.
+- Additive per-set `unloaded: true` marks new intentional unweighted targets. Legacy null/omitted target weights still inherit; no historical rewrite or migration. Explicit global `suggested_weight: null` clears the global target only.
+- Landing uses three real, static mobile demo captures instead of the dark full-width iframe, with one demo CTA and shorter product copy.
+
+Validation: GPT-6 Astra review closed the identified integration blockers. API 266, MCP 51 and frontend 283 tests pass; API Ruff/Pyright, frontend typecheck and both builds pass. The standalone workout browser smoke passes at 320 and 1280 pixels, covering add, per-set targets, replacement, skip/restore/delete, focus and cancellation. Separate Chromium checks covered map stability, measurement sheet and responsive landing assets. Real Telegram/iOS and production database/deployment verification remain pending. Pre-existing local formatting changes in App.tsx and theme.test.ts are excluded from these commits.

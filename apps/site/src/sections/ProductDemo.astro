@@ -1,21 +1,29 @@
 ---
-const demo = import.meta.env.PUBLIC_DEMO_URL || 'https://gym.jordixlab.com/demo';
+const media = `${import.meta.env.BASE_URL.replace(/\/$/, '')}/media/`;
+const screens = [
+	{ file: 'app-plan.png', title: 'Tu sesión, ordenada', caption: 'Ejercicios agrupados por músculo.', alt: 'Plan de entrenamiento de la demo, agrupado por músculos con series y repeticiones.' },
+	{ file: 'app-exercise.png', title: 'Cada serie cuenta', caption: 'Peso y repeticiones, al terminar.', alt: 'Registro de un ejercicio en la demo con sus series, peso y repeticiones.' },
+	{ file: 'app-profile.png', title: 'Mira tu progreso', caption: 'Tus medidas, a lo largo del tiempo.', alt: 'Mediciones del perfil ficticio de la demo con gráficos de evolución corporal.' },
+];
 ---
 
-<section id="producto" class="border-y border-edge bg-dark py-20 text-white lg:py-28">
+<section id="producto" class="border-y border-edge bg-surface py-14 text-ink lg:py-18" aria-labelledby="product-title">
 	<div class="mx-auto max-w-7xl px-5 sm:px-8">
-		<div class="flex flex-wrap items-end justify-between gap-6">
-			<div class="max-w-2xl">
-				<p class="font-mono text-[.68rem] font-bold tracking-[0] text-white/60 uppercase">Durante el entreno</p>
-				<h2 class="mt-3 font-display text-4xl leading-tight font-[760] tracking-[0] text-balance sm:text-5xl">Tu entrenamiento, en Gym Tracker.</h2>
-			</div>
-			<a href={demo} target="_blank" rel="noopener" class="rounded-control bg-white px-5 py-3 font-semibold text-dark transition-transform duration-150 active:scale-[.97]">Abrir demo ↗</a>
+		<div class="max-w-2xl">
+			<p class="font-mono text-[.68rem] font-bold tracking-[0] text-accent uppercase">Durante el entreno</p>
+			<h2 id="product-title" class="mt-3 font-display text-3xl leading-tight font-[760] tracking-[0] text-balance sm:text-4xl">Plan, series y progreso.</h2>
 		</div>
-		<iframe
-			title="Demo de Gym Tracker con datos ficticios"
-			src={demo}
-			loading="lazy"
-			class="mt-10 block h-[720px] w-full border-0 bg-white"
-		/>
+		<div class="mx-auto mt-9 grid max-w-[1000px] justify-items-center gap-x-8 gap-y-10 md:grid-cols-3">
+			{screens.map((screen) => (
+				<figure class="w-full max-w-[300px] min-w-0">
+					<img src={`${media}${screen.file}`} alt={screen.alt} width="780" height="1688" loading="lazy" decoding="async" class="block aspect-[390/844] w-full rounded-control border border-edge object-contain" />
+					<figcaption class="mt-4">
+						<h3 class="text-base font-bold">{screen.title}</h3>
+						<p class="mt-1 text-sm leading-relaxed text-hint">{screen.caption}</p>
+					</figcaption>
+				</figure>
+			))}
+		</div>
+		<p class="mt-7 text-center text-xs text-hint">Capturas de la app con datos ficticios.</p>
 	</div>
 </section>
