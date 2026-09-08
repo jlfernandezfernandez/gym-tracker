@@ -1,12 +1,14 @@
 /** Profile: athlete data with inline editing. Apple-style: tap a field, confirm, done. */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "preact/hooks";
+import { useRef, useState } from "preact/hooks";
+import { Plus } from "lucide-preact";
 import { apiFetch } from "../../lib/api";
 import { formatMuscle, showToast } from "../../lib/helpers";
 import { useApp } from "../../app/App";
 import { Empty, Loading } from "../../components/feedback";
 import { TopBar } from "../../components/navigation";
 import { MeasurementChart } from "../../components/visualizations";
+import { ConfirmSheet } from "../../components/sheet";
 import { buildProfileFieldPatch } from "./profile-input";
 
 const MEASURES = [
@@ -69,7 +71,7 @@ function InlineSelect({
 }) {
   return (
     <select
-      class="min-h-9 cursor-pointer border-0 bg-transparent pr-1 text-right text-[.85rem] font-[580] text-hint outline-none"
+      class="min-h-9 cursor-pointer rounded-lg border-0 bg-transparent pr-1 text-right text-[.85rem] font-[580] text-hint focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
       value={value}
       onChange={(e: any) => onSave(e.target.value)}
     >
@@ -170,7 +172,14 @@ export function Profile() {
   const [measurementDate, setMeasurementDate] = useState(
     new Date().toISOString().slice(0, 10),
   );
-  const [measurementSource, setMeasurementSource] = useState("manual");
+  const [measurementOpen, setMeasurementOpen] = useState(false);
+  const [selectedMeasures, setSelectedMeasures] = useState<string[]>([]);
+  const [measurementError, setMeasurementError] = useState("");
+  const measurementFormRef = useRef<HTMLFormElement>(null);
+  const closeMeasurement = () => {
+    measurementFormRef.current?.closest("dialog")?.close();
+    setMeasurementOpen(false);
+  };
   const [measurementValues, setMeasurementValues] = useState<
     Record<string, string>
   >({
@@ -185,46 +194,32 @@ export function Profile() {
     mutationFn: async () => {
       const payload: Record<string, unknown> = {
         measured_at: `${measurementDate}T12:00:00`,
-        source: measurementSource || "manual",
+        source: "manual",
         notes: measurementValues.notes || "",
       };
-      let hasValue = false;
-      for (const key of [
-        "weight_kg",
-        "muscle_kg",
-        "fat_kg",
-        "body_fat_pct",
-        "visceral_fat",
-      ]) {
-        const raw = measurementValues[key];
-        if (!raw) continue;
+      if (!measurementDate) throw new Error("Elige una fecha");
+      if (!selectedMeasures.length) throw new Error("Añade al menos una medición");
+      for (const { key, label } of MEASURES.filter((metric) => selectedMeasures.includes(metric.key))) {
+        const raw = (measurementValues[key] || "").trim();
         const numeric = Number(raw.replace(",", "."));
-        if (!Number.isFinite(numeric) || numeric < 0) {
-          throw new Error("Las mediciones deben ser numeros positivos");
+        if (!raw || !Number.isFinite(numeric) || numeric < 0) {
+          throw new Error(`Introduce un número válido, igual o mayor que cero, para ${label}`);
         }
         payload[key] = numeric;
-        hasValue = true;
       }
-      if (!measurementDate) throw new Error("Elige una fecha");
-      if (!hasValue) throw new Error("Añade al menos una medición");
       return apiFetch("POST", "/profile/measurements", payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["measurements"] });
       queryClient.invalidateQueries({ queryKey: ["profile"] });
-      setMeasurementSource("manual");
-      setMeasurementValues({
-        weight_kg: "",
-        muscle_kg: "",
-        fat_kg: "",
-        body_fat_pct: "",
-        visceral_fat: "",
-        notes: "",
-      });
+      closeMeasurement();
+      setSelectedMeasures([]);
+      setMeasurementValues({});
+      setMeasurementError("");
       showToast("Medición guardada", "ok");
     },
     onError: (error: any) => {
-      showToast(error.message, "err");
+      setMeasurementError(error.message);
     },
   });
 
@@ -382,86 +377,29 @@ export function Profile() {
 
       {/* Measurements with charts */}
       <div class="card">
-        <div class="flex items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <h2>Mediciones</h2>
           {!app.readOnly && (
-            <span class="rounded-pill bg-accent-bg px-2.5 py-1 text-[.68rem] font-[650] text-accent">
-              Entrada manual
-            </span>
+            <button
+              type="button"
+              class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg border-0 bg-accent px-3 py-2 text-sm font-semibold text-white"
+              onClick={() => {
+                setMeasurementDate(new Date().toISOString().slice(0, 10));
+                setSelectedMeasures([]);
+                setMeasurementValues({});
+                setMeasurementError("");
+                setMeasurementOpen(true);
+              }}
+            >
+              <Plus size={16} aria-hidden="true" />
+              Añadir medición
+            </button>
           )}
         </div>
-        {!app.readOnly && (
-          <div class="mt-3 rounded-control bg-surface-2 px-[15px] py-[14px]">
-            <div class="grid gap-3 min-[720px]:grid-cols-2">
-              <div>
-                <label for="measurement-date">Fecha</label>
-                <input
-                  id="measurement-date"
-                  type="date"
-                  value={measurementDate}
-                  onInput={(e: any) => setMeasurementDate(e.target.value)}
-                />
-              </div>
-              <div>
-                <label for="measurement-source">Origen</label>
-                <input
-                  id="measurement-source"
-                  type="text"
-                  value={measurementSource}
-                  onInput={(e: any) => setMeasurementSource(e.target.value)}
-                  placeholder="manual, inbody, dexa..."
-                />
-              </div>
-            </div>
-            <div class="mt-3 grid gap-3 min-[720px]:grid-cols-2">
-              {MEASURES.map((metric) => (
-                <div key={metric.key}>
-                  <label for={`measurement-${metric.key}`}>
-                    {metric.label}
-                  </label>
-                  <input
-                    id={`measurement-${metric.key}`}
-                    type="text"
-                    inputmode="decimal"
-                    value={measurementValues[metric.key] || ""}
-                    placeholder={metric.unit.trim() || "0"}
-                    onInput={(e: any) =>
-                      setMeasurementValues((current) => ({
-                        ...current,
-                        [metric.key]: e.target.value,
-                      }))
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-            <div class="mt-3">
-              <label for="measurement-notes">Notas</label>
-              <textarea
-                id="measurement-notes"
-                value={measurementValues.notes}
-                onInput={(e: any) =>
-                  setMeasurementValues((current) => ({
-                    ...current,
-                    notes: e.target.value,
-                  }))
-                }
-                placeholder="Ayunas, despues de entrenar, bascula del gimnasio..."
-              />
-            </div>
-            <button
-              class="btn-primary mt-3 bg-ink text-canvas"
-              disabled={addMeasurement.isPending}
-              onClick={() => addMeasurement.mutate()}
-            >
-              {addMeasurement.isPending ? "Guardando..." : "Guardar medición"}
-            </button>
-          </div>
-        )}
         {measurements.length < 2 ? (
           <p>
             {measurements.length === 0
-              ? "Aquí irán peso, grasa, músculo, perímetros o cualquier medición por fecha cuando el coach las añada."
+              ? "Todavía no hay mediciones registradas."
               : "Necesitas al menos 2 mediciones para ver la evolución."}
           </p>
         ) : (
@@ -491,7 +429,7 @@ export function Profile() {
                     >
                       {trend}{" "}
                       {delta !== 0
-                        ? `${Math.abs(delta).toFixed(1)}${metric.unit}`
+                        ? `${Math.abs(delta).toLocaleString("es-ES", { maximumFractionDigits: 2 })}${metric.unit.trim() ? ` ${metric.unit.trim()}` : ""}`
                         : "igual"}
                     </span>
                   </div>
@@ -502,6 +440,89 @@ export function Profile() {
           </div>
         )}
       </div>
+
+      {!app.readOnly && measurementOpen && (
+        <ConfirmSheet
+          open={measurementOpen}
+          title="Añadir medición"
+          message=""
+          confirmLabel="Guardar medición"
+          busy={addMeasurement.isPending}
+          onCancel={closeMeasurement}
+          onConfirm={() => {
+            if (!addMeasurement.isPending) {
+              setMeasurementError("");
+              addMeasurement.mutate();
+            }
+          }}
+        >
+          <form
+            ref={(form) => {
+              measurementFormRef.current = form;
+              form?.closest("dialog")?.setAttribute("aria-label", "Añadir medición");
+            }}
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!addMeasurement.isPending) {
+                setMeasurementError("");
+                addMeasurement.mutate();
+              }
+            }}
+          >
+            <fieldset disabled={addMeasurement.isPending} class="min-w-0 border-0 p-0">
+              <legend class="mb-2 text-sm font-semibold">Medidas</legend>
+              <div class="grid grid-cols-2 gap-x-3 gap-y-1">
+                {MEASURES.map((metric) => (
+                  <label for={`select-${metric.key}`} class="!mb-0 flex min-h-11 items-center gap-2 !text-sm !font-normal" key={metric.key}>
+                    <input
+                      id={`select-${metric.key}`}
+                      type="checkbox"
+                      class="!size-5 !min-h-0 !w-5 shrink-0 accent-accent"
+                      checked={selectedMeasures.includes(metric.key)}
+                      onChange={(event) => {
+                        const checked = event.currentTarget.checked;
+                        setSelectedMeasures((current) => checked
+                          ? [...current, metric.key]
+                          : current.filter((key) => key !== metric.key));
+                      }}
+                    />
+                    <span class="min-w-0 break-words">{metric.label}</span>
+                  </label>
+                ))}
+              </div>
+              <div class="mt-3 grid gap-3 min-[400px]:grid-cols-2">
+                {MEASURES.filter((metric) => selectedMeasures.includes(metric.key)).map((metric) => (
+                  <div class="min-w-0" key={metric.key}>
+                    <label for={`measurement-${metric.key}`}>
+                      {metric.label}{metric.unit.trim() ? ` (${metric.unit.trim()})` : ""}
+                    </label>
+                    <input
+                      id={`measurement-${metric.key}`}
+                      type="text"
+                      inputmode="decimal"
+                      value={measurementValues[metric.key] || ""}
+                      onInput={(event: any) => setMeasurementValues((current) => ({ ...current, [metric.key]: event.target.value }))}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div class="mt-3">
+                <label for="measurement-date">Fecha</label>
+                <input id="measurement-date" type="date" value={measurementDate} onInput={(event: any) => setMeasurementDate(event.target.value)} />
+              </div>
+              <div class="mt-3">
+                <label for="measurement-notes">Notas</label>
+                <textarea
+                  id="measurement-notes"
+                  value={measurementValues.notes || ""}
+                  onInput={(event: any) => setMeasurementValues((current) => ({ ...current, notes: event.target.value }))}
+                />
+              </div>
+            </fieldset>
+            {measurementError && <p class="mt-3 text-sm text-err" role="alert">{measurementError}</p>}
+          </form>
+        </ConfirmSheet>
+      )}
 
       {/* App version, linked to the release changelog */}
       <a

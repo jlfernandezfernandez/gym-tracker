@@ -6,6 +6,21 @@ import { BodyMap } from "./BodyMap";
 const BodyMapView = BodyMap as any;
 
 describe("BodyMap component rendering", () => {
+  it("reserves the same detail space with and without a selection", () => {
+    for (const selectedMuscle of [null, "upper-back", "hip-flexors"]) {
+      const html = render(h(BodyMapView, { selectedMuscle }));
+      expect(html).toMatch(/class="[^"]*h-40[^"]*" aria-live="polite"/);
+      if (selectedMuscle) expect(html).toContain("break-words");
+    }
+    const hidden = render(h(BodyMapView, { showPopover: false }));
+    expect(hidden).not.toContain('aria-live="polite"');
+  });
+
+  it("does not scale muscle polygons on press", () => {
+    const html = render(h(BodyMapView, {}));
+    expect(html).not.toMatch(/active:scale/);
+  });
+
   it("renders front (anterior) and back (posterior) SVG diagrams", () => {
     const html = render(h(BodyMapView, {}));
     expect(html).toContain("Vista frontal");

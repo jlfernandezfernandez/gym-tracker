@@ -125,7 +125,7 @@ export function Home() {
                       <img
                         class="size-full object-contain p-1"
                         src={mediaSrc}
-                        alt={activeExercise?.name || "Ejercicio actual"}
+                        alt={activeExercise?.name || "Ejercicio sugerido"}
                         loading="eager"
                       />
                     ) : (
@@ -134,7 +134,7 @@ export function Home() {
                   </div>
                   <div>
                     <p class="text-[.68rem] font-bold tracking-[.07em] text-hint uppercase">
-                      Serie actual
+                      Serie sugerida
                     </p>
                     <h3>
                       {currentState?.current_exercise_name ||

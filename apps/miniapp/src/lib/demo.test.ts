@@ -8,6 +8,57 @@ describe('demoFetch', () => {
     beforeEach(async () => { await demoFetch('POST', '/demo/reset'); });
     afterEach(async () => { await demoFetch('POST', '/demo/reset'); });
 
+    it.each([{}, { weight: null }, { weight: 35 }, { weight: null, unloaded: true }, { unloaded: true }])('preserves per-set weight semantics through edits and current state: %j', async (weightFields) => {
+      await demoFetch('POST', '/sessions/900/exercises/9001/sets', { set_number: 3, weight: 70, reps: 8 });
+      const updated = await demoFetch('PUT', '/sessions/900/exercises/9002', {
+        suggested_weight: 50,
+        set_targets: [1, 2].map((set_number) => ({ set_number, reps: 12, ...weightFields })),
+      });
+      const target = updated.planned_exercises.find((exercise: any) => exercise.id === 9002).set_targets[0];
+      expect(Object.hasOwn(target, 'weight')).toBe(Object.hasOwn(weightFields, 'weight'));
+      const unloaded = 'unloaded' in weightFields && weightFields.unloaded;
+      const initialWeight = unloaded ? null : weightFields.weight ?? 50;
+      expect((await demoFetch('GET', '/sessions/900/current')).next_set_target.weight).toBe(initialWeight);
+      await demoFetch('PUT', '/sessions/900/exercises/9002', { suggested_weight: 60 });
+      await demoFetch('POST', '/sessions/900/exercises/9002/sets', { set_number: 1, weight: 40, reps: 10 });
+      const current = (await demoFetch('GET', '/sessions/900/current')).next_set_target;
+      expect(current.weight).toBe(unloaded ? null : weightFields.weight ?? 40);
+      expect(current.unloaded).toBe(unloaded ? true : undefined);
+      const stored = (await demoFetch('GET', '/sessions/900')).planned_exercises.find((exercise: any) => exercise.id === 9002).set_targets[1];
+      expect(Object.hasOwn(stored, 'weight')).toBe(Object.hasOwn(weightFields, 'weight'));
+      expect(stored.weight).toBe(weightFields.weight);
+      expect(stored.unloaded).toBe(unloaded ? true : undefined);
+    });
+
+    it.each([{}, { weight: null }, { weight: null, unloaded: true }, { unloaded: true }])('preserves weight presence when adding targets: %j', async (weightFields) => {
+      const updated = await demoFetch('POST', '/sessions/900/exercises', {
+        exercise_id: 102, target_sets: 1, target_reps: 10, suggested_weight: 50,
+        set_targets: [{ set_number: 1, reps: 12, ...weightFields }],
+      });
+      const target = updated.planned_exercises.at(-1).set_targets[0];
+      expect(Object.hasOwn(target, 'weight')).toBe(Object.hasOwn(weightFields, 'weight'));
+      expect(target.weight).toBe(weightFields.weight);
+      expect(target.unloaded).toBe('unloaded' in weightFields ? weightFields.unloaded : undefined);
+    });
+
+    it.each(['POST', 'PUT'])('rejects contradictory unloaded weight without mutations via %s', async (method) => {
+      const before = await demoFetch('GET', '/sessions/900');
+      const path = method === 'POST' ? '/sessions/900/exercises' : '/sessions/900/exercises/9002';
+      await expect(demoFetch(method, path, {
+        exercise_id: 102, target_reps: 10,
+        set_targets: [{ set_number: 1, reps: 10, weight: 35, unloaded: true }],
+      })).rejects.toMatchObject({ status: 422, message: expect.stringContaining('unloaded') });
+      expect(await demoFetch('GET', '/sessions/900')).toEqual(before);
+    });
+
+    it('rejects unloaded cardio targets', async () => {
+      const [cardio] = await demoFetch('GET', '/exercises?activity_type=cardio');
+      await expect(demoFetch('POST', '/sessions/900/exercises', {
+        exercise_id: cardio.id, execution_metric: 'duration_minutes', target_duration_minutes: 20,
+        set_targets: [{ set_number: 1, duration_minutes: 20, unloaded: true }],
+      })).rejects.toMatchObject({ status: 422, message: expect.stringContaining('unloaded') });
+    });
+
     it.each([false, true])('rejects metric changes with logged sets without changing history (timed=%s)', async (timed) => {
       if (timed) {
         await demoFetch('PUT', '/sessions/900/exercises/9002', {
@@ -380,7 +431,9 @@ describe('demoFetch', () => {
       notes: 'demo',
     });
     const measurementList = await demoFetch('GET', '/profile/measurements?limit=8');
-    expect(measurementList[0].source).toBe('manual');
+    expect(measurementList).toEqual(expect.arrayContaining([
+      expect.objectContaining({ source: 'manual', weight_kg: 77.1, notes: 'demo' }),
+    ]));
 
     await demoFetch('POST', '/disliked-exercises', { exercise_id: 102 });
     expect(await demoFetch('GET', '/disliked-exercises')).toEqual([

@@ -150,6 +150,9 @@ describe("History", () => {
     expect(html).toContain('data-testid="heatmap-count"');
     expect(html).toContain(">1<");
     expect(html).toContain("Empuje");
+    expect(html).toMatch(
+      /class="[^"]*rounded-control[^"]*focus-visible:ring-2[^"]*"/,
+    );
     expect(seenKeys).toContain("session-activity");
     expect(seenKeys).toContain("sessions:history:0");
   });

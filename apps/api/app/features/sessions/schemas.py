@@ -2,7 +2,13 @@ from datetime import date, datetime
 from typing import Literal
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import (
+    BaseModel,
+    Field,
+    SerializerFunctionWrapHandler,
+    model_serializer,
+    model_validator,
+)
 
 ExecutionMetric = Literal["reps", "duration_minutes", "duration_seconds"]
 
@@ -17,7 +23,22 @@ def _sync_rpe_rir(rpe: float | None, rir: float | None) -> tuple[float | None, f
 
 class SetTarget(BaseModel):
     set_number: int = Field(ge=1)
-    weight: float | None = Field(default=None, gt=0)
+    weight: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "A null or omitted weight inherits the previous set weight, then the exercise "
+            "weight, unless unloaded is true."
+        ),
+    )
+    unloaded: bool = Field(
+        default=False,
+        description=(
+            "Explicitly no load; weight must be null or omitted. This additive JSON field "
+            "preserves inheritance for historical targets without a migration. "
+            "Not applicable to cardio."
+        ),
+    )
     reps: int | None = Field(default=None, ge=1)
     duration_minutes: int | None = Field(default=None, ge=1)
     duration_seconds: int | None = Field(default=None, ge=1)
@@ -25,9 +46,22 @@ class SetTarget(BaseModel):
     rpe: float | None = Field(default=None, ge=1, le=10)
     rir: float | None = Field(default=None, ge=0, le=10)
 
+    @model_serializer(mode="wrap")
+    def serialize_target(self, handler: SerializerFunctionWrapHandler):
+        data = handler(self)
+        if "weight" not in self.model_fields_set:
+            data.pop("weight", None)
+        if not self.unloaded:
+            data.pop("unloaded", None)
+        return data
+
     @model_validator(mode="after")
     def validate_metric(self) -> "SetTarget":
         _require_exactly_one_metric(self.reps, self.duration_minutes, self.duration_seconds)
+        if self.unloaded and self.weight is not None:
+            raise ValueError("unloaded requires null or omitted weight")
+        if self.unloaded and self.duration_minutes is not None:
+            raise ValueError("Cardio does not accept unloaded targets")
         self.rpe, self.rir = _sync_rpe_rir(self.rpe, self.rir)
         return self
 
@@ -174,7 +208,14 @@ class PlannedExerciseUpdate(BaseModel):
     target_reps: int | None = Field(default=None, ge=1)
     target_duration_minutes: int | None = Field(default=None, ge=1)
     target_duration_seconds: int | None = Field(default=None, ge=1)
-    suggested_weight: float | None = Field(default=None, gt=0)
+    suggested_weight: float | None = Field(
+        default=None,
+        gt=0,
+        description=(
+            "For strength, null clears the global weight; omission preserves it. "
+            "Per-set weights are independent."
+        ),
+    )
     notes: str | None = None
     set_targets: list[SetTarget] | None = None
     unilateral: bool | None = None

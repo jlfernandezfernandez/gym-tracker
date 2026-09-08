@@ -257,6 +257,33 @@ def current_state(workout: WorkoutSession) -> dict:
     next_set_target = next(
         (t for t in current.set_targets or [] if t.get("set_number") == next_set_number), None
     )
+    if next_set_target is not None:
+        previous_set = max(
+            (
+                performed
+                for performed in current.performed_sets or []
+                if performed.set_number < next_set_number
+            ),
+            key=lambda performed: performed.set_number,
+            default=None,
+        )
+        inherited_weight = (
+            previous_set.weight if previous_set is not None else current.suggested_weight
+        )
+        resolved_weight = (
+            None
+            if next_set_target.get("unloaded")
+            else next_set_target.get("weight") or inherited_weight
+        )
+        next_set_target = {
+            **next_set_target,
+            "weight": resolved_weight,
+            **(
+                {"unloaded": True}
+                if resolved_weight is None and current.activity_type != "cardio"
+                else {}
+            ),
+        }
     return {
         "session_id": workout.id,
         "session_status": workout.status,

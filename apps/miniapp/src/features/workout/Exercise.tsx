@@ -23,6 +23,7 @@ import { BusyButton, Empty, Loading } from "../../components/feedback";
 import { TopBar } from "../../components/navigation";
 import { RestTimer } from "../../components/RestTimer";
 import { ConfirmSheet } from "../../components/sheet";
+import { WorkoutExerciseActions } from "./Plan";
 import {
   BodyMap,
   ProgressChart,
@@ -45,8 +46,8 @@ export function isTimedOrIsometricExercise(exercise: any): boolean {
   );
 }
 
-const targetForSet = (exercise: any, setNumber: number) =>
-  resolveSetTarget(exercise, setNumber) || {
+const targetForSet = (exercise: any, setNumber: number) => {
+  const target = resolveSetTarget(exercise, setNumber) || {
     set_number: setNumber,
     weight: exercise.weight ?? null,
     reps: exercise.reps,
@@ -54,6 +55,8 @@ const targetForSet = (exercise: any, setNumber: number) =>
     duration_seconds: exercise.duration_seconds,
     is_warmup: false,
   };
+  return target;
+};
 
 export const targetValue = (target: any, exercise: any) => {
   const executionMetric =
@@ -487,6 +490,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
   );
   const [showPicker, setShowPicker] = useState(false);
   const [showRestTimer, setShowRestTimer] = useState(false);
+  const [formRevision, setFormRevision] = useState(0);
 
   // Keep screen on during training session
   useWakeLock(
@@ -526,6 +530,18 @@ export function Exercise({ plannedId }: { plannedId: number }) {
   return (
     <>
       <TopBar title={plan.title || "Entrenamiento"} onBack={app.pop} />
+      <WorkoutExerciseActions
+        key={exercise.planned_id}
+        sessionId={plan.id}
+        planStatus={plan.status}
+        exercise={exercise}
+        onDeleted={app.pop}
+        onReplaced={() => {
+          setFormRevision((revision) => revision + 1);
+          setShowPicker(false);
+          setShowRestTimer(false);
+        }}
+      />
       <div class="my-3 overflow-hidden rounded-card bg-surface shadow-card min-[720px]:grid min-[720px]:grid-cols-[1.05fr_.95fr]">
         {/* Dataset media is 180×180: render at native size, never upscale or overflow. */}
         <div class="relative grid h-[200px] w-full place-items-center overflow-hidden bg-white shadow-[inset_0_0_0_1px_rgba(0,0,0,.05)] min-[720px]:h-auto min-[720px]:min-h-[280px]">
@@ -613,7 +629,7 @@ export function Exercise({ plannedId }: { plannedId: number }) {
             ))}
           {showEditor && currentSetNumber !== undefined && (
             <LogSetForm
-              key={currentSetNumber}
+              key={`${exercise.planned_id}:${exercise.exercise_id}:${currentSetNumber}:${formRevision}`}
               sessionId={plan.id}
               exercise={exercise}
               nextSetNumber={currentSetNumber}

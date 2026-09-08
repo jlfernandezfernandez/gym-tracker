@@ -136,6 +136,39 @@ function renderForm(exercise: Record<string, unknown>) {
 }
 
 describe("isTimedOrIsometricExercise", () => {
+  it.each([
+    [{ weight: null, unloaded: true }, ""],
+    [{ unloaded: true }, ""],
+    [{ weight: null }, "50"],
+    [{}, "50"],
+  ])("resolves the next weight after a previous 50 load: %j", (weightFields, expected) => {
+    const html = render(h(LogSetForm, {
+      sessionId: 1,
+      exercise: {
+        planned_id: 2, exercise_id: 3, activity_type: "strength", execution_metric: "reps",
+        weight_mode: "weighted", weight: 30, reps: 10,
+        performed_sets: [{ set_number: 1, weight: 50, reps: 10 }],
+        set_targets: [{ set_number: 2, reps: 12, ...weightFields }],
+      },
+      nextSetNumber: 2, remainingSetCount: 1, onShowPicker: () => undefined,
+    }));
+    if (expected) {
+      expect(html).toMatch(/<input\b(?=[^>]*id="set-weight")(?=[^>]*value="50")[^>]*>/);
+    } else {
+      expect(html).toMatch(/<input\b(?=[^>]*id="set-weight")(?=[^>]*\svalue(?:="")?(?=[\s/>]))[^>]*>/);
+    }
+    expect(html).toMatch(/<input\b(?=[^>]*id="set-reps")(?=[^>]*value="12")[^>]*>/);
+  });
+
+  it("does not inherit common weight when the individual set explicitly has no load", () => {
+    const html = renderForm({
+      activity_type: "strength", execution_metric: "reps", weight: 50, reps: 10,
+      set_targets: [{ set_number: 1, weight: null, unloaded: true, reps: 12 }],
+    });
+    expect(html).toMatch(/<input\b(?=[^>]*id="set-weight")(?=[^>]*\svalue(?:="")?(?=[\s/>]))[^>]*>/);
+    expect(html).toMatch(/<input\b(?=[^>]*id="set-reps")(?=[^>]*value="12")[^>]*>/);
+  });
+
   it("detects only the explicit timed contract", () => {
     expect(
       isTimedOrIsometricExercise({ execution_metric: "duration_seconds" }),

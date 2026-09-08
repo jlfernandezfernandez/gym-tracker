@@ -24,6 +24,13 @@ export interface MeasurementPoint {
   value: number;
 }
 
+const chartNumberFormat = new Intl.NumberFormat('es-ES', { maximumFractionDigits: 2 });
+
+function formatChartValue(value: number | string, unit = ''): string {
+  const number = chartNumberFormat.format(Number(value));
+  return unit.trim() ? `${number} ${unit.trim()}` : number;
+}
+
 function resolvedColor(token: string, fallback: string): string {
   const probe = document.createElement('span');
   probe.style.color = `var(--color-${token}, ${fallback})`;
@@ -96,12 +103,12 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
             label: (tooltipContext) => {
               const point = points[tooltipContext.dataIndex];
               return metric === 'minutes'
-                ? [`máx ${point.top_duration_minutes || 0} min`, `${point.sets} bloques`]
+                ? [`máx ${formatChartValue(point.top_duration_minutes || 0, 'min')}`, `${formatChartValue(point.sets)} bloques`]
                 : metric === 'seconds'
-                ? [`máx ${point.top_duration_seconds || 0} s`, `${point.sets} series`]
+                ? [`máx ${formatChartValue(point.top_duration_seconds || 0, 's')}`, `${formatChartValue(point.sets)} series`]
                 : metric === 'weight'
-                ? [`máx ${point.top_weight || 0} kg`, `${point.sets} series · ${Math.round(point.volume)} kg vol`]
-                : [`máx ${point.top_reps || 0} reps`, `${point.sets} series`];
+                ? [`máx ${formatChartValue(point.top_weight || 0, 'kg')}`, `${formatChartValue(point.sets)} series · ${formatChartValue(point.volume, 'kg')} vol`]
+                : [`máx ${formatChartValue(point.top_reps || 0, 'reps')}`, `${formatChartValue(point.sets)} series`];
             },
           },
         },
@@ -109,7 +116,7 @@ export function renderProgressChart(canvas: HTMLCanvasElement, points: ProgressP
       scales: {
         x: { ticks: { color: hintColor, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
         y: {
-          ticks: { color: hintColor, font: { size: 10 }, callback: (value) => metric === 'minutes' ? `${value} min` : metric === 'seconds' ? `${value}s` : metric === 'weight' ? `${value}kg` : `${value} reps` },
+          ticks: { color: hintColor, font: { size: 10 }, callback: (value) => formatChartValue(value, progressUnit(metric)) },
           grid: { color: COLORS.grid() },
         },
       },
@@ -140,10 +147,18 @@ export function renderMeasurementChart(canvas: HTMLCanvasElement, points: Measur
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { displayColors: false } },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          displayColors: false,
+          callbacks: {
+            label: (context) => context.parsed.y == null ? '' : formatChartValue(context.parsed.y, unit),
+          },
+        },
+      },
       scales: {
         x: { ticks: { color: hintColor, font: { size: 10 }, maxTicksLimit: 6 }, grid: { display: false } },
-        y: { ticks: { color: hintColor, font: { size: 10 }, callback: (v) => `${v}${unit}` }, grid: { color: COLORS.grid() } },
+        y: { ticks: { color: hintColor, font: { size: 10 }, callback: (value) => formatChartValue(value, unit) }, grid: { color: COLORS.grid() } },
       },
     },
   });

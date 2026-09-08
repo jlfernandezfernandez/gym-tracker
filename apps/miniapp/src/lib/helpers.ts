@@ -129,7 +129,9 @@ const mergeTargetFields = (
 ): ResolvedSetTarget => {
   if (!source) return target;
   const next: ResolvedSetTarget = { ...target };
-  for (const key of ['weight', 'reps', 'duration_minutes', 'duration_seconds'] as const) {
+  if (source.unloaded === true) next.weight = null;
+  else if (source.weight != null) next.weight = source.weight;
+  for (const key of ['reps', 'duration_minutes', 'duration_seconds'] as const) {
     if (source[key] != null) next[key] = source[key];
   }
   if (source.is_warmup != null) next.is_warmup = Boolean(source.is_warmup);
@@ -155,7 +157,11 @@ export function resolveCurrentSetNumber(exercise: any, currentState: any): numbe
 export function resolveSetTarget(exercise: any, setNumber: number | null, currentState?: any) {
   if (!exercise || setNumber == null) return null;
   let target = baseTargetForSet(exercise, setNumber);
-  target = mergeTargetFields(target, previousPerformedSet(exercise, setNumber));
+  const previous = previousPerformedSet(exercise, setNumber);
+  target = mergeTargetFields(target, previous);
+  if (previous && Object.prototype.hasOwnProperty.call(previous, 'weight')) {
+    target.weight = previous.weight;
+  }
   target = mergeTargetFields(
     target,
     exercise?.set_targets?.find((candidate: any) => Number(candidate.set_number) === setNumber),

@@ -1,3 +1,5 @@
+import { resolveSetTarget } from './helpers';
+
 const MEDIA = 'https://jlfernandezfernandez.github.io/gym-tracker/media';
 
 type ExecutionMetric = 'reps' | 'duration_minutes' | 'duration_seconds';
@@ -22,7 +24,8 @@ interface CatalogExercise {
 
 interface DemoSetTarget {
   set_number: number;
-  weight: number | null;
+  weight?: number | null;
+  unloaded?: boolean;
   reps: number | null;
   duration_minutes: number | null;
   duration_seconds: number | null;
@@ -31,6 +34,7 @@ interface DemoSetTarget {
 
 interface DemoPerformedSet extends DemoSetTarget {
   id: number;
+  weight: number | null;
   activity_type: 'strength' | 'cardio';
   weight_mode: 'weighted' | 'bodyweight' | 'unloaded' | null;
   rpe?: number | null;
@@ -625,6 +629,12 @@ function validateDemoSetTargets(executionMetric: ExecutionMetric, setTargets: Ar
     if (target[metricField(executionMetric)] == null) {
       throw demoError(422, `set_targets must use execution_metric '${executionMetric}'`);
     }
+    if (target.unloaded === true && target.weight != null) {
+      throw demoError(422, 'unloaded requires null or omitted weight');
+    }
+    if (target.unloaded === true && executionMetric === 'duration_minutes') {
+      throw demoError(422, 'Cardio does not accept unloaded targets');
+    }
   }
 }
 
@@ -639,7 +649,11 @@ function buildTarget(exercise: DemoPlannedExercise, setNumber: number): DemoSetT
   const executionMetric = asMetric(exercise);
   return {
     set_number: setNumber,
-    weight: fromTarget?.weight ?? exercise.suggested_weight ?? null,
+    weight: resolveSetTarget({
+      weight: exercise.suggested_weight,
+      performed_sets: exercise.performed_sets,
+      set_targets: exercise.set_targets,
+    }, setNumber)!.weight,
     reps: fromTarget?.reps ?? (executionMetric === 'reps' ? exercise.target_reps : null),
     duration_minutes:
       fromTarget?.duration_minutes ?? (executionMetric === 'duration_minutes' ? exercise.target_duration_minutes : null),
@@ -659,17 +673,15 @@ function syncSetTargets(exercise: DemoPlannedExercise) {
   });
 }
 
-function normalizeSetTargets(exercise: DemoPlannedExercise, executionMetric: ExecutionMetric, targetSets: number, targetWeight: number | null) {
+function normalizeSetTargets(exercise: DemoPlannedExercise, executionMetric: ExecutionMetric, targetSets: number) {
   const currentTargets = new Map(exercise.set_targets.map((target) => [target.set_number, target]));
   return Array.from({ length: targetSets }, (_, index) => {
     const setNumber = index + 1;
     const existing = currentTargets.get(setNumber);
     const target = existing ? { ...existing } : buildTarget(exercise, setNumber);
-    const weight = target.weight ?? targetWeight ?? null;
     return {
       ...target,
       set_number: setNumber,
-      weight,
       reps: executionMetric === 'reps' ? (target.reps ?? exercise.target_reps) : null,
       duration_minutes: executionMetric === 'duration_minutes' ? (target.duration_minutes ?? exercise.target_duration_minutes) : null,
       duration_seconds: executionMetric === 'duration_seconds' ? (target.duration_seconds ?? exercise.target_duration_seconds) : null,
@@ -767,6 +779,10 @@ function sessionCurrent(session: DemoSession) {
   const currentExercise = ordered.find((exercise) => exercise.status === 'in_progress');
   if (!currentExercise) return emptyState;
   const currentSetNumber = nextMissingSetNumber(currentExercise);
+  const nextSetTarget = currentSetNumber == null ? null : buildTarget(currentExercise, currentSetNumber);
+  if (nextSetTarget?.weight === null && currentExercise.activity_type !== 'cardio') {
+    nextSetTarget.unloaded = true;
+  }
   return {
     session_id: session.id,
     session_status: session.status,
@@ -782,7 +798,7 @@ function sessionCurrent(session: DemoSession) {
     suggested_weight: currentExercise.suggested_weight,
     weight_mode: effectiveWeightMode(currentExercise),
     activity_type: currentExercise.activity_type,
-    next_set_target: currentSetNumber == null ? null : buildTarget(currentExercise, currentSetNumber),
+    next_set_target: nextSetTarget,
     exercise_order: currentExercise.order,
     exercise_count: ordered.length,
     completed_exercises: completedExercises,
@@ -926,13 +942,14 @@ function updateExercisePrescription(exercise: DemoPlannedExercise, payload: Reco
       .filter((target) => Number(target.set_number) <= nextTargetSets)
       .map((target) => ({
         set_number: Number(target.set_number),
-        weight: target.weight ?? nextSuggestedWeight ?? null,
+        ...(Object.prototype.hasOwnProperty.call(target, 'weight') ? { weight: target.weight } : {}),
+        ...(target.unloaded === true ? { unloaded: true } : {}),
         reps: target.reps ?? null,
         duration_minutes: target.duration_minutes ?? null,
         duration_seconds: target.duration_seconds ?? null,
         is_warmup: Boolean(target.is_warmup),
       }))
-    : normalizeSetTargets(baseExercise, executionMetric, nextTargetSets, nextSuggestedWeight);
+    : normalizeSetTargets(baseExercise, executionMetric, nextTargetSets);
   for (const target of nextSetTargets || []) {
     validateDemoMetrics(selectedExercise.activity_type, {
       executionMetric,
@@ -1253,7 +1270,8 @@ export async function demoFetch(method: string, path: string, body?: any): Promi
       if (Array.isArray(body?.set_targets)) {
         created.set_targets = body.set_targets.map((target: any) => ({
           set_number: Number(target.set_number),
-          weight: target.weight ?? created.suggested_weight ?? null,
+          ...(Object.prototype.hasOwnProperty.call(target, 'weight') ? { weight: target.weight } : {}),
+          ...(target.unloaded === true ? { unloaded: true } : {}),
           reps: target.reps ?? null,
           duration_minutes: target.duration_minutes ?? null,
           duration_seconds: target.duration_seconds ?? null,

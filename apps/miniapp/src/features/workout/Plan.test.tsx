@@ -1,9 +1,13 @@
 import { h } from 'preact';
 import render from 'preact-render-to-string';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useMutation } from '@tanstack/react-query';
+import { apiFetch } from '../../lib/api';
+
+const context = vi.hoisted(() => ({ readOnly: false, pending: [] as any[] }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useMutation: () => ({ mutate: vi.fn(), isPending: false }),
+  useMutation: vi.fn(() => ({ mutate: vi.fn(), isPending: false })),
   useQuery: vi.fn(),
   useQueryClient: () => ({
     invalidateQueries: vi.fn(),
@@ -11,7 +15,7 @@ vi.mock('@tanstack/react-query', () => ({
   }),
 }));
 vi.mock('../../app/App', () => ({
-  useApp: () => ({ readOnly: false, pop: vi.fn(), replace: vi.fn() }),
+  useApp: () => ({ readOnly: context.readOnly, workoutSync: { state: { pending: context.pending } }, pop: vi.fn(), replace: vi.fn() }),
   useSession: () => ({ data: null, isLoading: false }),
   useCurrent: () => ({ data: null }),
 }));
@@ -19,6 +23,73 @@ vi.mock('../../lib/telegram', () => ({ haptic: () => undefined }));
 vi.mock('../../lib/api', () => ({ apiFetch: vi.fn() }));
 
 import { CompletedSummary } from './Plan';
+import * as planView from './Plan';
+
+beforeEach(() => {
+  context.readOnly = false;
+  context.pending = [];
+  vi.mocked(useMutation).mockClear();
+  vi.mocked(apiFetch).mockClear();
+});
+
+describe('shared workout exercise actions', () => {
+  const exercise = { planned_id: 4, name: 'Press', status: 'pending', performed_sets: [] };
+  const renderActions = (overrides = {}) => render(h(planView.WorkoutExerciseActions, {
+    sessionId: 1, planStatus: 'in_progress', exercise, ...overrides,
+  }));
+
+  it('offers the same three actions without order controls', () => {
+    const html = renderActions();
+    expect(html).toContain('Reemplazar');
+    expect(html).toContain('Saltar');
+    expect(html).toContain('Eliminar');
+    expect(html).not.toContain('Subir');
+    expect(html).not.toContain('Bajar');
+  });
+
+  it.each(['readonly', 'completed', 'journal'])('blocks mutations for %s', async (reason) => {
+    context.readOnly = reason === 'readonly';
+    context.pending = reason === 'journal' ? [{ sessionId: 1 }] : [];
+    const html = renderActions({ planStatus: reason === 'completed' ? 'completed' : 'in_progress' });
+    if (reason !== 'journal') expect(html).toBe('');
+    else expect(html.split('</details>')[0].match(/<button\b[^>]*\sdisabled(?=[\s=>])/g)?.length).toBe(3);
+    const mutation = vi.mocked(useMutation).mock.calls[0][0];
+    await expect(mutation.mutationFn!({} as never, {} as never)).rejects.toThrow();
+    expect(apiFetch).not.toHaveBeenCalled();
+  });
+
+  it('protects logged sets against replacement and deletion', () => {
+    const html = renderActions({ exercise: { ...exercise, performed_sets: [{ set_number: 1 }] } });
+    expect(html.split('</details>')[0].match(/<button\b[^>]*\sdisabled(?=[\s=>])/g)?.length).toBe(2);
+  });
+
+  it('skips through the existing API wrapper', async () => {
+    renderActions();
+    const mutation = vi.mocked(useMutation).mock.calls[0][0];
+    await mutation.mutationFn!({} as never, {} as never);
+    expect(apiFetch).toHaveBeenCalledWith('PUT', '/sessions/1/exercises/4', { status: 'skipped' });
+  });
+});
+
+describe('visual exercise groups', () => {
+  it('groups primary muscles without mutating order and keeps explicit mixed-muscle supersets intact', () => {
+    const exercises = [
+      { planned_id: 1, target: 'chest', muscle_group: 'arms' },
+      { planned_id: 2, muscle_group: 'quadriceps' },
+      { planned_id: 3, target: 'chest' },
+      { planned_id: 4, target: 'biceps' },
+      { planned_id: 5, target: 'triceps' },
+    ];
+    const original = structuredClone(exercises);
+    const groups = planView.groupPlanExercises(exercises, [
+      { id: 4, superset_group: 'A' }, { id: 5, superset_group: 'A' },
+    ]);
+    expect(groups.map(group => group.exercises.map(exercise => exercise.planned_id))).toEqual([[1, 3], [2], [4, 5]]);
+    expect(groups.map(group => group.label)).toEqual(['Pecho', 'Cuádriceps', 'Superserie A']);
+    expect(groups[2].exercises.every(exercise => exercise.superset_group === 'A')).toBe(true);
+    expect(exercises).toEqual(original);
+  });
+});
 
 describe('CompletedSummary component in Plan.tsx', () => {
   it('renders completed session stats and post-workout muscle load split', () => {

@@ -213,9 +213,9 @@ function HistorySessionRow({
   });
 
   return (
-    <div class="grid min-h-[76px] grid-cols-[1fr_auto] items-center gap-2 border-b border-edge px-[15px] py-3 last:border-b-0">
+    <div class="grid min-h-[76px] grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-edge px-2 py-1.5 last:border-b-0">
       <button
-        class="group grid min-w-0 cursor-pointer grid-cols-[82px_1fr_auto] items-center gap-2.5 border-0 bg-transparent text-left text-ink transition-colors hover:bg-hover active:bg-hover"
+        class="group grid min-h-16 min-w-0 cursor-pointer grid-cols-[82px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control border-0 bg-transparent px-[7px] py-1.5 text-left text-ink transition-colors hover:bg-hover active:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         onClick={() => app.openSession(session.id)}
       >
         <span class="text-[.74rem] font-medium text-hint">
@@ -248,7 +248,7 @@ function HistorySessionRow({
       </button>
       {session.status === "completed" && (
         <button
-          class="inline-flex items-center gap-1.5 rounded-pill border-0 bg-accent-bg px-3 py-2 text-[.68rem] font-[680] text-accent"
+          class="inline-flex min-h-11 items-center gap-1.5 rounded-pill border-0 bg-accent-bg px-3 py-2 text-[.68rem] font-[680] text-accent transition-colors hover:bg-accent-soft active:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent disabled:opacity-40"
           disabled={repeat.isPending}
           onClick={() => repeat.mutate()}
         >

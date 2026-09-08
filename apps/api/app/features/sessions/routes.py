@@ -72,7 +72,6 @@ def _normalize_set_targets(
     target_reps: int | None,
     target_duration_minutes: int | None,
     target_duration_seconds: int | None,
-    suggested_weight: float | None,
 ) -> list[dict] | None:
     if not existing_targets:
         return None
@@ -89,7 +88,6 @@ def _normalize_set_targets(
         normalized_target = {
             **target,
             "set_number": set_number,
-            "weight": target.get("weight", suggested_weight),
             "reps": None,
             "duration_minutes": None,
             "duration_seconds": None,
@@ -337,7 +335,7 @@ async def update_planned_exercise(
         )
         effective_weight = (
             body.suggested_weight
-            if body.suggested_weight is not None
+            if "suggested_weight" in body.model_fields_set
             else planned_exercise.suggested_weight
         )
     else:
@@ -348,7 +346,7 @@ async def update_planned_exercise(
         effective_duration_seconds = None
         effective_weight = (
             body.suggested_weight
-            if body.suggested_weight is not None
+            if "suggested_weight" in body.model_fields_set
             else planned_exercise.suggested_weight
         )
 
@@ -393,7 +391,6 @@ async def update_planned_exercise(
             target_reps=effective_reps,
             target_duration_minutes=effective_duration_minutes,
             target_duration_seconds=effective_duration_seconds,
-            suggested_weight=effective_weight,
         )
     if next_set_targets is not None:
         next_set_targets = [

@@ -218,6 +218,110 @@ def _client(workout: WorkoutSession, user_id: int = 42, catalog: dict[int, Exerc
 
 
 @pytest.mark.parametrize(
+    "weight_fields",
+    [{}, {"weight": None}, {"weight": 35}, {"weight": None, "unloaded": True}, {"unloaded": True}],
+)
+def test_update_set_targets_preserves_weight_presence_in_storage_and_response(weight_fields):
+    workout = _workout(sets=())
+    gen = _client(workout)
+    client, _ = next(gen)
+    response = client.put(
+        "/api/sessions/1/exercises/5",
+        json={
+            "suggested_weight": 50,
+            "set_targets": [{"set_number": 1, "reps": 12, **weight_fields}],
+        },
+    )
+    assert response.status_code == 200, response.text
+    targets = workout.planned_exercises[0].set_targets
+    assert targets is not None
+    for target in [
+        targets[0],
+        response.json()["planned_exercises"][0]["set_targets"][0],
+    ]:
+        assert ("weight" in target) == ("weight" in weight_fields)
+        assert target.get("weight") == weight_fields.get("weight")
+        assert target.get("unloaded") == weight_fields.get("unloaded")
+        assert target["duration_minutes"] is None
+        assert target["duration_seconds"] is None
+        assert target["is_warmup"] is False
+    response = client.put("/api/sessions/1/exercises/5", json={"suggested_weight": 60})
+    assert response.status_code == 200, response.text
+    targets = workout.planned_exercises[0].set_targets
+    assert targets is not None
+    stored = targets[0]
+    assert ("weight" in stored) == ("weight" in weight_fields)
+    assert stored.get("weight") == weight_fields.get("weight")
+    assert stored.get("unloaded") == weight_fields.get("unloaded")
+    returned = response.json()["planned_exercises"][0]["set_targets"][0]
+    assert returned == stored
+
+
+@pytest.mark.parametrize("previous", [False, True])
+@pytest.mark.parametrize("timed", [False, True])
+@pytest.mark.parametrize(
+    "weight_fields",
+    [{}, {"weight": None}, {"weight": 35}, {"weight": None, "unloaded": True}, {"unloaded": True}],
+)
+def test_current_resolves_persisted_targets_without_changing_history(
+    previous, timed, weight_fields
+):
+    workout = _timed_strength_workout() if timed else _workout(sets=())
+    planned = workout.planned_exercises[0]
+    planned.suggested_weight = 50
+    if previous:
+        performed = _performed(planned.id, 1, weight=40)
+        if timed:
+            performed.reps = None
+            performed.duration_seconds = 40
+        planned.performed_sets = [performed]
+    target = {
+        "set_number": 2 if previous else 1,
+        **({"duration_seconds": 40} if timed else {"reps": 12}),
+        **weight_fields,
+    }
+    planned.set_targets = [target.copy()]
+    gen = _client(workout)
+    client, _ = next(gen)
+    path = f"/api/sessions/{workout.id}"
+    before = client.get(path).json()
+
+    response = client.get(f"{path}/current")
+
+    assert response.status_code == 200, response.text
+    expected = (
+        None
+        if weight_fields.get("unloaded")
+        else weight_fields.get("weight") or (40 if previous else 50)
+    )
+    assert response.json()["next_set_target"] == {**target, "weight": expected}
+    assert planned.set_targets == [target]
+    assert client.get(path).json() == before
+
+
+@pytest.mark.parametrize("cardio", [False, True])
+def test_update_rejects_invalid_unloaded_targets_without_mutation(cardio):
+    workout = _cardio_workout() if cardio else _workout(sets=())
+    planned = workout.planned_exercises[0]
+    gen = _client(workout)
+    client, _ = next(gen)
+    path = f"/api/sessions/{workout.id}"
+    before = client.get(path).json()
+    target = {"duration_minutes": 20} if cardio else {"reps": 10, "weight": 35}
+
+    response = client.put(
+        f"{path}/exercises/{planned.id}",
+        json={
+            "set_targets": [{"set_number": 1, "unloaded": True, **target}],
+        },
+    )
+
+    assert response.status_code == 422
+    assert "unloaded" in response.text
+    assert client.get(path).json() == before
+
+
+@pytest.mark.parametrize(
     "changes,expected_rpe,expected_rir",
     [
         ({"reps": 12}, 8, 2),
@@ -312,6 +416,7 @@ def test_planned_metric_change_rejects_logged_sets_without_mutating_history(time
         json={
             "execution_metric": "reps" if timed else "duration_seconds",
             **({"target_reps": 12} if timed else {"target_duration_seconds": 35}),
+            "suggested_weight": None,
             "notes": "must not persist",
         },
     )
@@ -357,7 +462,8 @@ def test_replace_uses_new_global_targets_instead_of_previous_set_targets(prescri
     assert client.get("/api/sessions/1").json()["planned_exercises"][0] == updated
 
 
-def test_replace_preserves_explicit_set_targets_over_new_globals() -> None:
+@pytest.mark.parametrize("weight", [15, None])
+def test_replace_preserves_explicit_set_targets_over_new_globals(weight) -> None:
     workout = _workout(sets=())
     workout.planned_exercises[0].set_targets = [{"set_number": 1, "weight": 62.5, "reps": 10}]
     gen = _client(workout, catalog={20: _exercise(20, "dumbbell")})
@@ -367,7 +473,7 @@ def test_replace_preserves_explicit_set_targets_over_new_globals() -> None:
         "/api/sessions/1/exercises/5",
         json={
             "new_exercise_id": 20,
-            "suggested_weight": 15,
+            "suggested_weight": weight,
             "target_reps": 12,
             "set_targets": [{"set_number": 1, "weight": 10, "reps": 8, "is_warmup": True}],
         },
@@ -375,7 +481,7 @@ def test_replace_preserves_explicit_set_targets_over_new_globals() -> None:
 
     assert response.status_code == 200
     current = client.get("/api/sessions/1/current").json()
-    assert current["suggested_weight"] == 15
+    assert current["suggested_weight"] == weight
     assert current["target_reps"] == 12
     assert current["next_set_target"]["weight"] == 10
     assert current["next_set_target"]["reps"] == 8
@@ -424,6 +530,148 @@ def test_same_metric_update_preserves_logged_sets_and_per_set_targets() -> None:
     assert updated["suggested_weight"] == 42.5
     assert updated["performed_sets"] == before["performed_sets"]
     assert updated["set_targets"] == before["set_targets"]
+
+
+@pytest.mark.parametrize("timed", [False, True])
+@pytest.mark.parametrize(
+    "weight_update", [{}, {"suggested_weight": None}, {"suggested_weight": 25}]
+)
+def test_planned_weight_update_preserves_omission_and_explicit_null(timed, weight_update) -> None:
+    workout = _timed_strength_workout() if timed else _workout()
+    planned = workout.planned_exercises[0]
+    if timed:
+        performed = _performed(planned.id, 1, weight=32.5)
+        performed.reps = None
+        performed.duration_seconds = 40
+        planned.performed_sets = [performed]
+    else:
+        planned.set_targets = [{"set_number": 2, "weight": 45, "reps": 8}]
+    gen = _client(workout)
+    client, _ = next(gen)
+    path = f"/api/sessions/{workout.id}"
+    before = client.get(path).json()["planned_exercises"][0]
+
+    response = client.put(f"{path}/exercises/{planned.id}", json=weight_update)
+
+    assert response.status_code == 200, response.text
+    updated = response.json()["planned_exercises"][0]
+    assert updated["suggested_weight"] == weight_update.get(
+        "suggested_weight", 32.5 if timed else 40
+    )
+    assert updated["performed_sets"] == before["performed_sets"]
+    assert updated["set_targets"] == before["set_targets"]
+    assert updated["execution_metric"] == before["execution_metric"]
+    assert updated["target_reps"] == before["target_reps"]
+    assert updated["target_duration_seconds"] == before["target_duration_seconds"]
+    assert client.get(path).json()["planned_exercises"][0] == updated
+
+
+@pytest.mark.parametrize("timed", [False, True])
+@pytest.mark.parametrize("equipment", ["dumbbell", "body weight"])
+def test_replace_explicit_null_weight_clears_old_load_and_set_targets(timed, equipment) -> None:
+    workout = _timed_strength_workout() if timed else _workout(sets=())
+    planned = workout.planned_exercises[0]
+    if not timed:
+        planned.set_targets = [{"set_number": 1, "weight": 45, "reps": 8}]
+    gen = _client(workout, catalog={99: _exercise(99, equipment)})
+    client, _ = next(gen)
+    path = f"/api/sessions/{workout.id}"
+
+    response = client.put(
+        f"{path}/exercises/{planned.id}",
+        json={"new_exercise_id": 99, "suggested_weight": None},
+    )
+
+    assert response.status_code == 200, response.text
+    updated = response.json()["planned_exercises"][0]
+    assert updated["exercise_id"] == 99
+    assert updated["suggested_weight"] is None
+    assert updated["set_targets"] is None
+    assert updated["execution_metric"] == ("duration_seconds" if timed else "reps")
+    assert updated["target_reps"] == (None if timed else 10)
+    assert updated["target_duration_seconds"] == (40 if timed else None)
+    assert client.get(path).json()["planned_exercises"][0] == updated
+    current = client.get(f"{path}/current").json()
+    assert current["suggested_weight"] is None
+    assert current["next_set_target"] is None
+
+
+@pytest.mark.parametrize("metric_update", [{}, {"execution_metric": "reps"}])
+@pytest.mark.parametrize(
+    "weight_update", [{}, {"suggested_weight": None}, {"suggested_weight": 25}]
+)
+@pytest.mark.parametrize("equipment", ["dumbbell", "body weight"])
+def test_replace_timed_with_reps_respects_explicit_weight_and_omission(
+    metric_update, weight_update, equipment
+) -> None:
+    workout = _timed_strength_workout()
+    gen = _client(workout, catalog={99: _exercise(99, equipment)})
+    client, _ = next(gen)
+    before = client.get("/api/sessions/3").json()
+    expected_weight = weight_update.get("suggested_weight", 32.5)
+
+    response = client.put(
+        "/api/sessions/3/exercises/7",
+        json={
+            "new_exercise_id": 99,
+            "target_reps": 12,
+            **metric_update,
+            **weight_update,
+        },
+    )
+
+    if equipment == "body weight" and expected_weight is not None:
+        assert response.status_code == 422
+        assert "take no weight" in response.json()["detail"]
+        assert client.get("/api/sessions/3").json() == before
+        return
+
+    assert response.status_code == 200, response.text
+    updated = response.json()["planned_exercises"][0]
+    assert updated["exercise_id"] == 99
+    assert updated["execution_metric"] == "reps"
+    assert updated["target_reps"] == 12
+    assert updated["target_duration_seconds"] is None
+    assert updated["target_duration_minutes"] is None
+    assert updated["suggested_weight"] == expected_weight
+    assert updated["set_targets"] is None
+    assert client.get("/api/sessions/3").json()["planned_exercises"][0] == updated
+    current = client.get("/api/sessions/3/current").json()
+    assert current["execution_metric"] == "reps"
+    assert current["suggested_weight"] == expected_weight
+    assert current["next_set_target"] is None
+
+
+def test_replace_timed_with_reps_requires_explicit_reps() -> None:
+    gen = _client(_timed_strength_workout(), catalog={99: _exercise(99, "body weight")})
+    client, _ = next(gen)
+    before = client.get("/api/sessions/3").json()
+
+    response = client.put(
+        "/api/sessions/3/exercises/7",
+        json={"new_exercise_id": 99, "execution_metric": "reps", "suggested_weight": None},
+    )
+
+    assert response.status_code == 422
+    assert "Strength requires reps" in response.json()["detail"]
+    assert client.get("/api/sessions/3").json() == before
+
+
+@pytest.mark.parametrize("replacement_id", [10, 99])
+def test_replace_with_null_weight_rejects_logged_sets_without_mutation(replacement_id) -> None:
+    workout = _workout()
+    gen = _client(workout, catalog={10: _exercise(10), 99: _exercise(99, "body weight")})
+    client, _ = next(gen)
+    before = client.get("/api/sessions/1").json()
+
+    response = client.put(
+        "/api/sessions/1/exercises/5",
+        json={"new_exercise_id": replacement_id, "suggested_weight": None},
+    )
+
+    assert response.status_code == 422
+    assert "Cannot replace an exercise after logging sets" in response.json()["detail"]
+    assert client.get("/api/sessions/1").json() == before
 
 
 def test_restore_middle_set_returns_fresh_completed_session() -> None:
