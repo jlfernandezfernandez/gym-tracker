@@ -218,7 +218,7 @@ function HistorySessionRow({
         class="group grid min-h-16 min-w-0 cursor-pointer grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-2.5 rounded-control border-0 bg-transparent px-[7px] py-1.5 text-left text-ink transition-colors hover:bg-hover active:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
         onClick={() => app.openSession(session.id)}
       >
-        <span class="text-[1.15rem] font-semibold leading-none text-ink">
+        <span class="text-[.9rem] font-medium leading-none text-hint">
           {formatDay(session.session_date)}
         </span>
         <span class="min-w-0">
