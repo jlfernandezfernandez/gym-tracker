@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.10.0...v2.11.0) (2026-09-08)
+
+
+### Features
+
+* **miniapp:** enlarge day-only date on history cards ([8552809](https://github.com/jlfernandezfernandez/gym-tracker/commit/8552809ff160961717137d7916e11ce8da690601))
+
 ## [2.10.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.9.1...v2.10.0) (2026-09-08)
 
 
