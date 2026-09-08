@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.11.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.11.0...v2.11.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* **miniapp:** keep day-only date secondary on history cards ([342c8fe](https://github.com/jlfernandezfernandez/gym-tracker/commit/342c8fe28149cc1239bc47c2c722ee5666fdc4af))
+
 ## [2.11.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.10.0...v2.11.0) (2026-09-08)
 
 
