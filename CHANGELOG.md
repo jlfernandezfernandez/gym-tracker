@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.9.1](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.9.0...v2.9.1) (2026-09-08)
+
+
+### Bug Fixes
+
+* **miniapp:** normalize checkbox/radio sizing and accent ([b37bfcd](https://github.com/jlfernandezfernandez/gym-tracker/commit/b37bfcd993edda3012127593bfdffa1bf6bfadb2))
+
 ## [2.9.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.8.0...v2.9.0) (2026-09-08)
 
 
