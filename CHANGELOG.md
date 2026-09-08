@@ -1,5 +1,23 @@
 # Changelog
 
+## [2.9.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.8.0...v2.9.0) (2026-09-08)
+
+
+### Features
+
+* add direct workout controls and history ([7a212a9](https://github.com/jlfernandezfernandez/gym-tracker/commit/7a212a94837a3be1d806b79daac393aaf7f4e96c))
+* polish app and interactive demo ([28faa7f](https://github.com/jlfernandezfernandez/gym-tracker/commit/28faa7f42cef44cea3290407523babdea3588589))
+* present mobile app with static previews ([c2305b8](https://github.com/jlfernandezfernandez/gym-tracker/commit/c2305b8ba8c052813d1b1a61930886d8823f5c4f))
+* streamline daily workout interactions ([72e4ed3](https://github.com/jlfernandezfernandez/gym-tracker/commit/72e4ed327903c3453f69c302d3cc150c3f68411e))
+
+
+### Bug Fixes
+
+* preserve partial workout corrections ([e58b527](https://github.com/jlfernandezfernandez/gym-tracker/commit/e58b527bcb89ff619d06b50b81b0a6d2e38b31b5))
+* preserve pre-upgrade set replays ([2512ba1](https://github.com/jlfernandezfernandez/gym-tracker/commit/2512ba17109dc83601f851e315b0deb36a90e795))
+* preserve workout metrics across clients ([e3fa11f](https://github.com/jlfernandezfernandez/gym-tracker/commit/e3fa11f4c8c10e7f2e5b54555177d0ec4495294c))
+* preserve workout metrics across clients ([22b5a0f](https://github.com/jlfernandezfernandez/gym-tracker/commit/22b5a0fbd4754ae3c01e808b9ac8a03f75abcd7f))
+
 ## [2.8.0](https://github.com/jlfernandezfernandez/gym-tracker/compare/v2.7.1...v2.8.0) (2026-09-07)
 
 
