@@ -49,6 +49,10 @@ export const formatEquipment = (equipment: string) =>
 export const formatDate = (isoDate: string) =>
   new Date(isoDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
 
+/** Day-only date for compact list rows (e.g. history cards grouped by week). */
+export const formatDay = (isoDate: string) =>
+  new Date(isoDate + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric' });
+
 export function normalizeSession(session: any) {
   const orderedExercises = [...(session?.planned_exercises || [])].sort(
     (first, second) => (first.order ?? 0) - (second.order ?? 0),

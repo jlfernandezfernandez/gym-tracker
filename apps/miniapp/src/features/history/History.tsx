@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, Clock3, Repeat2 } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import { apiFetch } from "../../lib/api";
-import { formatDate, showToast } from "../../lib/helpers";
+import { formatDay, showToast } from "../../lib/helpers";
 import { useApp } from "../../app/App";
 import { Empty, Loading } from "../../components/feedback";
 import { TopBar } from "../../components/navigation";
@@ -219,7 +219,7 @@ function HistorySessionRow({
         onClick={() => app.openSession(session.id)}
       >
         <span class="text-[.74rem] font-medium text-hint">
-          {formatDate(session.session_date)}
+          {formatDay(session.session_date)}
         </span>
         <span class="min-w-0">
           <b class="block overflow-hidden text-[.9rem] text-ellipsis whitespace-nowrap">
