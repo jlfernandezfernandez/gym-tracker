@@ -699,6 +699,7 @@ async def log_set(
     if body.request_id:
         receipt = await db.get(SetLogReceipt, str(body.request_id))
         if receipt:
+            receipt_payload = {"duration_seconds": None, **receipt.payload}
             original = next(
                 (
                     item
@@ -711,7 +712,7 @@ async def log_set(
                 receipt.session_id != session_id
                 or receipt.planned_exercise_id != planned_id
                 or receipt.exercise_id != planned_exercise.exercise_id
-                or receipt.payload != payload
+                or receipt_payload != payload
                 or original is None
                 or any(getattr(original, key) != value for key, value in payload.items())
             ):
